@@ -1,0 +1,40 @@
+name: Windows build
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Source safety checks
+        shell: pwsh
+        run: |
+          ./tools/TestRepository.ps1
+          ./tests/release-source-test.ps1
+      - name: Build original assets and app
+        shell: pwsh
+        run: ./build.ps1
+      - name: Startup display name and isolated legacy migration
+        shell: pwsh
+        run: ./tests/startup-registration-test.ps1
+      - name: Offline smoke tests (no Claude calls)
+        shell: pwsh
+        run: ./tests/smoke-test.ps1
+      - name: Data-only character pack validation and live refresh
+        shell: pwsh
+        run: ./tests/character-pack-test.ps1
+      - name: Original animation transparency and phases
+        shell: powershell
+        run: ./tests/original-assets-test.ps1
+      - name: Elbow continuity and independent expression cadence
+        shell: pwsh
+        run: ./tests/companion-motion-test.ps1
+      - name: Character reminder choreography and transparent presentation
+        shell: powershell
+        run: ./tests/reminder-performance-test.ps1

@@ -1,0 +1,12 @@
+XianPal AI Desktop Companion
+Copyright 2026 OrbitPet / XianPal contributors.
+
+Public release 0.5.0, based on a locally developed desktop companion application
+and its internal 3.1.5 development snapshot. Historical technical identifiers
+are retained for compatibility. Artwork uses approved AI-assisted original
+cultivation-companion textures and deterministic local layered animation.
+See art/PROVENANCE.md and ASSET-LICENSE.md for source and licensing scope.
+
+Claude Code is a separate product of Anthropic. Windows and .NET are
+Microsoft products. No affiliation, sponsorship or trademark license is claimed.
+Historical local assets and excluded files are not licensed by this release.
