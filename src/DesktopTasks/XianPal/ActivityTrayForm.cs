@@ -17,13 +17,32 @@ namespace XianPal
         internal string Output;
         internal DateTime Updated;
         internal bool Unread;
-        internal bool NativeInteractive;
+        internal readonly List<ChatMessage> Messages=new List<ChatMessage>();
+        internal void StartConversation(string prompt)
+        { if(Messages.Count==0)Messages.Add(new ChatMessage {Role="user",Text=UiText.Normalize(prompt)}); }
+        internal void AppendUserPrompt(string prompt)
+        {
+            if(Messages.Count==0&&!String.IsNullOrWhiteSpace(Output))Messages.Add(new ChatMessage {Role="assistant",Text=ActivityTrayForm.NormalizeOutput(Output),At=Updated});
+            Messages.Add(new ChatMessage {Role="user",Text=UiText.Normalize(prompt)});
+            Output=(Output??"")+"\r\n\r\n你："+prompt+"\r\n\r\n";TrimMessages();
+        }
+        private void TrimMessages()
+        {
+            if(Messages.Count>0&&Messages[Messages.Count-1].Text.Length>100000)Messages[Messages.Count-1].Text="…\n"+UiText.TailCodeUnits(Messages[Messages.Count-1].Text,100000);
+            int count=0;foreach(ChatMessage m in Messages)count+=m.Text.Length;
+            while(Messages.Count>1&&(Messages.Count>80||count>110000)){count-=Messages[0].Text.Length;Messages.RemoveAt(0);}
+        }
 
         internal void AppendOutput(string text)
         {
             if (String.IsNullOrEmpty(text)) return;
             Output = (Output ?? "") + UiText.Normalize(text);
             if (Output.Length > 120000) Output = "…\r\n" + UiText.TailCodeUnits(Output, 100000);
+            if(Messages.Count>0)
+            {
+                if(Messages[Messages.Count-1].Role!="assistant")Messages.Add(new ChatMessage {Role="assistant",Text=""});
+                Messages[Messages.Count-1].Text+=UiText.Normalize(text);TrimMessages();
+            }
         }
 
         public override string ToString()
@@ -36,6 +55,14 @@ namespace XianPal
     {
         private readonly ListBox list = new ListBox();
         private readonly UnicodeRichTextBox details = new UnicodeRichTextBox();
+        private readonly ChatConversationView conversation=new ChatConversationView();
+        private readonly Timer renderTimer=new Timer {Interval=120};
+        private readonly Dictionary<ActivityRecord,string> drafts=new Dictionary<ActivityRecord,string>();
+        private ActivityRecord draftActivity;
+        private bool updatingList,renderPending;
+        private Label heading;
+        private Label statusCaption;
+        private bool historyExpanded;
         private readonly Label emptyDetails = new Label();
         private readonly ChineseInputTextBox reply = new ChineseInputTextBox();
         private readonly Label replyPlaceholder = new Label();
@@ -44,13 +71,22 @@ namespace XianPal
         private bool pinnedOpen;
         internal event Action ActivityViewed;
         internal event Func<ActivityRecord, string, bool> ReplySubmitted;
+        internal event Action HeaderDragStarted;
+        internal event Func<Point,Point> HeaderDragLocationRequested;
+        internal event Action HeaderDragFinished;
+        internal event Action<Point> CompanionPositionRequested;
+        private Control capturedHeader;
+        private bool headerArmed,headerMoving;
+        private Point headerPointer,headerOrigin;
+        internal bool HeaderDragInProgress {get{return headerMoving;}}
 
         internal ActivityTrayForm()
         {
             Text = "Claude Code 动态";
             Icon = AppIcon.WindowIcon;
-            ClientSize = new Size(548, 462);
+            ClientSize = new Size(640, 650);
             FormBorderStyle = FormBorderStyle.None;
+            StartPosition = FormStartPosition.Manual;
             AutoScaleMode = AutoScaleMode.None;
             ShowInTaskbar = false;
             TopMost = true;
@@ -58,39 +94,36 @@ namespace XianPal
             DoubleBuffered = true;
             Font = UiText.Font(9f);
 
-            Label title = new Label { Text = "Claude Code", Font = UiText.Font(10.5f, FontStyle.Bold), ForeColor = Color.FromArgb(34, 34, 32), AutoSize = true, Location = new Point(18, 16) };
-            Label subtitle = new Label { Text = "动态", Font = UiText.Font(9f), ForeColor = Color.FromArgb(105, 105, 100), AutoSize = true, Location = new Point(118, 18) };
-            Button close = new Button { Text = "×", FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = Color.FromArgb(72, 72, 68), Font = new Font("Segoe UI", 13f), Location = new Point(504, 8), Size = new Size(30, 30), Cursor = Cursors.Hand };
+            Label title = new Label { Text = "仙伴 · 对话", Font = UiText.Font(12f, FontStyle.Bold), ForeColor = Color.FromArgb(34, 55, 44), AutoSize = true, Location = new Point(18, 16) };
+            heading=title;
+            title.AutoSize=false;title.Size=new Size(180,28);title.AutoEllipsis=true;
+            Label subtitle = new Label { Text = "Claude Code", Font = UiText.Font(9f), ForeColor = Color.FromArgb(105, 105, 100), AutoSize = true, Location = new Point(214, 20) };
+            statusCaption=subtitle;
+            WireHeaderDrag(this);WireHeaderDrag(title);WireHeaderDrag(subtitle);
+            title.Cursor=Cursors.SizeAll;subtitle.Cursor=Cursors.SizeAll;
+            tips.SetToolTip(title,"拖动标题栏，人物会一起移动");
+            Button close = new Button { Text = "×", Anchor=AnchorStyles.Top|AnchorStyles.Right,FlatStyle = FlatStyle.Flat, BackColor = Color.Transparent, ForeColor = Color.FromArgb(72, 72, 68), Font = new Font("Segoe UI", 13f), Location = new Point(592, 8), Size = new Size(30, 30), Cursor = Cursors.Hand };
             close.FlatAppearance.BorderSize = 0;
             close.FlatAppearance.MouseOverBackColor = Color.FromArgb(240, 240, 237);
             close.Click += delegate { Dismiss(); };
+            var historyButton=new Button {Text="会话 ▾",FlatStyle=FlatStyle.Flat,BackColor=BackColor,ForeColor=Color.FromArgb(74,96,82),Location=new Point(504,13),Size=new Size(77,28),Anchor=AnchorStyles.Top|AnchorStyles.Right,Cursor=Cursors.Hand};historyButton.FlatAppearance.BorderSize=0;
 
-            RoundedPanel listCard = new RoundedPanel { Radius = 15, BorderColor = Color.FromArgb(228, 228, 224), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 52), Size = new Size(520, 116) };
+            RoundedPanel listCard = new RoundedPanel { Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right,Radius = 15, BorderColor = Color.FromArgb(228, 228, 224), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 52), Size = new Size(612, 94) };
             list.BorderStyle = BorderStyle.None;
             list.BackColor = listCard.BackColor;
             list.ForeColor = Color.FromArgb(38, 38, 36);
             list.Font = UiText.Font(9f);
             list.DrawMode = DrawMode.OwnerDrawFixed;
-            list.ItemHeight = 40;
+            list.ItemHeight = 38;
             list.IntegralHeight = false;
             list.Location = new Point(8, 7);
-            list.Size = new Size(504, 102);
+            list.Size = new Size(596, 80);list.Anchor=AnchorStyles.Top|AnchorStyles.Left|AnchorStyles.Right;
             list.SelectedIndexChanged += ShowSelected;
             list.DrawItem += DrawActivity;
             listCard.Controls.Add(list);
 
-            RoundedPanel detailsCard = new RoundedPanel { Radius = 15, BorderColor = Color.FromArgb(228, 228, 224), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 178), Size = new Size(520, 198) };
-            details.ReadOnly = true;
-            details.BorderStyle = BorderStyle.None;
-            details.BackColor = detailsCard.BackColor;
-            details.ForeColor = Color.FromArgb(45, 45, 42);
-            details.Font = UiText.Font(9.5f);
-            details.DetectUrls = true;
-            details.WordWrap = true;
-            details.Location = new Point(12, 11);
-            details.Size = new Size(496, 176);
-            details.ScrollBars = RichTextBoxScrollBars.Vertical;
-            detailsCard.Controls.Add(details);
+            RoundedPanel detailsCard = new RoundedPanel { Anchor=AnchorStyles.Top|AnchorStyles.Bottom|AnchorStyles.Left|AnchorStyles.Right,Radius = 15, BorderColor = Color.FromArgb(232, 235, 230), BackColor = Color.FromArgb(250,251,249), Location = new Point(14, 156), Size = new Size(612, 400),Padding=new Padding(4) };
+            conversation.Dock=DockStyle.Fill;detailsCard.Controls.Add(conversation);
 
             emptyDetails.Text = "选择一条动态查看 Claude 回复";
             emptyDetails.ForeColor = Color.FromArgb(145, 145, 140);
@@ -100,7 +133,7 @@ namespace XianPal
             detailsCard.Controls.Add(emptyDetails);
             emptyDetails.BringToFront();
 
-            RoundedPanel replyCard = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 386), Size = new Size(520, 62) };
+            RoundedPanel replyCard = new RoundedPanel { Anchor=AnchorStyles.Bottom|AnchorStyles.Left|AnchorStyles.Right,Radius = 16, BorderColor = Color.FromArgb(220, 229, 220), BackColor = Color.FromArgb(247, 249, 246), Location = new Point(14, 568), Size = new Size(612, 68) };
             reply.Multiline = true;
             reply.AcceptsReturn = true;
             reply.BorderStyle = BorderStyle.None;
@@ -108,7 +141,7 @@ namespace XianPal
             reply.ForeColor = Color.FromArgb(34, 34, 32);
             reply.Font = UiText.Font(9.5f);
             reply.Location = new Point(14, 13);
-            reply.Size = new Size(438, 38);
+            reply.Size = new Size(530, 42);reply.Anchor=AnchorStyles.Top|AnchorStyles.Bottom|AnchorStyles.Left|AnchorStyles.Right;
             reply.KeyDown += ReplyKeyDown;
             reply.TextChanged += delegate { UpdateReplyState(); };
             reply.GotFocus += delegate { UpdateReplyState(); };
@@ -128,7 +161,7 @@ namespace XianPal
             send.ForeColor = Color.White;
             send.BackColor = Color.FromArgb(32, 33, 31);
             send.FlatStyle = FlatStyle.Flat;
-            send.Location = new Point(467, 10);
+            send.Location = new Point(559, 13);send.Anchor=AnchorStyles.Top|AnchorStyles.Right;
             send.Size = new Size(42, 42);
             send.Cursor = Cursors.Hand;
             send.FlatAppearance.BorderSize = 0;
@@ -144,13 +177,20 @@ namespace XianPal
             Controls.Add(listCard);
             Controls.Add(detailsCard);
             Controls.Add(replyCard);
+            Controls.Add(historyButton);
+            listCard.Visible=false;
+            Action arrangeCards=delegate {int top=historyExpanded?156:52;replyCard.Top=ClientSize.Height-82;detailsCard.Top=top;detailsCard.Height=Math.Max(100,replyCard.Top-12-top);};
+            historyButton.Click+=delegate {historyExpanded=!historyExpanded;listCard.Visible=historyExpanded;arrangeCards();};
             FormClosing += delegate(object sender, FormClosingEventArgs e)
             {
                 if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Dismiss(); }
             };
-            Resize += delegate { ApplyRoundedRegion(); };
+            Resize += delegate { arrangeCards();ApplyRoundedRegion(); };
+            arrangeCards();
             ApplyRoundedRegion();
             UpdateReplyState();
+            renderTimer.Tick+=delegate {renderTimer.Stop();if(renderPending&&Visible){renderPending=false;RenderSelected();}};
+            VisibleChanged+=delegate {if(Visible){renderPending=false;RenderSelected();}else {renderTimer.Stop();EndHeaderDrag();}};
         }
 
         protected override CreateParams CreateParams
@@ -176,30 +216,37 @@ namespace XianPal
         internal void SetActivities(IList<ActivityRecord> activities)
         {
             ActivityRecord selected = list.SelectedItem as ActivityRecord;
+            bool same=list.Items.Count==activities.Count;
+            if(same)for(int i=0;i<activities.Count;i++)if(!Object.ReferenceEquals(list.Items[i],activities[i])){same=false;break;}
+            if(same){list.Invalidate();QueueRender();return;}
+            updatingList=true;
             list.BeginUpdate();
             list.Items.Clear();
             foreach (ActivityRecord activity in activities) list.Items.Add(activity);
             list.EndUpdate();
+            updatingList=false;
             if (list.Items.Count == 0)
             {
-                details.Clear();
+                conversation.Present(null);
                 emptyDetails.Visible = true;
                 UpdateReplyState();
                 return;
             }
             int selectedIndex = selected == null ? -1 : list.Items.IndexOf(selected);
             if (Visible) list.SelectedIndex = selectedIndex >= 0 ? selectedIndex : 0;
+            foreach(ActivityRecord key in new List<ActivityRecord>(drafts.Keys))if(!activities.Contains(key))drafts.Remove(key);
+            QueueRender();
         }
 
         internal void ShowNear(Rectangle petBounds)
         {
+            if(HeaderDragInProgress)return;
             pinnedOpen = true;
             Rectangle area = Screen.FromRectangle(petBounds).WorkingArea;
-            int x = petBounds.Left + ((petBounds.Width - Width) / 2);
-            x = Math.Max(area.Left + 8, Math.Min(x, area.Right - Width - 8));
-            int y = petBounds.Bottom + 8;
-            if (y + Height > area.Bottom - 8) y = petBounds.Top - Height - 8;
-            Location = new Point(x, Math.Max(area.Top + 8, y));
+            ChatAnchorLayout layout=ChatAnchorLayout.Below(petBounds,new Size(640,650),area);
+            if(CompanionPositionRequested!=null)CompanionPositionRequested(layout.Pet.Location);
+            ClientSize=layout.Dialog.Size;
+            Location=layout.Dialog.Location;
             if (!Visible) Show();
             if (list.Items.Count > 0 && list.SelectedIndex < 0) list.SelectedIndex = 0;
             Activate();
@@ -214,11 +261,44 @@ namespace XianPal
 
         private void Dismiss()
         {
+            EndHeaderDrag();
             pinnedOpen = false;
             Hide();
         }
 
         internal void DismissForTest() { Dismiss(); }
+
+        private void WireHeaderDrag(Control handle)
+        {
+            handle.MouseDown+=delegate(object sender,MouseEventArgs e){if(e.Button!=MouseButtons.Left)return;if(handle==this&&e.Y>=48)return;BeginHeaderDrag(handle,handle.PointToScreen(e.Location));};
+            handle.MouseMove+=delegate(object sender,MouseEventArgs e){if(headerArmed)MoveHeaderDrag(handle.PointToScreen(e.Location));};
+            handle.MouseUp+=delegate(object sender,MouseEventArgs e){if(e.Button==MouseButtons.Left)EndHeaderDrag();};
+            handle.MouseCaptureChanged+=delegate {if(headerArmed&&capturedHeader==handle&&!handle.Capture)EndHeaderDrag();};
+        }
+        private void BeginHeaderDrag(Control handle,Point pointer)
+        {
+            if(headerArmed)EndHeaderDrag();
+            headerPointer=pointer;headerOrigin=Location;capturedHeader=handle;headerArmed=true;headerMoving=false;handle.Capture=true;
+        }
+        private void MoveHeaderDrag(Point pointer)
+        {
+            if(!headerArmed)return;
+            int dx=pointer.X-headerPointer.X,dy=pointer.Y-headerPointer.Y;
+            if(!headerMoving)
+            {
+                if(Math.Abs(dx)<4&&Math.Abs(dy)<4)return;
+                headerMoving=true;if(HeaderDragStarted!=null)HeaderDragStarted();
+            }
+            Point requested=new Point(headerOrigin.X+dx,headerOrigin.Y+dy);
+            Location=HeaderDragLocationRequested!=null?HeaderDragLocationRequested(requested):ChatWindowDrag.Constrain(new Rectangle(headerOrigin,Size),null,requested,Screen.FromPoint(pointer).WorkingArea);
+        }
+        private void EndHeaderDrag()
+        {
+            if(!headerArmed)return;
+            bool moved=headerMoving;headerArmed=false;headerMoving=false;
+            Control source=capturedHeader;capturedHeader=null;if(source!=null&&!source.IsDisposed)source.Capture=false;
+            if(moved&&HeaderDragFinished!=null)HeaderDragFinished();
+        }
 
         internal void SelectActivity(ActivityRecord activity)
         {
@@ -245,19 +325,23 @@ namespace XianPal
 
         private void ShowSelected(object sender, EventArgs e)
         {
+            if(updatingList)return;
             ActivityRecord item = list.SelectedItem as ActivityRecord;
             if (item == null) return;
+            if(!Object.ReferenceEquals(draftActivity,item))
+            {if(draftActivity!=null)drafts[draftActivity]=reply.Text;string draft;reply.Text=drafts.TryGetValue(item,out draft)?draft:"";draftActivity=item;}
             item.Unread = false;
-            details.Text = NormalizeOutput(item.Output);
-            UiText.ApplyMixedGlyphFonts(details);
-            details.SelectionStart = 0;
-            details.ScrollToCaret();
-            emptyDetails.Visible = details.TextLength == 0;
+            RenderSelected();
             UpdateReplyState();
             list.Invalidate();
             Action viewed = ActivityViewed;
             if (viewed != null) viewed();
         }
+        private void QueueRender(){renderPending=true;if(Visible&&!renderTimer.Enabled)renderTimer.Start();}
+        private void RenderSelected()
+        {ActivityRecord item=list.SelectedItem as ActivityRecord;conversation.Present(item);emptyDetails.Visible=item==null;if(heading!=null)heading.Text=item==null?"仙伴 · 对话":String.IsNullOrEmpty(item.CharacterId)?"Claude · 对话":PetCharacter.Find(item.CharacterId).Name+" · 对话";if(statusCaption!=null)statusCaption.Text=item==null?"Claude Code":"Claude Code · "+(item.State=="正在运行"?"正在回复":item.State??"就绪");UpdateReplyState();}
+        internal ChatConversationView ConversationForTest {get{return conversation;}}
+        internal void FlushConversationForTest(){renderPending=false;RenderSelected();}
 
         private void ReplyKeyDown(object sender, KeyEventArgs e)
         {
@@ -272,7 +356,7 @@ namespace XianPal
         {
             ActivityRecord item = list.SelectedItem as ActivityRecord;
             string text = reply.Text.Trim();
-            if (item == null || item.NativeInteractive || String.IsNullOrWhiteSpace(item.SessionId) || text.Length == 0) return;
+            if (item == null || item.State=="正在运行" || String.IsNullOrWhiteSpace(item.SessionId) || text.Length == 0) return;
             Func<ActivityRecord, string, bool> handler = ReplySubmitted;
             if (handler != null && handler(item, text))
             {
@@ -284,11 +368,11 @@ namespace XianPal
         private void UpdateReplyState()
         {
             ActivityRecord item = list.SelectedItem as ActivityRecord;
-            bool canReply = item != null && !item.NativeInteractive && !String.IsNullOrWhiteSpace(item.SessionId);
+            bool canReply = item != null && !String.IsNullOrWhiteSpace(item.SessionId);
             reply.Enabled = canReply;
-            send.Enabled = canReply && reply.Text.Trim().Length > 0;
+            send.Enabled = canReply && item.State!="正在运行"&&reply.Text.Trim().Length > 0;
             send.BackColor = send.Enabled ? Color.FromArgb(32, 33, 31) : Color.FromArgb(190, 190, 186);
-            replyPlaceholder.Text = item != null && item.NativeInteractive ? "请在对应的 Claude 原生 CLI 窗口继续对话" : canReply ? "回复所选 Claude 会话…" : "该动态尚未取得会话 ID";
+            replyPlaceholder.Text = canReply ? "回复所选 Claude 会话…" : "该动态尚未取得会话 ID";
             replyPlaceholder.Visible = reply.TextLength == 0 && !reply.Focused;
         }
 
@@ -329,5 +413,6 @@ namespace XianPal
             Region = new Region(PromptForm.RoundedRectangle(ClientRectangle, 18));
             if (old != null) old.Dispose();
         }
+        protected override void Dispose(bool disposing){if(disposing){EndHeaderDrag();renderTimer.Dispose();details.Dispose();tips.Dispose();}base.Dispose(disposing);}
     }
 }

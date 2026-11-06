@@ -8,20 +8,68 @@
 
 四位国风 Q 版伙伴 × 本机 Claude Code × 对话、文件处理与定时任务
 
-[![版本 0.5.0 · Preview](docs/images/version.svg)](CHANGELOG.md)
+[![版本 0.6.11 · Preview](docs/images/version.svg)](CHANGELOG.md)
 ![Windows 10 / 11](docs/images/windows.svg)
 [![Apache-2.0](docs/images/license.svg)](LICENSE)
 
-[下载与安装](#quick-start) · [看看能做什么](#features) · [定制自己的角色](#custom-characters) · [从源码构建](#build) · [English](README.en.md)
+[English README](README.en.md) · [0.6.11 更新](#whats-new) · [下载与安装](#quick-start) · [功能](#features) · [定制角色](#custom-characters) · [从源码构建](#build)
 
 </div>
 
 > 一只会陪你说话、接住文件、记得提醒，还能把任务交给 Claude Code 的桌面伙伴。  
 > 桌面程序在本地运行；AI 能力由你自行安装、配置和授权的 **Claude Code CLI** 提供，不内置模型或 API 密钥。
 
-**0.5 开放预览版，欢迎一起共建。** 当前发布号为 **0.5.0**，功能、接口和素材格式仍在迭代，不代表 1.0 稳定版。欢迎提交问题、原创角色与代码 PR；使用重要任务前，请备份配置并先在测试目录验证。
+**0.6 开放预览版，欢迎一起共建。** 当前发布号为 **0.6.11**，功能、接口和素材格式仍在迭代，不代表 1.0 稳定版。欢迎提交问题、原创角色与代码 PR；使用重要任务前，请备份配置并先在测试目录验证。
+
+<a id="whats-new"></a>
+## 0.6.11 更新
+
+- **大堂角色清晰显示**。四位角色使用和桌面宠物相同的原始动作帧，随工位等比例缩放。
+
+### 0.6.10 功能
+
+- **默认设置**收纳开机启动、置顶、虚拟桌面、大小、光轨、跑动路线、主动关怀和 Claude 默认目录等选项。
+- **贴边不透明度**可设为 20% 至 100%。吸附后应用所选值，拖离边缘后恢复完全可见。
+- **Claude 配置文件**可设全局默认和角色专用 JSON。右键宠物，打开 **默认设置 → Claude 配置文件 → 按角色设置**，选角色后指定文件。角色未单独设置时沿用全局配置，两处都留空则使用 Claude 自己的配置。门派成员按各自角色取配置，定时任务按启动时的当前角色取配置。[Claude CLI 配置参数](https://code.claude.com/docs/en/cli-reference)
+- **定时任务**默认后台运行。进度、输出和结果集中在 **Claude Code 定时任务 → 运行情况**，双击记录可查看实时输出。需要终端交互时，可以为任务选用对应的终端模式。
+
+拖动时手脚随鼠标速度加减速。**默认设置 → 减少动画**可关闭拖动步态。
+
+[完整更新日志](CHANGELOG.md)
 
 <a id="features"></a>
+## 事件规划与门派协作
+
+**大堂自适应布局（0.6.8）**：调整窗口大小时，场景和工位自动缩放、重排；人物与桌子保持比例。拖动大堂与下方详情之间的分隔条，可调节查看空间；窗口缩放后保留比例。常用四道友无需固定高度滚动，成员较多或场景区域较小时才启用纵向滚动。
+
+**长途乘灵器（0.6.7）**：长路线自动乘灵器，短距离继续走路。青衡御剑、绯笺乘符卷、苍芷乘灵叶舟、小墨乘墨玉盘；起飞后加速，到达后平滑落地。按整条路线的累计长度判断（当前显示器工作区对角线的40%，至少480px），本地与AI路线都适用，不增加AI调用；“减少动态”仍会关闭自主运动。
+
+![四位伙伴的灵器与双向飞行姿态，来自实际透明渲染器](docs/images/artifact-travel.png)
+
+**0.6.5 修复安装后的大堂背景缺失**：安装器现在完整部署场景目录，并将默认背景内嵌到程序。外部背景丢失或损坏时自动回退；已安装旧版请先退出仙伴，再覆盖安装新版，无需手动复制背景图。
+
+**0.6.2 对话体验更新**：动态窗口采用左右气泡，用户消息在右侧、道友回复在左侧；支持角色头像、姓名/时间、流式合并刷新、文字选择与复制。会话列表通过右上角“会话”展开，默认给聊天留出空间。
+
+**拖动对话窗口**：按住顶部角色名称、状态文字或标题栏空白处拖动，宠物会保持相对位置一起移动。正文拖动仍用于选择文字；屏幕边缘会约束这组窗口，换到较小屏幕时必要时重新排布，避免窗口或人物丢失。
+
+**默认展开位置（0.6.6）**：双击回复气泡后，对话窗口在人物正下方、水平居中展开。下方空间不足时先缩短窗口，必要时将人物上移或向屏幕内侧调整，不再直接翻到人物上方。
+
+![左右对话气泡：用户靠右，道友回复靠左；图中为离线演示内容](docs/images/chat-bubbles.png)
+
+右键宠物进入 **事件规划 / 门派协作**。
+
+- **事件规划**：一次、每日、每周事件，支持关联门派；到点通知后由你确认执行，不擅自调用模型。
+- **多 Agent 门派**：自定义门派名、成员职责、工作目录和任务依赖；独立 Claude CLI 会话交接上游结果，最多两个并发，同目录串行。
+- **四道友职责预设（0.6.1）**：青衡规划统筹、绯笺实施交付、苍芷独立审查、小墨测试验证；一键创建“研发”或“会诊”门派，可编辑共同目标与验收要求。[角色能力、边界及原生Claude定义](docs/COMPANION-ROLES.md)
+- **门派大堂**显示成员执行、等待和失败状态。流动光点展示实际交接，点击成员可查看回复和传递摘要。
+- **运行记录**：失败阻断、取消、每步10分钟超时、最近记录与中断恢复标记。不恢复执行已中断的任务。
+
+大堂动画不是模型的内部思考或实时网络速度；多 Agent 执行会消耗你的模型额度。请先在测试目录使用。[完整操作说明与限制](docs/WORKSHOP.md)
+
+![门派大堂中的四位高清角色与工位状态](docs/images/sect-hall.png)
+
+*门派大堂原生界面预览，图中为离线伪 Agent 测试数据，并非真实模型运行结果。*
+
 ## 不只好看，也能一起把事情做好
 
 | 当你想…… | 仙伴可以…… |
@@ -78,9 +126,9 @@
 
 ### 方式一：安装使用
 
-1. 在 [GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) 下载 `XianPal-0.5.0-Setup.exe`，并按需核对发布页的 SHA256。
+1. 在 [GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) 下载 `XianPal-0.6.11-Setup.exe`，并按需核对发布页的 SHA256。
 2. 在 Windows 10 / 11 上运行安装器。它会创建开始菜单快捷方式，并配置当前用户的宠物联动。
-3. **右键宠物**打开菜单，选择角色、设置 Claude Code 默认工作目录，或进入提醒 / 定时任务。
+3. **右键宠物**可选择角色或进入提醒与定时任务。Claude Code 默认工作目录与配置文件在 **默认设置** 中。
 4. 使用 AI 功能前，先确认本机 Claude Code 已能在终端正常运行、完成登录或服务配置。
 
 > 若尚未发布 Release，下载页可能暂不可用，可先按下方步骤从源码构建。安装器未做代码签名，Windows 可能提示未知发布者，请确认文件来源。
@@ -91,7 +139,7 @@
 | --- | --- |
 | 右键宠物 | 打开功能和设置菜单，并收起气泡 |
 | 单击 / 双击宠物 | 角色互动；按当前设置触发角色发言或短途跑动 |
-| 拖动宠物 | 追随鼠标移动，靠近屏幕边缘可吸附 |
+| 拖动宠物 | 步频随鼠标速度变化，靠近屏幕边缘可吸附 |
 | 双击回复气泡 | 展开会话动态；展开后可选中文本并继续回复 |
 | 托盘图标右键 | 显示 / 隐藏宠物，恢复窗口与退出 |
 | 拖入文件 / 文件夹 | 准备文件处理需求与对应工作目录 |
@@ -119,7 +167,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 | 生成内容 | 路径 |
 | --- | --- |
-| 安装包 | `dist/XianPal-0.5.0-Setup.exe` |
+| 安装包 | `dist/XianPal-0.6.11-Setup.exe` |
 | 可运行程序 | `build/payload/OrbitPet.exe` |
 | 全动作离线预览 | `build/previews/index.html` |
 | 全屏演绎预览 | `build/previews/performances.html` |
@@ -131,7 +179,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -SkipInstaller
 ```
 
-当前公开版本为 **0.5.0（Preview）**。应用命名空间为 `XianPal`，安装器为 `XianPal.Installer`。
+当前公开版本为 **0.6.11（Preview）**。应用命名空间为 `XianPal`，安装器为 `XianPal.Installer`。
 
 Windows 任务管理器中的启动项与程序文件描述使用“仙伴 · AI桌面伴侣”。更新后的程序在正常启动时自动迁移旧 `OrbitPet` 启动项，保留原启动命令及 Windows 已有的启用/禁用状态；没有启动项时不会自行开启自启动。
 
@@ -191,9 +239,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -SkipInstaller
 
 ## 验证与贡献
 
-### 一起把 0.5 做得更好
-
-项目持续接受代码贡献，不需要等到“大功能全部做好”才提交。适合参与的方向包括：
+欢迎参与以下方向。
 
 - **角色与动画**：原创人物、动作过渡、角色制作工具和可视化预览。
 - **桌面体验**：多显示器、不同 DPI、窗口恢复及性能优化。
@@ -208,6 +254,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -SkipInstaller
 .\tests\startup-registration-test.ps1
 .\tests\character-pack-test.ps1
 .\tests\smoke-test.ps1
+.\tests\drag-gait-test.ps1
 .\tests\companion-motion-test.ps1
 .\tests\original-assets-test.ps1
 .\tests\reminder-performance-test.ps1

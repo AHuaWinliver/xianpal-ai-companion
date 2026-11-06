@@ -45,6 +45,8 @@ obj/
 *.key
 settings.local.json
 claude-tasks.json
+workshop.json
+face-shapes.json
 claude-event.txt
 scheduled-task-runs/
 # These tests depend on historical assets, so retain locally only.

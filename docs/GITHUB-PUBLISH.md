@@ -1,4 +1,4 @@
-# 发布仙伴 0.5.0 预览版到 GitHub
+# 发布仙伴 0.6.11 预览版到 GitHub
 
 目标仓库：<https://github.com/AHuaWinliver/xianpal-ai-companion>。
 
@@ -6,7 +6,7 @@
 
 ## 准备发布目录
 
-优先使用 `dist/XianPal-0.5.0-Source.zip` 的解压内容作为初次提交目录。它只包含公开文件及校验清单，不含个人设置、任务、聊天、旧素材或备份。
+优先使用 `dist/XianPal-0.6.11-Source.zip` 的解压内容作为初次提交目录。它只包含公开文件及校验清单，不含个人设置、任务、聊天、旧素材或备份。
 
 也可以直接提交当前源码根目录中的公开文件，但先检查 `.gitignore` 和 `git status`。不要从外层旧工作区整体上传，更不要提交 `build/`、`dist/`、`work/`、Claude 配置或 API 密钥。
 
@@ -17,6 +17,7 @@
 .\tests\release-source-test.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 .\tests\smoke-test.ps1
+.\tests\drag-gait-test.ps1
 .\tools\ExportOpenSource.ps1
 ```
 
@@ -32,7 +33,7 @@ git branch -M main
 git add .
 git status
 git diff --cached --stat
-git commit -m "Release XianPal 0.5.0"
+git commit -m "Release XianPal 0.6.11"
 git remote add origin https://github.com/AHuaWinliver/xianpal-ai-companion.git
 git push -u origin main
 ```
@@ -47,14 +48,13 @@ git push -u origin main
 - **Social preview**：在仓库设置中上传 `docs/images/social-preview.png`。该图采用现有角色素材制作，没有引入外部 IP 图片。
 - 主 README 为中文，`README.en.md` 为英文；所有展示图和动图采用仓库相对路径，不依赖本机绝对路径。
 
-## 发布 v0.5.0
+## 发布 v0.6.11
 
-在 Releases 中新建发布，Tag 使用 `v0.5.0`，标题建议 `XianPal 0.5.0 Preview · 欢迎一起共建 AI 桌面伴侣`，将此次发布标记为 **pre-release（预发布）**。引用 `CHANGELOG.md` 的 0.5.0 说明，附上：
+在 Releases 中新建发布，使用标签 `v0.6.11` 和标题 `XianPal 0.6.11 Preview · 门派大堂角色清晰度`，标记为 **pre-release（预发布）**。引用 `CHANGELOG.md` 的 0.6.11 说明，并添加以下附件。
 
-- `XianPal-0.5.0-Setup.exe`：Windows 安装器。
-- `XianPal-0.5.0-Source.zip`：含原画、构建工具、测试、文档的完整源码包。
-- SHA256 文件：与附件逐一对应。
+- `XianPal-0.6.11-Setup.exe` 为 Windows 安装器，校验值见 `SHA256SUMS.txt`。
+- `XianPal-0.6.11-Source.zip` 包含原画、构建工具、测试和文档，校验值见 `XianPal-0.6.11-Source.zip.sha256`。
 
 说明安装器未签名、AI 需用户自行配置 CLI、可能消耗模型额度、虚拟桌面与 Background 依赖环境，以及安装会修改当前用户的 Hooks。
 
-发布前继续执行 [发布检查清单](RELEASE-CHECKLIST.md)，审阅授权和敏感信息。**0.5.0 为持续迭代的公开预览版，不是稳定性、授权或兼容性的担保。** 鼓励贡献代码，但不要把尚未实现的能力写成已交付功能。
+0.6.11 按公开预览版发布。发布前审阅素材授权和敏感信息，按清单检查构建与附件。[发布检查清单](RELEASE-CHECKLIST.md)

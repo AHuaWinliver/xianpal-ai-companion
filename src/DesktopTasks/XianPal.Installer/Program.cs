@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -15,15 +15,15 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("仙伴 · AI桌面伴侣 安装程序")]
 [assembly: AssemblyProduct(XianPal.StartupRegistration.DisplayName)]
-[assembly: AssemblyVersion("0.5.0.0")]
-[assembly: AssemblyFileVersion("0.5.0.0")]
+[assembly: AssemblyVersion("0.6.11.0")]
+[assembly: AssemblyFileVersion("0.6.11.0")]
 
 namespace XianPal.Installer
 {
     internal static class Program
     {
         internal const string AppName = XianPal.StartupRegistration.DisplayName;
-        internal const string Version = "0.5.0";
+        internal const string Version = "0.6.11";
         internal static readonly string InstallDirectory = ResolveInstallDirectory();
         internal static readonly string PetExe = Path.Combine(InstallDirectory, "OrbitPet.exe");
 
@@ -99,10 +99,13 @@ namespace XianPal.Installer
         {
             string staging = Path.Combine(InstallDirectory, ".payload-" + Guid.NewGuid().ToString("N"));
             string assets = Path.Combine(InstallDirectory, "assets");
+            string scenes = Path.Combine(InstallDirectory,"scenes");
             string backup = Path.Combine(InstallDirectory, "asset-backups", DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
             string backupAssets = Path.Combine(backup, "assets");
+            string backupScenes=Path.Combine(backup,"scenes");
             string backupExe = Path.Combine(backup, "OrbitPet.exe");
             bool savedExe = false, movedOldAssets = false, promotedAssets = false;
+            bool movedOldScenes=false,promotedScenes=false;
             Directory.CreateDirectory(staging);
             try
             {
@@ -149,6 +152,18 @@ namespace XianPal.Installer
                 Directory.Move(stagedAssets, assets);
                 promotedAssets = true;
             }
+            // Scene artwork is a separate resource tree, not part of assets/. Promote
+            // it transactionally too; top-level file copying otherwise silently drops it.
+            string stagedScenes=Path.Combine(staging,"scenes");
+            if(!AssetTreesMatch(stagedScenes,scenes))
+            {
+                if(Directory.Exists(scenes))
+                {
+                    if((File.GetAttributes(scenes)&FileAttributes.ReparsePoint)!=0)throw new InvalidOperationException("场景目录不能是目录链接。");
+                    Directory.CreateDirectory(backup);Directory.Move(scenes,backupScenes);movedOldScenes=true;
+                }
+                Directory.Move(stagedScenes,scenes);promotedScenes=true;
+            }
             foreach (string file in Directory.GetFiles(staging, "*", SearchOption.TopDirectoryOnly))
                 File.Copy(file, Path.Combine(InstallDirectory, Path.GetFileName(file)), true);
             ValidatePayload(InstallDirectory);
@@ -157,6 +172,8 @@ namespace XianPal.Installer
             }
             catch
             {
+                if(promotedScenes&&Directory.Exists(scenes))Directory.Move(scenes,Path.Combine(staging,"failed-scenes"));
+                if(movedOldScenes&&Directory.Exists(backupScenes))Directory.Move(backupScenes,scenes);
                 // Only remove the newly promoted tree from the active path;
                 // never delete the old assets. Keep their backup on success.
                 if (promotedAssets && Directory.Exists(assets)) Directory.Move(assets, Path.Combine(staging, "failed-assets"));
@@ -176,6 +193,10 @@ namespace XianPal.Installer
 
         private static void ValidatePayload(string directory)
         {
+            string scene=Path.Combine(directory,"scenes","sect-hall-v2.png");
+            if(!File.Exists(scene))throw new InvalidOperationException("安装资源缺少门派大堂背景图。");
+            using(Image image=Image.FromFile(scene))
+                if(image.Width<320||image.Height<200||image.Width>8192||image.Height>8192)throw new InvalidOperationException("门派大堂背景图校验失败。");
             using (Process test = Process.Start(new ProcessStartInfo(Path.Combine(directory, "OrbitPet.exe"), "--self-test") { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = directory }))
             {
                 if (!test.WaitForExit(30000))

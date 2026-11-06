@@ -30,6 +30,13 @@ internal static class IntegrationTaskTests
     [STAThread]
     private static int Main(string[] args)
     {
+        if (args.Length > 0 && (args[0] == "--session-id" || args[0] == "-p"))
+        {
+            string expected = Environment.GetEnvironmentVariable("FUFU_TEST_EXPECTED_SETTINGS");
+            int settings = Array.IndexOf(args, "--settings");
+            if (!String.IsNullOrEmpty(expected) && (settings < 0 || settings + 1 >= args.Length || args[settings + 1] != expected))
+                return 94;
+        }
         if (args.Length > 2 && args[0] == "--session-id") return MockNativeCli(args);
         if (args.Length > 0 && args[0] == "-p")
         {
@@ -272,35 +279,34 @@ internal static class IntegrationTaskTests
         string oldPath = Environment.GetEnvironmentVariable("PATH");
         string oldState = Environment.GetEnvironmentVariable("FUFU_STATE_DIR");
         Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + oldPath);
+        Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", Path.Combine(bin, "claude.cmd"));
+        string settingsPath = Path.Combine(root, "角色 Claude O'Brien & %FUFU_TEST_PATH_TOKEN%.json");
+        File.WriteAllText(settingsPath, "{\"model\":\"sonnet\"}", new UTF8Encoding(false));
+        Environment.SetEnvironmentVariable("FUFU_TEST_PATH_TOKEN", "should-stay-literal");
+        Environment.SetEnvironmentVariable("FUFU_TEST_EXPECTED_SETTINGS", settingsPath);
         try
         {
-            foreach (string mode in new[] { "powershell", "terminal", "interactive-powershell", "interactive-terminal" })
+            foreach (string scenario in new[] { "background", "background-parallel", "powershell", "terminal", "interactive-powershell", "interactive-terminal" })
             {
-                Environment.SetEnvironmentVariable("FUFU_STATE_DIR", Path.Combine(root, "live-" + mode));
+                string mode = scenario == "background-parallel" ? "background" : scenario;
+                Environment.SetEnvironmentVariable("FUFU_STATE_DIR", Path.Combine(root, "live-" + scenario));
+                var preferences = new IntegrationPreferences { ClaudeSettingsPath = Path.Combine(root, "unused-default.json") };
+                preferences.SetSettingsPath("orbit", settingsPath);
+                preferences.Save();
                 using (PetForm form = new PetForm())
                 {
+                    IntPtr handle = form.Handle;
                     ReplyBubbleForm bubble = (ReplyBubbleForm)Field(form, "replyBubble"); bubble.Opacity = 0.01;
                     ClaudeTaskService service = (ClaudeTaskService)Field(form, "claudeTaskService");
-                    ScheduledClaudeTask task = service.Add("实时测试 中文任务", root, "interval", TimeSpan.Zero, DayOfWeek.Monday, 60, DateTime.Now, mode, "block");
+                    ScheduledClaudeTask task = service.Add("实时测试 中文任务", root, "interval", TimeSpan.Zero, DayOfWeek.Monday, 60, DateTime.Now, mode, scenario == "background-parallel" ? "parallel" : "block");
                     form.GetType().GetMethod("QueueScheduledClaudeTask", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { task });
                     ClaudeTaskRunRecord run = task.History[0];
-                    Require(bubble.Visible, mode + " bubble shows at task start, not completion");
+                    Require(!bubble.Visible && run.RunMode == mode, scenario + " keeps the selected execution mode and opens no reply bubble");
                     Require(PumpUntil(delegate { return run.Transcript.Contains("中文回复") && run.Status == "running"; }, 10000), mode + " task history receives reply before completion");
-                    Require(((StringBuilder)Field(bubble, "response")).ToString().Contains("中文回复"), mode + " pet bubble receives streamed reply");
                     System.Collections.Generic.List<ActivityRecord> activities = (System.Collections.Generic.List<ActivityRecord>)Field(form, "activities");
-                    Require(activities.Count == 1 && activities[0].Output.Contains("中文回复"), mode + " exactly one activity with live output");
-                    if (ClaudeTaskService.IsInteractiveMode(mode))
-                    {
-                        Require(activities[0].NativeInteractive, "native activity continues conversation in CLI, not GUI stream mode");
-                        Require(!(bool)form.GetType().GetMethod("RunClaudeReply", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { activities[0], "不应另起 -p 会话" }), "native session cannot be resumed concurrently by GUI reply");
-                    }
-                    Require(PumpUntil(delegate { return (string)Field(form, "state") == "review" && run.Status == "running"; }, 3500), mode + " pet reacts while tool is executing");
+                    Require(activities.Count == 0 && !bubble.Visible, scenario + " live output stays out of ordinary chat");
                     if (ClaudeTaskService.IsInteractiveMode(mode))
                         File.WriteAllText(Path.Combine(Program.StateDirectory, "scheduled-task-runs", run.Id + ".log.continue"), "继续原生对话", new UTF8Encoding(false));
-                    form.ContextMenuStrip.Opacity = 0.01;
-                    form.ContextMenuStrip.Show(new Point(1, 1)); Application.DoEvents();
-                    Require(!bubble.Visible && bubble.UserDismissed, "right-click menu automatically dismisses reply bubble");
-                    form.ContextMenuStrip.Close();
                     using (ClaudeTaskRunTranscriptForm transcript = new ClaudeTaskRunTranscriptForm(task, run))
                     {
                         transcript.Opacity = 0.01; transcript.Show();
@@ -311,10 +317,8 @@ internal static class IntegrationTaskTests
                             return false;
                         }, 1500), mode + " opened transcript updates without reopening");
                     }
-                    string text = ((StringBuilder)Field(bubble, "response")).ToString();
-                    Require(Regex.Matches(text, "中文回复").Count == 1 && Regex.Matches(text, "结束：文件处理完成。").Count == 1, mode + " completion does not reset or duplicate bubble content");
-                    Require(activities.Count == 1 && run.Transcript.Contains("[工具结果]"), mode + " one conversation preserves tool process");
-                    Require(!bubble.Visible && bubble.UserDismissed, mode + " dismissed bubble is not reopened by progress or completion");
+                    Require(activities.Count == 0 && run.Transcript.Contains("[工具结果]"), scenario + " only task history records the tool output");
+                    Require(!bubble.Visible && ((StringBuilder)Field(bubble, "response")).Length == 0, scenario + " completion leaves chat and bubbles untouched");
                     if (mode == "terminal" || mode == "interactive-terminal")
                     {
                         string script = File.ReadAllText(Path.Combine(Program.StateDirectory, "scheduled-task-runs", run.Id + ".log.ps1"));
@@ -331,7 +335,14 @@ internal static class IntegrationTaskTests
                 }
             }
         }
-        finally { Environment.SetEnvironmentVariable("PATH", oldPath); Environment.SetEnvironmentVariable("FUFU_STATE_DIR", oldState); }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", oldPath);
+            Environment.SetEnvironmentVariable("FUFU_STATE_DIR", oldState);
+            Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", null);
+            Environment.SetEnvironmentVariable("FUFU_TEST_EXPECTED_SETTINGS", null);
+            Environment.SetEnvironmentVariable("FUFU_TEST_PATH_TOKEN", null);
+        }
     }
 
     private static void ReadInstalledBridge(string settingsPath)
@@ -385,7 +396,30 @@ internal static class IntegrationTaskTests
         settings.MonitorExternalSessions = false; settings.Save();
         ProcessStartInfo background = ClaudeCliRunner.BuildStartInfo("claude.cmd", root, null);
         Require(background.EnvironmentVariables["FUFU_PET_MANAGED_SESSION"] == "1", "background conversations carry ownership marker");
-        Require(PetForm.BuildTerminalStartInfo(root).Arguments.Contains("FUFU_PET_MANAGED_SESSION"), "interactive CLI carries ownership marker");
+        string terminalArguments = PetForm.BuildTerminalStartInfo(root).Arguments;
+        string terminalScript = Encoding.Unicode.GetString(Convert.FromBase64String(terminalArguments.Substring(terminalArguments.LastIndexOf(' ') + 1)));
+        Require(terminalScript.Contains("FUFU_PET_MANAGED_SESSION"), "interactive CLI carries ownership marker");
+        string global = Path.Combine(root, "global.json");
+        string specific = Path.Combine(root, "专用 O'Brien.json");
+        File.WriteAllText(global, "{\"model\":\"sonnet\"}");
+        File.WriteAllText(specific, "{\"model\":\"haiku\"}");
+        settings.SetSettingsPath(null, global);
+        settings.SetSettingsPath("spark", specific);
+        settings.Save();
+        Require(ClaudeSettingsFile.CurrentPath("ORBIT") == global && ClaudeSettingsFile.CurrentPath("SPARK") == specific, "role-specific configuration overrides the saved global file");
+        terminalArguments = PetForm.BuildTerminalStartInfo(root, "spark").Arguments;
+        terminalScript = Encoding.Unicode.GetString(Convert.FromBase64String(terminalArguments.Substring(terminalArguments.LastIndexOf(' ') + 1)));
+        Require(terminalScript.Contains(specific.Replace("'", "''")) && terminalScript.Contains("--settings"), "manual CLI receives the selected companion's file");
+        File.Delete(specific);
+        bool missingRejected = false;
+        try { ClaudeSettingsFile.CurrentPath("spark"); }
+        catch (IOException) { missingRejected = true; }
+        Require(missingRejected, "missing role file fails rather than silently switching to another configuration");
+        settings.SetSettingsPath("spark", "");
+        settings.Save();
+        Require(ClaudeSettingsFile.CurrentPath("spark") == global, "clearing a role restores the global setting");
+        settings.SetSettingsPath(null, "");
+        settings.Save();
     }
 
     private static void RunHook(bool managed, string taskId, bool bridge = false)

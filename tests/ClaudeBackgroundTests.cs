@@ -43,6 +43,11 @@ internal static class ClaudeBackgroundTests
             Require(!BackgroundTaskSupervisor.ParseSession(blocked).Finished, "unknown CLI state is not assumed successful");
             Require(BackgroundTaskSupervisor.FindSession(new object[] { blocked }, "different-name", "") == null, "foreign background sessions ignored");
             Require(!BackgroundTaskSupervisor.ValidJobId("abc'; Remove-Item x"), "attach/log job ID injection rejected");
+            string settingsPath = Path.Combine(root, "角色配置.json");
+            File.WriteAllText(settingsPath, "{\"model\":\"haiku\",\"env\":{\"TEST_SETTING\":\"preserved\"}}", new UTF8Encoding(false));
+            var preferences = new IntegrationPreferences { ClaudeSettingsPath = Path.Combine(root, "unused-global.json") };
+            preferences.SetSettingsPath("orbit", settingsPath);
+            preferences.Save();
             using (PetForm pet = new PetForm())
             {
                 pet.Show(); ((System.Windows.Forms.Timer)Field(pet, "timer")).Stop();
@@ -62,6 +67,7 @@ internal static class ClaudeBackgroundTests
                 Dictionary<string, object> capture = Read(Path.Combine(root, run.BackgroundJobName + ".capture"));
                 Require((string)capture["cwd"] == fixtureDirectory && !(bool)capture["redirected"] && !(bool)capture["inputRedirected"], "actual mock --bg call keeps TTY and specified Chinese/single-quote directory");
                 Require((string)capture["taskId"] == task.Id && ((string)capture["prompt"]).Contains("第二行") && !((string)capture["prompt"]).Contains("\n"), "scoped ownership settings and multiline prompt preserved without cmd splitting");
+                Require((string)capture["model"] == "haiku" && (string)capture["customEnv"] == "preserved", "native Background merges role settings with ownership markers");
                 string workerPath = Path.Combine(root, run.BackgroundJobName + ".worker");
                 Require(File.Exists(workerPath) && !Process.GetProcessById(Int32.Parse(File.ReadAllText(workerPath))).HasExited, "detached mock worker survives startup console exit");
                 Call(pet, "QueueScheduledClaudeTask", task);
@@ -80,7 +86,8 @@ internal static class ClaudeBackgroundTests
                 state["state"] = "done"; state["status"] = "idle"; Write(statePath, state);
                 Require(Until(delegate { return run.Status == "success"; }, 10000), "done session completes only after authoritative CLI state");
                 List<ActivityRecord> activities = (List<ActivityRecord>)Field(pet, "activities");
-                Require(activities.Count == 1 && activities[0].NativeInteractive, "one native-owned activity per background run");
+                Require(activities.Count == 0 && !((ReplyBubbleForm)Field(pet, "replyBubble")).Visible, "native Background output stays in task history");
+                Require(!File.Exists(log + ".settings.json") && File.Exists(settingsPath), "completed job clears generated settings and preserves the user's file");
                 File.WriteAllText(statePath + ".stop-worker", "done");
                 task.OverlapMode = "parallel";
                 Call(pet, "QueueScheduledClaudeTask", task); Call(pet, "QueueScheduledClaudeTask", task);
@@ -156,8 +163,9 @@ internal static class ClaudeBackgroundTests
         {
             string name = Arg(args, "--name"), settings = Arg(args, "--settings"), file = Path.Combine(root, name + ".json");
             if (Array.IndexOf(args, "-p") >= 0 || String.IsNullOrEmpty(name)) return 2;
-            Dictionary<string, object> env = (Dictionary<string, object>)Read(settings)["env"];
-            Write(Path.Combine(root, name + ".capture"), new { cwd = Environment.CurrentDirectory, redirected = Console.IsOutputRedirected, inputRedirected = Console.IsInputRedirected, taskId = env["FUFU_PET_INTERNAL_TASK_ID"], prompt = args[args.Length - 1] });
+            Dictionary<string, object> config = Read(settings);
+            Dictionary<string, object> env = (Dictionary<string, object>)config["env"];
+            Write(Path.Combine(root, name + ".capture"), new { cwd = Environment.CurrentDirectory, redirected = Console.IsOutputRedirected, inputRedirected = Console.IsInputRedirected, taskId = env["FUFU_PET_INTERNAL_TASK_ID"], model = config["model"], customEnv = env["TEST_SETTING"], prompt = args[args.Length - 1] });
             Write(file, new { id = Guid.NewGuid().ToString("N").Substring(0, 8), kind = "background", name = name, state = "working", status = "busy", cwd = Environment.CurrentDirectory, sessionId = Guid.NewGuid().ToString("D") });
             Process.Start(new ProcessStartInfo(Assembly.GetExecutingAssembly().Location, "--mock-worker " + name) { UseShellExecute = false, CreateNoWindow = true });
             Console.WriteLine("backgrounded · " + (string)Read(file)["id"] + " · " + name); return 0;

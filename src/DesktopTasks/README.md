@@ -1,4 +1,4 @@
-# XianPal 0.5.0 — AI desktop companion source
+# XianPal 0.6.7 — AI desktop companion source
 
 `XianPal/` contains the Windows desktop application in the `XianPal` namespace;
 `XianPal.Installer/` contains its per-user installer in `XianPal.Installer`.

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Web.Script.Serialization;
@@ -8,6 +9,29 @@ namespace XianPal
     internal sealed class IntegrationPreferences
     {
         public bool MonitorExternalSessions { get; set; }
+        public string ClaudeSettingsPath { get; set; }
+        public Dictionary<string, string> CharacterClaudeSettings { get; set; }
+
+        internal string SettingsPathFor(string characterId)
+        {
+            if (String.IsNullOrEmpty(characterId)) return ClaudeSettingsPath ?? "";
+            string path;
+            return CharacterClaudeSettings != null && CharacterClaudeSettings.TryGetValue(characterId.ToLowerInvariant(), out path)
+                ? path ?? "" : "";
+        }
+
+        internal void SetSettingsPath(string characterId, string path)
+        {
+            if (String.IsNullOrEmpty(characterId))
+            {
+                ClaudeSettingsPath = path;
+                return;
+            }
+            if (CharacterClaudeSettings == null) CharacterClaudeSettings = new Dictionary<string, string>();
+            string key = characterId.ToLowerInvariant();
+            if (String.IsNullOrEmpty(path)) CharacterClaudeSettings.Remove(key);
+            else CharacterClaudeSettings[key] = path;
+        }
         private static string StoragePath { get { return Path.Combine(Program.StateDirectory, "claude-integration.json"); } }
 
         internal static IntegrationPreferences Load()

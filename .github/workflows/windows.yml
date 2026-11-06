@@ -26,6 +26,27 @@ jobs:
       - name: Offline smoke tests (no Claude calls)
         shell: pwsh
         run: ./tests/smoke-test.ps1
+      - name: Planner and multi-agent scheduler (fake agents only)
+        shell: pwsh
+        run: ./tests/workshop-test.ps1
+      - name: Left/right chat bubbles and streaming Unicode (no model calls)
+        shell: pwsh
+        run: ./tests/chat-bubble-test.ps1
+      - name: Conversation header drag follows pet (isolated settings)
+        shell: pwsh
+        run: ./tests/chat-drag-test.ps1
+      - name: Long route mounts, smooth landing and transparent artifacts (no model calls)
+        shell: pwsh
+        run: ./tests/artifact-travel-test.ps1
+      - name: Drag velocity drives smooth coordinated gait (no mouse injection or model calls)
+        shell: pwsh
+        run: ./tests/drag-gait-test.ps1
+      - name: Real isolated install/upgrade and hall background fallback
+        shell: pwsh
+        run: ./tests/hall-scene-install-test.ps1
+      - name: Hall resize, adaptive workstations and details splitter (no model calls)
+        shell: pwsh
+        run: ./tests/hall-layout-test.ps1
       - name: Data-only character pack validation and live refresh
         shell: pwsh
         run: ./tests/character-pack-test.ps1
