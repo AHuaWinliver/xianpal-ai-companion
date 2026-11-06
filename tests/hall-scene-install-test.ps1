@@ -11,8 +11,12 @@ foreach($name in @('FUFU_TEST_MODE','FUFU_INSTALL_ROOT','FUFU_CLAUDE_CONFIG_DIR'
 try{
     $env:FUFU_TEST_MODE='1';$env:FUFU_INSTALL_ROOT=Join-Path $fixture 'app';$env:FUFU_CLAUDE_CONFIG_DIR=Join-Path $fixture 'claude';$env:FUFU_STATE_DIR=Join-Path $fixture 'state'
     function Install-Fixture {
-        $process=Start-Process -FilePath $installer -ArgumentList '--silent' -WorkingDirectory $fixture -WindowStyle Hidden -Wait -PassThru
-        if($process.ExitCode -ne 0){throw ('Isolated installation failed: '+$process.ExitCode)}
+        $diagnostics=Join-Path $fixture 'installer-stderr.txt'
+        $process=Start-Process -FilePath $installer -ArgumentList '--silent' -WorkingDirectory $fixture -WindowStyle Hidden -RedirectStandardError $diagnostics -Wait -PassThru
+        if($process.ExitCode -ne 0){
+            $detail=Get-Content -LiteralPath $diagnostics -Raw -Encoding utf8
+            throw ('Isolated installation failed ('+$process.ExitCode+'): '+$detail)
+        }
     }
     Install-Fixture
     $scene=Join-Path $env:FUFU_INSTALL_ROOT 'scenes/sect-hall-v2.png'

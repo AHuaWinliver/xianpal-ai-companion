@@ -52,7 +52,11 @@ namespace XianPal.Installer
             if (args.Length > 0 && String.Equals(args[0], "--silent", StringComparison.OrdinalIgnoreCase))
             {
                 try { Install(); Environment.ExitCode = 0; }
-                catch { Environment.ExitCode = 1; }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(ex.Message);
+                    Environment.ExitCode = 1;
+                }
                 return;
             }
             Application.EnableVisualStyles();
