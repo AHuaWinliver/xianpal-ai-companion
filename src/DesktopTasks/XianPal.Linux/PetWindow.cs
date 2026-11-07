@@ -50,6 +50,9 @@ internal sealed class PetWindow : Window
     internal string DirectoryPath => preferences.Directory;
     internal bool ChatWorking { get; set; }
     internal bool IsClosing { get; private set; }
+    internal ConversationWindow Conversation => conversation;
+    internal DesktopServices Services => services;
+    internal void SelectCharacter(PetCharacter character) => LoadCharacter(character);
 
     internal PetWindow()
     {

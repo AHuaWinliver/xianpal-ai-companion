@@ -129,6 +129,15 @@ internal sealed class ConversationWindow : Window
         }
     }
 
+    internal void SendMessage(string text)
+    {
+        input.Text = text;
+        Send();
+    }
+
+    internal bool IsRunning => runner != null;
+    internal string LastReply => response?.Text ?? "";
+
     private void Flush()
     {
         if (pending.Length == 0 || response == null) return;

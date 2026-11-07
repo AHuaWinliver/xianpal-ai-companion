@@ -9,13 +9,18 @@ namespace XianPal;
 
 internal static class Program
 {
-    internal static string StateDirectory => NativePaths.UserDirectory("XDG_STATE_HOME", ".local", "state");
+    internal static string StateDirectory =>
+        Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1" && Path.IsPathFullyQualified(Environment.GetEnvironmentVariable("FUFU_STATE_DIR") ?? "")
+            ? Environment.GetEnvironmentVariable("FUFU_STATE_DIR")
+            : NativePaths.UserDirectory("XDG_STATE_HOME", ".local", "state");
     internal static bool ShouldSuppressHook(string internalTaskId) => !string.IsNullOrWhiteSpace(internalTaskId);
 
     [STAThread]
     public static int Main(string[] args)
     {
         if (args.Length == 1 && args[0] == "--self-test") return LinuxSelfTest.Run();
+        if (args.Length == 2 && args[0] == "--desktop-test")
+            return DesktopValidation.Start(args[1]);
         if (!OperatingSystem.IsLinux())
         {
             Console.Error.WriteLine("This executable targets Linux. Use the Windows build on Windows.");
