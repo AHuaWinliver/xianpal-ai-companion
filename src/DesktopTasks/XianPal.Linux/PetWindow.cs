@@ -409,14 +409,14 @@ internal sealed class PetWindow : Window
 
     private void ShowSettings()
     {
-        var directory = new TextBox { Text = preferences.Directory, Watermark = "Claude 默认工作目录" };
+        var directory = new TextBox { Text = preferences.Directory, PlaceholderText = "Claude 默认工作目录" };
         var top = new CheckBox { Content = "保持置顶", IsChecked = Topmost };
         var motion = new CheckBox { Content = "减少动画", IsChecked = preferences.ReduceMotion };
         var size = new Slider { Minimum = 80, Maximum = 260, Value = Width };
         var opacity = new Slider { Minimum = 20, Maximum = 100, Value = preferences.DockedOpacity * 100 };
         var integration = IntegrationPreferences.Load();
         var scope = new ComboBox { ItemsSource = new[] { "全局默认" }.Concat(PetCharacter.Available.Select(p => p.Name)).ToArray(), SelectedIndex = 0 };
-        var configuration = new TextBox { Watermark = "继承全局 / CLI 自身配置", Text = integration.ClaudeSettingsPath };
+        var configuration = new TextBox { PlaceholderText = "继承全局 / CLI 自身配置", Text = integration.ClaudeSettingsPath };
         var profiles = PetCharacter.Available;
         Window dialog = null;
         scope.SelectionChanged += (_, _) => configuration.Text = scope.SelectedIndex <= 0 ? integration.ClaudeSettingsPath : integration.SettingsPathFor(profiles[scope.SelectedIndex - 1].Id);

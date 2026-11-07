@@ -15,7 +15,7 @@ internal static class ReminderWindows
     internal static void ShowSettings(PetWindow pet, ReminderService service)
     {
         Window window = null;
-        var input = new TextBox { Watermark = "例如：起来活动一下" };
+        var input = new TextBox { PlaceholderText = "例如：起来活动一下" };
         var time = new TimePicker { ClockIdentifier = "24HourClock", SelectedTime = DateTime.Now.TimeOfDay };
         var effect = new ComboBox { ItemsSource = new[] { "角色演绎", "仅提示框" }, SelectedIndex = 0 };
         var list = new ListBox { MinHeight = 120, MaxHeight = 180 };
