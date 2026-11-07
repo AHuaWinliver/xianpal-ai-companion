@@ -11,6 +11,8 @@ foreach ($path in @('src/DesktopTasks/XianPal/Program.cs','src/DesktopTasks/Xian
 }
 $installer = [IO.File]::ReadAllText((Join-Path $projectRoot 'src/DesktopTasks/XianPal.Installer/Program.cs'))
 if ([regex]::Match($installer, 'const string Version = "([0-9.]+)"').Groups[1].Value -ne $version) { throw 'Installer constant disagrees with VERSION' }
+$changelog = [IO.File]::ReadAllText((Join-Path $projectRoot 'CHANGELOG.md'))
+if ($changelog -notmatch ('(?m)^##[ \t]+' + [regex]::Escape($version) + '(?:[ \t]|$)')) { throw ('Changelog entry missing for '+$version) }
 $ignored = [IO.File]::ReadAllText((Join-Path $projectRoot '.gitignore'))
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $projectRoot 'src/DesktopTasks') -Recurse -Filter '*.cs' -File) {
     $source = [IO.File]::ReadAllText($file.FullName)
@@ -25,7 +27,7 @@ foreach ($script in @('BuildOriginalCharacters.cs','BuildAppIcon.cs','PublicFile
 foreach ($name in @('README.md','README.en.md')) {
     $path = Join-Path $projectRoot $name
     $text = [IO.File]::ReadAllText($path)
-    if (-not $text.Contains($version) -or $text -match '尚未重新打包发布|[A-Za-z]:[\\/]AI[\\/]') { throw ('Stale/local-only README content: '+$name) }
+    if ($text -match '尚未重新打包发布|[A-Za-z]:[\\/]AI[\\/]') { throw ('Stale/local-only README content: '+$name) }
     foreach ($match in [regex]::Matches($text, '(?:\]\(|src=")([^\s\)"<>]+)')) {
         $target = $match.Groups[1].Value
         if ($target -match '^(https?://|#|mailto:)') { continue }

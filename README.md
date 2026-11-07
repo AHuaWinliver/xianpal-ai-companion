@@ -1,315 +1,109 @@
 <div align="center">
 
-<img src="docs/images/hero.png" alt="仙伴 XianPal：四位国风 Q 版 AI 桌面伙伴，连接本机 Claude Code" width="100%">
+# 仙伴 XianPal
 
-# 仙伴 XianPal · AI 桌面伴侣
+**连接本机 Claude Code 的 Windows AI 桌面伴侣。**
 
-**让 AI 不止在对话框里，也陪在你的桌面上。**
+[English](README.en.md) · [快速开始](#quick-start) · [功能](#features) · [定制角色](#custom-characters) · [下载](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
 
-四位国风 Q 版伙伴 × 本机 Claude Code × 对话、文件处理与定时任务
-
-[![版本 0.6.11 · Preview](docs/images/version.svg)](CHANGELOG.md)
-![Windows 10 / 11](docs/images/windows.svg)
-[![Apache-2.0](docs/images/license.svg)](LICENSE)
-
-[English README](README.en.md) · [0.6.11 更新](#whats-new) · [下载与安装](#quick-start) · [功能](#features) · [定制角色](#custom-characters) · [从源码构建](#build)
+<img src="docs/images/hero.png" alt="仙伴的四位原创国风 Q 版桌面伙伴" width="100%">
 
 </div>
 
-> 一只会陪你说话、接住文件、记得提醒，还能把任务交给 Claude Code 的桌面伙伴。  
-> 桌面程序在本地运行；AI 能力由你自行安装、配置和授权的 **Claude Code CLI** 提供，不内置模型或 API 密钥。
-
-**0.6 开放预览版，欢迎一起共建。** 当前发布号为 **0.6.11**，功能、接口和素材格式仍在迭代，不代表 1.0 稳定版。欢迎提交问题、原创角色与代码 PR；使用重要任务前，请备份配置并先在测试目录验证。
-
-<a id="whats-new"></a>
-## 0.6.11 更新
-
-- **大堂角色清晰显示**。四位角色使用和桌面宠物相同的原始动作帧，随工位等比例缩放。[查看大堂效果](#sect-hall)
-
-### 0.6.10 功能
-
-- [默认设置与角色专用 Claude 配置](#claude-settings)集中管理桌面行为、工作目录和角色配置。
-- [定时任务独立运行记录](#scheduled-task-history)集中查看每次运行的进度、结果和回复。
-- [拖动步态](#desktop-motion)随鼠标速度加减速。**默认设置 → 减少动画**可关闭拖动步态。
-
-[完整更新日志](CHANGELOG.md)
-
-<a id="features"></a>
-## 事件规划与门派协作
-
-**大堂自适应布局（0.6.8）**：调整窗口大小时，场景和工位自动缩放、重排；人物与桌子保持比例。拖动大堂与下方详情之间的分隔条，可调节查看空间；窗口缩放后保留比例。常用四道友无需固定高度滚动，成员较多或场景区域较小时才启用纵向滚动。
-
-**长途乘灵器（0.6.7）**：长路线自动乘灵器，短距离继续走路。青衡御剑、绯笺乘符卷、苍芷乘灵叶舟、小墨乘墨玉盘；起飞后加速，到达后平滑落地。按整条路线的累计长度判断（当前显示器工作区对角线的40%，至少480px），本地与AI路线都适用，不增加AI调用；“减少动态”仍会关闭自主运动。
-
-![四位伙伴的灵器与双向飞行姿态，来自实际透明渲染器](docs/images/artifact-travel.png)
-
-**0.6.5 修复安装后的大堂背景缺失**：安装器现在完整部署场景目录，并将默认背景内嵌到程序。外部背景丢失或损坏时自动回退；已安装旧版请先退出仙伴，再覆盖安装新版，无需手动复制背景图。
-
-**0.6.2 对话体验更新**：动态窗口采用左右气泡，用户消息在右侧、道友回复在左侧；支持角色头像、姓名/时间、流式合并刷新、文字选择与复制。会话列表通过右上角“会话”展开，默认给聊天留出空间。
-
-**拖动对话窗口**：按住顶部角色名称、状态文字或标题栏空白处拖动，宠物会保持相对位置一起移动。正文拖动仍用于选择文字；屏幕边缘会约束这组窗口，换到较小屏幕时必要时重新排布，避免窗口或人物丢失。
-
-**默认展开位置（0.6.6）**：双击回复气泡后，对话窗口在人物正下方、水平居中展开。下方空间不足时先缩短窗口，必要时将人物上移或向屏幕内侧调整，不再直接翻到人物上方。
-
-![左右对话气泡：用户靠右，道友回复靠左；图中为离线演示内容](docs/images/chat-bubbles.png)
-
-右键宠物进入 **事件规划 / 门派协作**。
-
-- **事件规划**：一次、每日、每周事件，支持关联门派；到点通知后由你确认执行，不擅自调用模型。
-- **多 Agent 门派**：自定义门派名、成员职责、工作目录和任务依赖；独立 Claude CLI 会话交接上游结果，最多两个并发，同目录串行。
-- **四道友职责预设（0.6.1）**：青衡规划统筹、绯笺实施交付、苍芷独立审查、小墨测试验证；一键创建“研发”或“会诊”门派，可编辑共同目标与验收要求。[角色能力、边界及原生Claude定义](docs/COMPANION-ROLES.md)
-- **门派大堂**显示成员执行、等待和失败状态。流动光点展示实际交接，点击成员可查看回复和传递摘要。
-- **运行记录**：失败阻断、取消、每步10分钟超时、最近记录与中断恢复标记。不恢复执行已中断的任务。
-
-大堂动画不是模型的内部思考或实时网络速度；多 Agent 执行会消耗你的模型额度。请先在测试目录使用。[完整操作说明与限制](docs/WORKSHOP.md)
-
-<a id="sect-hall"></a>
-![门派大堂中的四位高清角色与工位状态](docs/images/sect-hall.png)
-
-*门派大堂原生界面预览，图中为离线伪 Agent 测试数据，并非真实模型运行结果。*
-
-<a id="claude-settings"></a>
-## 默认设置与角色专用 Claude 配置
-
-右键宠物，打开 **默认设置**。在这里可管理开机启动、置顶、虚拟桌面、大小、光轨、跑动路线、主动关怀和 Claude 默认目录。**贴边不透明度**可设为 20% 至 100%，拖离边缘后恢复完全可见。
-
-1. 进入 **Claude 配置文件 → 全局默认**，为伙伴设置共用的 Claude JSON 配置。
-2. 进入 **Claude 配置文件 → 按角色设置**，选择角色和专用 JSON。选择 **沿用全局配置**可恢复继承。两处均留空时使用 Claude 自身的配置。
-3. 门派成员按各自角色读取配置，定时任务按启动时的当前角色读取配置。[Claude CLI 配置参数](https://code.claude.com/docs/en/cli-reference)
-
-![默认设置菜单依次展开 Claude 配置文件、按角色设置和绯笺的配置项](docs/images/claude-settings.png)
-
-*菜单示例使用演示文件 `feijian.json`。*
-
-<a id="scheduled-task-history"></a>
-## 定时任务与独立运行记录
-
-1. 右键宠物打开 **Claude Code 定时任务**，填写任务、工作目录和运行周期，可选每日、每周或固定间隔。
-2. 默认选择 **后台运行**。定时触发时，输出归入任务记录，日常对话保持独立。需要亲自操作 CLI 时，可选对应的终端模式。
-3. 选择任务并点击 **运行情况**。列表显示各次运行的状态、时间、耗时和退出码。双击正在执行的记录可跟踪已捕获的输出，双击已完成记录可查看保存的任务和 Claude 回复。
-
-![定时任务运行记录与双击打开的 Claude 回复详情](docs/images/scheduled-task-history.png)
-
-*左侧为运行情况，右侧为双击记录打开的详情，均使用演示数据。*
-
-## 不只好看，也能一起把事情做好
-
-| 当你想…… | 仙伴可以…… |
-| --- | --- |
-| 有个有性格的 AI 伙伴 | 切换四位角色，按角色口吻聊天；开启主动发言、趣味介绍和休息提醒 |
-| 不来回切换聊天窗口 | 在宠物旁输入需求，查看最新回复，双击气泡展开会话动态并继续回复 |
-| 把一份文件交给 AI | 拖放文件或文件夹，看伙伴“吃掉”它，再确认需求与工作目录 |
-| 把重复工作交给 Claude | 设置每日、每周或间隔任务，选择阻塞 / 并行，查看历史运行与对话 |
-| 到点有人叫你一下 | 设置倒计时或每日提醒，选择专属全屏演出或安静的提示框 |
-| 让桌面更有生气 | 悬停互动、拖动追随、随机漫游、边缘吸附与半透明彩色尾迹 |
-| 安装后添加自己的角色 | 复制外置角色资源包，运行中自动发现和刷新，不需要重新安装 |
-
-### 四位伙伴，四种陪伴方式
-
-<img src="docs/images/characters.png" alt="青衡、绯笺、苍芷与墨黑灵龟小墨的实际角色素材" width="100%">
-
-| 角色 | 性格与灵感 | 专属提醒 |
-| --- | --- | --- |
-| **青衡** | 温和可靠的青衣游修，陪你理清思路、稳稳推进 | **御剑飞仙**：召剑、踏剑腾空、巡游、落剑提醒 |
-| **绯笺** | 轻快细心的符箓手艺人，把计划写得一笔一画 | **灵符报时**：挥袖放符、轻跃、灵符环绕 |
-| **苍芷** | 安静体贴的草木药师，提醒你留些余裕给自己 | **草木知时**：催生藤叶，落叶与萤光缓缓散去 |
-| **小墨** | 稳稳当当的墨黑云纹灵龟，慢一点也没关系 | **墨涟唤醒**：轻跃落地，金边墨涟与云纹向外舒展 |
-
-<a id="desktop-motion"></a>
-### 动起来，才像真的陪在身边
-
-<div align="center">
-<img src="docs/images/walking.gif" alt="四位角色的实际行走循环：人物对侧摆臂，灵龟四足交替" width="720">
-</div>
-
-24 相位行走、自然屈肘、轻微颈部联动和独立眨眼。人物左右手脚对侧协调，小墨采用四足交替步态。动作由随源码提供的透明原画在本地组合，**构建和安装不调用图片生成服务**。
-
-### 说一句需求，接上你的 Claude Code
-
-<img src="docs/images/workbench.png" alt="由真实界面控件渲染的会话动态和定时任务示例，使用隔离演示数据，无真实模型调用" width="100%">
-
-*界面示例使用真实控件与预设演示数据，不是一次真实模型执行记录，也不包含私人路径或聊天。*
-
-- **对话**：最新回复气泡、可手动关闭 / 固定的动态窗口、直接继续回复。
-- **文件**：拖入文件 / 文件夹，确认工作目录和需求后再发送；“吃文件”动画**不会删除原文件**。
-- **任务**：每日 / 每周 / 间隔调度，指定目录、阻塞或并行策略，运行记录与历史对话。
-- **运行方式**：后台执行、PowerShell / Windows Terminal 可见窗口、原生 CLI 交互；支持适用 CLI 版本的原生 Background。
-- **桌面**：托盘隐藏与恢复、桌面 1 / 所有虚拟桌面显示、可用时指定任务窗口的虚拟桌面。
-
-### 提醒，也可以有一点仪式感
-
-<div align="center">
-<img src="docs/images/sword-flight.gif" alt="青衡御剑飞仙：人物与飞剑共同沿弧线飞行，带出半透明剑光尾迹，再回中落剑" width="640">
-</div>
-
-每日提醒与倒计时；四位角色各有演绎。也可以选择 **仅提示框** 或开启 **减少动态**。全屏演出只在宠物所在显示器内展开，可按 **Esc** 退出，或选择稍后 5 分钟提醒。倒计时保持轻量提醒，不加入大型演出。
+在桌面和四位国风伙伴对话，拖入文件交给 Claude Code 处理，或安排定时任务。需要分工时，可以组建门派，在大堂查看道友的进度与交接。
 
 <a id="quick-start"></a>
-## 几分钟，领一位伙伴回桌面
+## 快速开始
 
-### 方式一：安装使用
+1. 在 Windows 10 / 11 上下载并运行 `XianPal-*-Setup.exe`，按发布页提供的 SHA256 核对文件。需要仓库中的最新功能时，可以[从源码构建](#build)。[GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
+2. 使用 AI 功能前，先在终端确认本机 `claude` 能启动并连接你配置的服务。桌面互动与本地提醒可独立使用。
+3. 右键宠物，从 **默认设置** 选择工作目录和 Claude 配置。双击回复气泡可继续对话，右键托盘图标可隐藏或找回宠物。
 
-1. 在 [GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) 下载 `XianPal-0.6.11-Setup.exe`，并按需核对发布页的 SHA256。
-2. 在 Windows 10 / 11 上运行安装器。它会创建开始菜单快捷方式，并配置当前用户的宠物联动。
-3. **右键宠物**可选择角色或进入提醒与定时任务。Claude Code 默认工作目录与配置文件在 **默认设置** 中。
-4. 使用 AI 功能前，先确认本机 Claude Code 已能在终端正常运行、完成登录或服务配置。
+[完整安装与使用说明](docs/GETTING-STARTED.md) · [更新日志](CHANGELOG.md)
 
-> 若尚未发布 Release，下载页可能暂不可用，可先按下方步骤从源码构建。安装器未做代码签名，Windows 可能提示未知发布者，请确认文件来源。
+<a id="features"></a>
+## 功能
 
-### 常用交互
+### 桌面对话与文件处理
 
-| 操作 | 用途 |
-| --- | --- |
-| 右键宠物 | 打开功能和设置菜单，并收起气泡 |
-| 单击 / 双击宠物 | 角色互动；按当前设置触发角色发言或短途跑动 |
-| 拖动宠物 | 步频随鼠标速度变化，靠近屏幕边缘可吸附 |
-| 双击回复气泡 | 展开会话动态；展开后可选中文本并继续回复 |
-| 托盘图标右键 | 显示 / 隐藏宠物，恢复窗口与退出 |
-| 拖入文件 / 文件夹 | 准备文件处理需求与对应工作目录 |
+双击回复气泡，在角色下方打开对话。你的消息靠右，道友回复靠左，正文可选择和复制。拖动对话标题可让窗口和角色一起移动。把文件或文件夹拖给宠物，确认需求与工作目录后再发送给 Claude Code。
 
-菜单会随 AI 开关、当前角色和运行状态变化；先在小目录里验证任务和权限，再用于真实工作。
+![仙伴的左右对话气泡与回复输入框](docs/images/chat-bubbles.png)
 
-<a id="build"></a>
-## 从源码构建
+### 定时任务与运行记录
 
-**环境**：Windows 10 / 11、系统 .NET Framework 4.x 编译器、PowerShell。无需 Node.js、NuGet、图片生成账号或构建用 API 密钥。
+右键进入 **Claude Code 定时任务**，填写需求和工作目录，设置每日、每周或间隔运行。可选择后台或终端模式，也可设定上一次仍在执行时跳过或并行启动。
 
-也可以下载仓库源码 ZIP 并解压，再执行构建命令；Git 仅用于下面的克隆步骤，不是编译依赖。
-建议解压到类似 `C:\src\xianpal` 的短目录；过深的目录可能触发 .NET Framework 的传统路径长度限制。
+任务输出集中在 **运行情况**，与日常对话分开。双击记录可跟踪已捕获的输出，也可查看已保存的任务和回复。
 
-```powershell
-git clone https://github.com/AHuaWinliver/xianpal-ai-companion.git
-cd xianpal-ai-companion
+<a id="scheduled-task-history"></a>
 
-# 生成动画素材、编译程序和安装器
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+![定时任务运行记录和双击打开的 Claude 回复详情](docs/images/scheduled-task-history.png)
 
-# 直接启动构建出的程序
-.\build\payload\OrbitPet.exe
-```
+### 事件规划与门派协作
 
-| 生成内容 | 路径 |
-| --- | --- |
-| 安装包 | `dist/XianPal-0.6.11-Setup.exe` |
-| 可运行程序 | `build/payload/OrbitPet.exe` |
-| 全动作离线预览 | `build/previews/index.html` |
-| 全屏演绎预览 | `build/previews/performances.html` |
-| README 展示素材 | `docs/images/` |
+从右键菜单进入 **事件规划 / 门派协作**，安排事件或创建门派。可用青衡统筹、绯笺实施、苍芷审查、小墨验证的职责预设，也可自定义角色职责、工作目录和任务依赖。
 
-只开发、不制作安装包时：
+大堂使用桌面角色的原始动画帧，随窗口缩放。光点显示成员之间已发生的交接，点击成员可查看输出和传递摘要。事件到点会通知你确认后再执行。[门派操作指南](docs/WORKSHOP.md) · [道友职责](docs/COMPANION-ROLES.md)
 
-```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -SkipInstaller
-```
+<a id="sect-hall"></a>
 
-当前公开版本为 **0.6.11（Preview）**。应用命名空间为 `XianPal`，安装器为 `XianPal.Installer`。
+![门派大堂的四位道友、工位状态与交接信息](docs/images/sect-hall.png)
 
-Windows 任务管理器中的启动项与程序文件描述使用“仙伴 · AI桌面伴侣”。更新后的程序在正常启动时自动迁移旧 `OrbitPet` 启动项，保留原启动命令及 Windows 已有的启用/禁用状态；没有启动项时不会自行开启自启动。
+### 为每位道友设置 Claude
+
+右键打开 **默认设置 → Claude 配置文件**，可选全局默认 JSON，也可在 **按角色设置** 指定专用文件。角色可继承全局配置。门派成员按各自角色取配置，定时任务按启动时的当前角色取配置。同一菜单还可调整默认工作目录、贴边不透明度和桌面显示范围。
+
+<a id="claude-settings"></a>
+
+![默认设置中展开了绯笺的 Claude 配置选项](docs/images/claude-settings.png)
+
+*界面图片使用演示数据。*
+
+<a id="desktop-motion"></a>
+### 桌面互动与提醒
+
+四位伙伴有各自的动作和表情。拖动时步频随鼠标速度变化，靠近边缘可吸附，长距离漫游时会乘上各自的灵器。
+
+![四位道友的步行动画循环](docs/images/walking.gif)
+
+![四位道友各自的灵器和双向飞行姿态](docs/images/artifact-travel.png)
+
+设置每日提醒或倒计时。每日提醒可选角色专属演出或提示框，倒计时以提示框报时。下图是青衡的御剑演绎，可按 **Esc** 退出。[全屏演绎说明](docs/REMINDER-PERFORMANCES.md)
+
+<img src="docs/images/sword-flight.gif" alt="青衡召剑、御剑飞行并回落，沿途留下半透明剑光" width="640">
 
 <a id="custom-characters"></a>
 ## 定制自己的角色
 
-不只使用内置伙伴，你也可以用自己的原创形象、人设和专属演出，打造一位 AI 桌面伴侣。
+<img src="docs/images/characters.png" alt="青衡、绯笺、苍芷与墨黑灵龟小墨的角色素材" width="100%">
 
-**0.5 支持外置角色资源包热更新，无需重新安装。** 右键宠物 → **切换形象 → 打开角色资源目录**，放入完整人物文件夹，待校验后在菜单中选择。更新当前角色的有效资源后，会自动刷新；坏包不会替换已加载的形象。默认目录为 `%LOCALAPPDATA%\XianPal\Characters`，也可手动“刷新外置角色 / 查看校验结果”。
+右键选择 **切换形象 → 打开角色资源目录**，复制完整的角色包。仙伴会校验资源并自动加载，适合在安装后添加或更新角色。
 
-资源包是 **角色配置＋12 种状态的 240 张透明 PNG 动作帧＋校验清单**，不是单张图片自动生成全部动作。新增外置人物不需要改应用源码；制作方仍需完成原画与动作，并用导出器生成成品包。[查看资源格式、导出命令和热更新说明](docs/CHARACTER-PACKS.md)。
+1. 复制[人物定制规格单](docs/templates/CHARACTER-SPEC.md)和[角色配置模板](docs/templates/character-profile.json)，定义造型、人设、台词、素材来源和提醒风格。
+2. 绘制透明动作帧，检查双向步态、关节连接、表情和画面边缘。双足动作采用对侧手脚，四足动作采用对角交替。外置角色使用自己的动作帧与内置演绎时间线。
+3. 按[角色包教程](docs/CHARACTER-PACKS.md)导出并热加载。在桌面和离线预览中检查待机、移动、交互和全屏演出。
 
-### 从哪里开始？
+要修改内置人物、动作骨架或演绎时间线，可查阅[人物定制与动画规范](docs/CHARACTER-CUSTOMIZATION.md)中的素材入口、连接锚点与验收清单。
 
-1. **确定形象和人设**：复制 [人物定制规格单](docs/templates/CHARACTER-SPEC.md)，记录名字、体型、配色、说话风格、台词及素材来源。先确认正常视角和侧向造型，再制作动作；不要在修动作时顺带改变五官、服饰或头身比例。
-2. **准备透明分层素材**：人体需要中性头、躯干、两条完整肩袖与手掌、两条含鞋靴的腿，以及张嘴/闭眼参考头；四足角色使用对应的头颈、身体、四肢与尾巴。正常与行走视角分别准备，按实际像素填写 `regions.json`，不要盲切九宫格。详细部件索引和绘图说明见 [制作规范](docs/CHARACTER-CUSTOMIZATION.md)。
-3. **连接关节并补齐动作**：对齐颈根、肩口、掌心、髋点和脚底。双足保持“左腿前、右臂前”的对侧步态，四足采用对角交替；行走至少 24 个不同相位，肘部自然弯折，头颈轻微联动。两条手臂/前肢始终处于最外层，避免被身体遮挡。
-4. **加入表情和特色演出**：眼睛/嘴使用局部贴片，不替换整张头导致脸型漂移；准备招手、查看、吃文件和擦嘴等交互。全屏演绎按人物性格设计，不把同一套动作套给所有角色，并保留减少动态、Esc 退出和单显示器边界。
-5. **预览、确认后交付**：逐帧检查双向行走、停走、动作过渡、连接、透明边缘与裁切，再验收全屏演出。确认后使用 [资源包导出工具](tools/ExportCharacterPack.ps1) 分享人物，使用者只复制资源、不重装程序；只有修改程序能力时才需要重新构建应用。不以自动测试通过代替视觉验收。
+<a id="build"></a>
+## 从源码构建
 
-### 资源包与底层制作入口
-
-只添加外置人物时，填写 [角色配置模板](docs/templates/character-profile.json) 并提供完成的动作帧即可，下面的源码入口供修改内置渲染器、骨架或程序功能时使用。
-
-| 定制内容 | 源码 / 素材入口 |
-| --- | --- |
-| 名字、人设、台词、提醒样式 | [PetCharacter.cs](src/DesktopTasks/XianPal/PetCharacter.cs) |
-| 正常与侧向原画、分层裁区 | [art/rigs](art/rigs)、[art/side-rigs](art/side-rigs)、人体侧向躯干 [art/side-torsos](art/side-torsos) |
-| 素材导入、动作帧与表情贴片生成 | [BuildOriginalCharacters.cs](tools/BuildOriginalCharacters.cs) |
-| 颈根、肩袖、屈肘、髋腿和手势目标 | [CompanionMotion.cs](src/DesktopTasks/XianPal/CompanionMotion.cs) |
-| 运行时加载、速度自适应和表情合成 | [PetForm.cs](src/DesktopTasks/XianPal/PetForm.cs)、[PetForm.Expressions.cs](src/DesktopTasks/XianPal/PetForm.Expressions.cs) |
-| 专属全屏演绎与道具时间线 | [ReminderPerformance.cs](src/DesktopTasks/XianPal/ReminderPerformance.cs) |
-
-现有 ID `orbit`、`spark`、`moss`、`pippin` 为内置人物保留。外置人物使用自己的唯一 ID，不占用这些名称；动态列表无需修改内置四角色数量。若要新增编译进程序的内置体型/渲染算法，仍需同步几何分支、预览和测试，见 [人物定制指南](docs/CHARACTER-CUSTOMIZATION.md)。
-
-### 本地查看自己的角色
-
-在 Windows 的项目根目录执行，无需图片生成账号，不调用 Claude 或付费模型：
+需要 Windows 10 / 11、PowerShell 和系统 .NET Framework 4.x 编译器。克隆仓库或解压源码后，在项目根目录运行以下命令。
 
 ```powershell
-# 生成角色素材、程序和离线预览，暂不制作安装包
-powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1 -SkipInstaller
-
-# 检查动作协调性、素材连接与全屏演绎
-.\tests\companion-motion-test.ps1
-.\tests\original-assets-test.ps1
-.\tests\reminder-performance-test.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
+.\build\payload\OrbitPet.exe
 ```
 
-构建后打开 `build/previews/index.html` 查看全部动作，打开 `build/previews/performances.html` 查看演出。原画与源码应保存在 `art/`、`src/`、`tools/` 等输入目录，**不要把唯一一份手工素材放在会被构建替换的 `build/payload` 中**。
+安装包在 `dist/`，动作和演出预览在 `build/previews/`。只需要程序和预览时，可给构建脚本加上 `-SkipInstaller`。[开发与验证指南](docs/DEVELOPMENT.md)
 
-[完整制作规则与常见问题排查](docs/CHARACTER-CUSTOMIZATION.md) · [可复制的规格单](docs/templates/CHARACTER-SPEC.md) · [全屏演绎说明](docs/REMINDER-PERFORMANCES.md)
+## 贡献
 
-制作好动作帧后，按 [资源包教程](docs/CHARACTER-PACKS.md) 执行 `tools/ExportCharacterPack.ps1`；无需在接收方电脑上安装编译工具。外置人物的表情画入完整动作帧，不使用内置头部贴片。全屏演出目前复用四种预设时间线，不加载外部脚本。
+欢迎贡献原创角色、动画工具、桌面体验修复、测试和翻译。通过 [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) 讨论改动，再按[贡献指南](CONTRIBUTING.md)提交。大功能更新需同步提供中英文 README 图文说明。
 
-请使用自己有权授权的原创素材，随贡献保留实际提示词、参考授权和人工修改记录；不要只给现有知名角色换色改名。素材权利说明见 [ASSET-LICENSE.md](ASSET-LICENSE.md)，提交要求见 [贡献指南](CONTRIBUTING.md)。
+## 隐私与许可
 
-## 验证与贡献
+AI 请求、文件权限和额度由本机 Claude Code 与所选服务管理。安装器会为当前用户添加联动 Hooks，备份 Claude 设置并保留其他处理器。[隐私与配置](docs/PRIVACY.md) · [安全报告](SECURITY.md)
 
-欢迎参与以下方向。
-
-- **角色与动画**：原创人物、动作过渡、角色制作工具和可视化预览。
-- **桌面体验**：多显示器、不同 DPI、窗口恢复及性能优化。
-- **CLI 与任务**：不同运行模式的兼容性、任务记录和错误反馈。
-- **质量与文档**：隔离测试、可复现问题、上手教程和翻译。
-
-先通过 [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) 讨论改动范围，再按 [贡献指南](CONTRIBUTING.md) 提交小而清晰的 PR，附复现步骤、测试结果；涉及角色或界面时附预览。不要在公开内容中上传凭据、私人会话或内网数据。
-
-```powershell
-.\tools\TestRepository.ps1
-.\tests\release-source-test.ps1
-.\tests\startup-registration-test.ps1
-.\tests\character-pack-test.ps1
-.\tests\smoke-test.ps1
-.\tests\drag-gait-test.ps1
-.\tests\companion-motion-test.ps1
-.\tests\original-assets-test.ps1
-.\tests\reminder-performance-test.ps1
-```
-
-专项测试使用模拟 CLI 或隔离目录，不调用真实付费模型。交互窗口、虚拟桌面与安装测试需要 Windows 桌面会话。CI 的实际结果请查看仓库 [Actions](https://github.com/AHuaWinliver/xianpal-ai-companion/actions)，不以本地通过代替全部 Windows 环境的兼容性验证。
-
-欢迎提交可复现的问题、界面建议、动画修复和原创角色贡献。先看 [贡献指南](CONTRIBUTING.md)，再到 [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) 交流。请不要上传凭据、真实工作记录或未经授权的角色素材。
-
-## 在把任务交给它之前
-
-- **本地程序不等于离线模型**：AI 请求由 Claude Code 按你的服务配置发出，可能联网并消耗额度。
-- **安装会修改当前用户的联动配置**：追加本项目 Hooks 并备份设置，保留其他处理器；详见 [隐私与配置](docs/PRIVACY.md)。
-- **不是安全沙箱**：发送文件或执行任务后，Claude 的读写能力由你的账户、权限和 CLI 设置决定。不要自动信任陌生目录或提示词。
-- **可按需关闭 AI 主动功能**；其他本机 Claude 会话的采集默认关闭，不自动终止其他会话。
-- 原生 Background 依赖 CLI 能力；Windows Terminal、中文 / emoji 字体和虚拟桌面效果也受本机环境影响。暂不提供语音对话。
-- 本项目与 Anthropic、Microsoft 或任何影视、小说、游戏厂商无隶属关系。
-
-## 文档与许可
-
-[开始使用](docs/GETTING-STARTED.md) · [角色资源包热更新](docs/CHARACTER-PACKS.md) · [开发与动画](docs/DEVELOPMENT.md) · [人物定制指南](docs/CHARACTER-CUSTOMIZATION.md) · [全屏演绎](docs/REMINDER-PERFORMANCES.md) · [GitHub 发布指南](docs/GITHUB-PUBLISH.md) · [更新日志](CHANGELOG.md)
-
-代码采用 [Apache-2.0](LICENSE)。内置角色为 AI 辅助原创设计，具体授权范围见 [素材许可](ASSET-LICENSE.md) 与 [来源记录](art/PROVENANCE.md)；AI 生成不等于绝对不侵权担保。系统字体不随项目分发。
-
-安全问题请先阅读 [安全报告](SECURITY.md)，不要在公开 Issue 中泄露漏洞细节或敏感数据。
-
----
-
-<div align="center">
-
-**给忙碌的桌面，留一个有回应的角落。**
-
-如果仙伴让你的桌面多了一点温度，欢迎用一个 Star 支持它。
-
-</div>
+代码采用 [Apache-2.0](LICENSE)。角色素材的授权范围与来源见[素材许可](ASSET-LICENSE.md)和[来源记录](art/PROVENANCE.md)。
