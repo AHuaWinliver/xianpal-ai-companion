@@ -73,6 +73,17 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 if (pet.Conversation.LastReply != before) throw new Exception("A scheduled task leaked into regular chat.");
                 TaskWindow.Show(pet, tasks);
                 ReminderWindows.ShowSettings(pet, pet.Services.Reminders);
+                pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "ARM64 提醒测试", Effect = "popup" });
+                await Task.Delay(200);
+                Window popup = desktop.Windows.Last(window => window.Title.Contains("提醒") && !window.Title.Contains("倒计时"));
+                Capture(popup, "reminder-popup.png");
+                popup.Close();
+                pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "ARM64 演绎测试", Effect = "impact" });
+                await Task.Delay(1200);
+                Window performance = desktop.Windows.Single(window => window.Title == "仙伴 · 全屏提醒");
+                if (performance.WindowState != WindowState.FullScreen) throw new Exception("Reminder performance did not enter full screen.");
+                Capture(performance, "reminder-performance.png");
+                performance.Close();
                 var sect = CompanionRolePresets.Create("ARM64 验证门派", Program.StateDirectory, true);
                 sect.Goal = "读取隔离样例并记录结果，供本次桌面测试验证。";
                 pet.Services.Workshop.Sects.Add(sect);

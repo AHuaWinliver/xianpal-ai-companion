@@ -98,6 +98,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 安装包在 `dist/`，动作和演出预览在 `build/previews/`。只需要程序和预览时，可给构建脚本加上 `-SkipInstaller`。[开发与验证指南](docs/DEVELOPMENT.md)
 
+## Linux ARM64 移植
+
+Linux 桌面端在 `linux` 分支开发。原生 ARM64 构建、中文对话、后台任务和四道友依赖交接已通过首轮自动化验证，完整功能仍在移植。[查看界面、验证结果与验收清单](docs/LINUX.md)
+
+![Linux ARM64 原生门派大堂，图中为隔离演示数据](docs/images/linux-workshop.png)
+
 ## 贡献
 
 欢迎贡献原创角色、动画工具、桌面体验修复、测试和翻译。通过 [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) 讨论改动，再按[贡献指南](CONTRIBUTING.md)提交。大功能更新需同步提供中英文 README 图文说明。

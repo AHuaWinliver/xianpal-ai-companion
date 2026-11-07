@@ -2,6 +2,16 @@
 
 Linux 桌面端在 `linux` 分支开发，使用 .NET 10 与 Avalonia，复用 Windows 端的角色配置、任务调度、提醒与门派依赖执行代码。发布条件是功能移植和原生 ARM64 验证全部通过。
 
+## 已完成的原生验证
+
+Ubuntu ARM64 上已通过程序构建、共享业务逻辑和原生窗口自动化检查。界面测试在 Xvfb 与 Openbox 中使用模拟 Claude，验证四个人物加载、中文与表情流式回复、后台任务独立记录和四道友依赖交接。[首轮 ARM64 验证](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42342609755)
+
+![ARM64 Linux 原生对话窗口，使用模拟回复](images/linux-conversation.png)
+
+![ARM64 Linux 原生门派大堂，使用隔离测试数据](images/linux-workshop.png)
+
+当前仍需完善原生终端与 Claude Background 模式、托盘与自启动、AI 路线和光轨、灵器移动、外置人物全屏演绎，以及真实目标桌面环境下的输入和窗口验证。完整功能验收仍在进行。
+
 ## 构建
 
 在项目根目录运行以下命令。

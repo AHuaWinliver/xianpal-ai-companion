@@ -96,6 +96,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Find the installer in `dist/` and offline animation and performance previews in `build/previews/`. Pass `-SkipInstaller` to build the app and previews only. [Development and testing guide](docs/DEVELOPMENT.md)
 
+## Linux ARM64 port
+
+The Linux desktop application is under development on the `linux` branch. The first native ARM64 checks cover the build, Unicode chat, isolated background tasks and four-companion dependency handoffs. Full feature migration is ongoing. [Screenshots, test results and release checklist](docs/LINUX.md)
+
+![Native Linux ARM64 workshop hall with isolated demonstration data](docs/images/linux-workshop.png)
+
 ## Contributing
 
 Original characters, animation tools, desktop fixes, tests and translations are welcome. Discuss changes in [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) and follow the [contribution guide](CONTRIBUTING.md). Major features include images and instructions in both READMEs.
