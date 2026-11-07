@@ -36,13 +36,13 @@ namespace XianPal
             Start(prompt, workingDirectory, resumeSessionId, null);
         }
 
-        internal void Start(string prompt, string workingDirectory, string resumeSessionId, string internalTaskId)
+        internal void Start(string prompt, string workingDirectory, string resumeSessionId, string internalTaskId, string characterId = null)
         {
             if (IsRunning) throw new InvalidOperationException("Claude 正在处理上一个请求。");
             string claude = FindClaudeCommand();
             if (claude == null) throw new FileNotFoundException("未找到本机 Claude Code CLI。请先确认终端中可以运行 claude。 ");
 
-            ProcessStartInfo info = BuildStartInfo(claude, workingDirectory, resumeSessionId, internalTaskId);
+            ProcessStartInfo info = BuildStartInfo(claude, workingDirectory, resumeSessionId, internalTaskId, characterId);
             process = new Process();
             process.StartInfo = info;
             process.EnableRaisingEvents = true;
@@ -80,23 +80,30 @@ namespace XianPal
             return BuildStartInfo(claude, workingDirectory, resumeSessionId, null);
         }
 
-        internal static ProcessStartInfo BuildStartInfo(string claude, string workingDirectory, string resumeSessionId, string internalTaskId)
+        internal static ProcessStartInfo BuildStartInfo(string claude, string workingDirectory, string resumeSessionId, string internalTaskId, string characterId = null)
         {
             if (String.IsNullOrWhiteSpace(claude)) throw new ArgumentException("Claude CLI 命令不能为空。", "claude");
             string directory = Directory.Exists(workingDirectory)
                 ? Path.GetFullPath(workingDirectory)
                 : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string arguments = BuildArguments(resumeSessionId);
+            string settingsPath = ClaudeSettingsFile.CurrentPath(characterId);
             ProcessStartInfo info = new ProcessStartInfo();
             if (claude.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || claude.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))
             {
                 info.FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
-                info.Arguments = "/d /s /c \"\"" + claude + "\" " + arguments + "\"";
+                if (settingsPath.Length > 0)
+                {
+                    // Expand the path once, inside the quoted argument. This keeps
+                    // percent signs and shell metacharacters in filenames literal.
+                    arguments += " --settings \"%FUFU_PET_SETTINGS_FILE%\"";
+                }
+                info.Arguments = "/d /v:off /s /c \"\"" + claude + "\" " + arguments + "\"";
             }
             else
             {
                 info.FileName = claude;
-                info.Arguments = arguments;
+                info.Arguments = arguments + (settingsPath.Length == 0 ? "" : " --settings \"" + settingsPath + "\"");
             }
             info.WorkingDirectory = directory;
             info.UseShellExecute = false;
@@ -109,6 +116,7 @@ namespace XianPal
             // process current directory. Keep both values in agreement.
             info.EnvironmentVariables["PWD"] = directory;
             info.EnvironmentVariables["FUFU_PET_MANAGED_SESSION"] = "1";
+            if (settingsPath.Length > 0) info.EnvironmentVariables["FUFU_PET_SETTINGS_FILE"] = settingsPath;
             if (!String.IsNullOrWhiteSpace(internalTaskId))
                 info.EnvironmentVariables["FUFU_PET_INTERNAL_TASK_ID"] = internalTaskId;
             return info;
@@ -116,8 +124,7 @@ namespace XianPal
 
         internal void Stop()
         {
-            if (!IsRunning) return;
-            try { process.Kill(); } catch { }
+            try { if (IsRunning) process.Kill(); } catch { }
         }
 
         internal void ParseLine(string line)
@@ -244,6 +251,11 @@ namespace XianPal
 
         private static string FindClaudeCommand()
         {
+            if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
+            {
+                string fixture = Environment.GetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND");
+                return File.Exists(fixture) ? fixture : null;
+            }
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string[] candidates = {

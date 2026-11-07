@@ -10,8 +10,8 @@ using System.Windows.Forms;
 
 [assembly: System.Reflection.AssemblyTitle(XianPal.StartupRegistration.DisplayName)]
 [assembly: System.Reflection.AssemblyProduct(XianPal.StartupRegistration.DisplayName)]
-[assembly: System.Reflection.AssemblyVersion("0.5.0.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.5.0.0")]
+[assembly: System.Reflection.AssemblyVersion("0.6.11.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.6.11.0")]
 
 namespace XianPal
 {
@@ -218,6 +218,7 @@ namespace XianPal
                     activity.DismissForTest();
                     bool activityManualCloseOnly = !activity.Visible && !activity.PinnedOpen;
                     System.Diagnostics.ProcessStartInfo terminal = PetForm.BuildTerminalStartInfo(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile));
+                    string terminalScript = Encoding.Unicode.GetString(Convert.FromBase64String(terminal.Arguments.Substring(terminal.Arguments.LastIndexOf(' ') + 1)));
                     System.Diagnostics.ProcessStartInfo scheduledCli = ClaudeCliRunner.BuildStartInfo("claude.cmd", Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), null);
                     PetCharacter brainCharacter = PetCharacter.Find("spark");
                     string personaPrompt = PetBrain.BuildConversationPrompt(brainCharacter, "帮我整理计划");
@@ -264,7 +265,7 @@ namespace XianPal
                         PetForm.GaitFrameIntervalMs(58.0, 6) > PetForm.GaitFrameIntervalMs(210.0, 6) &&
                         PetForm.PreservesGaitPhase("running-left", "running-right") && !PetForm.PreservesGaitPhase("idle", "running-right") &&
                         PetForm.KeyboardLocomotionState(-8, false) == "running-left" && PetForm.KeyboardLocomotionState(8, true) == "running-right" && PetForm.KeyboardLocomotionState(0, true) == "running-left" &&
-                        PetForm.DragPixelsPerFrame(2.0) < PetForm.DragPixelsPerFrame(0.1) &&
+                        DragGaitClock.CyclesPerSecond(1200) > DragGaitClock.CyclesPerSecond(60) &&
                         PetForm.MovementPixelsForElapsed(true, 16.0) > PetForm.MovementPixelsForElapsed(false, 16.0) &&
                         PetForm.MovementPixelsForElapsed(false, 32.0) > PetForm.MovementPixelsForElapsed(false, 16.0) &&
                         PetForm.HasReachedWanderTarget(5.0, true) && !PetForm.HasReachedWanderTarget(5.0, false) &&
@@ -272,7 +273,7 @@ namespace XianPal
                         reminderSettings.PreviewButtonAvailable && previewEventTriggered && secondaryCenter == new System.Drawing.Point(-960, 540) &&
                         leftDock.X < 0 && bottomDock.Y + 100 > 1080 &&
                         clearsPreviousFrame && rendersSmoothAlpha && terminal.FileName.EndsWith("powershell.exe", StringComparison.OrdinalIgnoreCase) &&
-                        terminal.Arguments.IndexOf("-NoExit", StringComparison.OrdinalIgnoreCase) >= 0 && terminal.Arguments.IndexOf("Set-Location", StringComparison.OrdinalIgnoreCase) >= 0 && terminal.Arguments.IndexOf("claude", StringComparison.OrdinalIgnoreCase) >= 0 &&
+                        terminal.Arguments.IndexOf("-NoExit", StringComparison.OrdinalIgnoreCase) >= 0 && terminalScript.Contains("Set-Location") && terminalScript.Contains("claude") &&
                         String.Equals(scheduledCli.WorkingDirectory, Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), StringComparison.OrdinalIgnoreCase) && String.Equals(scheduledCli.EnvironmentVariables["PWD"], scheduledCli.WorkingDirectory, StringComparison.OrdinalIgnoreCase) &&
                         temporaryCloseButtons.Length == 1 && temporaryCloseButtons[0].Left < 20 && PetCharacter.ValidateProfiles() &&
                         personaPrompt.Contains("绯笺") && personaPrompt.Contains("帮我整理计划") &&

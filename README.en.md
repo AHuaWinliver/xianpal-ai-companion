@@ -4,15 +4,13 @@
 
 # XianPal · AI Desktop Companion
 
-**Give your AI a place on your desktop, not just in a chat window.**
+Four original chibi companions for Windows, powered by your local Claude Code CLI
 
-Four original chibi companions × your local Claude Code CLI × conversations, files and scheduled work
-
-[![Version 0.5.0 · Preview](docs/images/version.svg)](CHANGELOG.md)
+[![Version 0.6.11 · Preview](docs/images/version.svg)](CHANGELOG.md)
 ![Windows 10 / 11](docs/images/windows.svg)
 [![Apache-2.0](docs/images/license.svg)](LICENSE)
 
-[中文](README.md) · [Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) · [Create your own companion](#custom-characters) · [Build from source](#build-from-source)
+[简体中文](README.md) · [What's new](#whats-new) · [Get started](#get-started) · [Create a companion](#custom-characters) · [Build from source](#build-from-source)
 
 </div>
 
@@ -20,7 +18,71 @@ XianPal combines a lively Windows desktop companion with a practical Claude Code
 
 The desktop app runs locally. **AI features require a separately installed, configured and authorized Claude Code CLI.** No model or API key is included; local execution does not mean offline inference.
 
-**0.5 is an open preview, built to evolve with contributors.** The current release is **0.5.0**, not a 1.0 stable release. Features, interfaces and asset formats may change. Issues, original characters and code PRs are welcome; back up configuration and try tasks in a test directory before using important data.
+**0.6 is an open preview, built to evolve with contributors.** The current release is **0.6.11**, not a 1.0 stable release. Features, interfaces and asset formats may change. Issues, original characters and code PRs are welcome; back up configuration and try tasks in a test directory before using important data.
+
+<a id="whats-new"></a>
+## What's new in 0.6.11
+
+- The workshop hall uses the same full-resolution animation frames as the desktop companions. Each character scales to its workstation with its original proportions. [See the hall](#sect-hall)
+
+### Features added in 0.6.10
+
+- [Default settings and per-companion Claude profiles](#claude-settings) group desktop behavior, the working directory and companion configuration.
+- [Dedicated scheduled-task history](#scheduled-task-history) keeps each run's progress, result and reply together.
+- [Drag animation](#desktop-motion) follows the cursor speed. **Default settings → Reduce motion (默认设置 → 减少动画)** turns off the drag animation.
+
+[Full changelog in Chinese](CHANGELOG.md)
+
+## Events and multi-agent teams
+
+**Responsive hall (0.6.8):** the scene and workstations resize and reflow with the window. Characters and desks keep their proportions. Drag the divider above the details pane to adjust its share; resizing preserves that ratio and the selected reply. Vertical scrolling is used only when the members cannot fit at a readable size, rather than enforcing a permanent 680px scene.
+
+**Artifact travel (0.6.7):** long routes automatically use a flying sword, talisman scroll, leaf boat or ink-jade disk, depending on the companion. Short routes keep walking. Mounting, acceleration and landing ease smoothly. The threshold is 40% of the current monitor working-area diagonal, with a 480px minimum, measured over the entire queued route. Both local and AI routes reuse this logic without additional model calls. Reduced motion still disables autonomous travel.
+
+![Four companion-specific artifacts in both directions, drawn by the production renderer](docs/images/artifact-travel.png)
+
+0.6.5 fixes the missing hall background after installation: the installer now deploys and validates the scene directory transactionally, while the executable embeds a fallback copy. Missing or corrupt external artwork falls back to the embedded scene. Exit the old app before upgrading; no manual image copying is required.
+
+0.6.2 replaces the activity transcript with left/right chat bubbles, character avatars, selectable Unicode text and throttled streaming updates. User and assistant turns are recorded explicitly rather than inferred from transcript text. The session list is collapsed by default; use the header session button to switch conversations.
+
+Drag the chat header, companion name or status label to move the conversation and visible companion together. Text selection and buttons do not start window dragging. The group is constrained to the target monitor's working area, with release-time reflow when moving to a smaller display.
+
+In 0.6.6, double-clicking the reply preview opens the conversation centered directly below the companion. The window is shortened when necessary; if still needed the companion moves upward/inward instead of automatically flipping the dialog above it. Manual first-show placement avoids Windows selecting another initial location.
+
+Version 0.6.1 adds editable role presets for Qingheng (planning/synthesis), Feijian (implementation), Cangzhi (independent review), and Xiaomo (verification). Create a research-first or development workflow with shared goals and acceptance criteria. Optional native Claude subagent definition templates are included but are not installed or enabled automatically. See [role boundaries and integration notes](docs/COMPANION-ROLES.md).
+
+Right-click the companion to open the event and team workshop. Define members, roles, directories and task dependencies. Separate Claude CLI sessions exchange bounded upstream summaries. The hall displays execution states and recorded handoffs. Click a member to inspect visible output. Up to two independent directories can run concurrently. Overlapping directories run in sequence. Events notify you before execution. Claude CLI permissions apply and model usage may incur charges.
+
+[Workshop guide in Chinese](docs/WORKSHOP.md)
+
+<a id="sect-hall"></a>
+![Four full-resolution companions at their workstations in a local workshop demonstration](docs/images/sect-hall.png)
+
+*The hall shows synthetic agent activity from an offline demonstration.*
+
+<a id="claude-settings"></a>
+## Default settings and per-companion Claude profiles
+
+Right-click the companion and open **Default settings (默认设置)** to manage startup, window behavior, size, trails, roaming, proactive care and the Claude working directory. **Docked opacity (贴边不透明度)** ranges from 20% to 100%. The companion returns to full opacity when undocked.
+
+1. Open **Claude settings file → Global default (Claude 配置文件 → 全局默认)** to choose a shared Claude JSON file.
+2. Open **By companion (按角色设置)** to choose a JSON file for a specific companion. Select **Use global settings (沿用全局配置)** to restore inheritance. When both are unset, Claude uses its own settings.
+3. Team members use their own companion profiles. Scheduled tasks use the companion active when the run starts. [Claude CLI settings flag](https://code.claude.com/docs/en/cli-reference)
+
+![The Default settings menu with the per-companion Claude file options expanded for Feijian](docs/images/claude-settings.png)
+
+*The menu shows the demonstration file `feijian.json`.*
+
+<a id="scheduled-task-history"></a>
+## Scheduled tasks and dedicated run history
+
+1. Right-click the companion and open **Claude Code scheduled tasks (Claude Code 定时任务)**. Enter a request, working directory and a daily, weekly or interval schedule.
+2. **Background (后台运行)** is the default. When a task starts on its schedule, output goes to its run record and regular chat stays separate. Choose a terminal mode when you want to interact with the CLI directly.
+3. Select the task and open **Run history (运行情况)** to see each run's status, times, duration and exit code. Double-click an active run to follow its captured output, or a completed run to read the saved task and Claude reply.
+
+![Scheduled-task run history and the saved Claude reply opened by double-clicking a row](docs/images/scheduled-task-history.png)
+
+*Run history is on the left and the detail opened by double-clicking is on the right. Both use demonstration data.*
 
 ## Four companions, four personalities
 
@@ -33,6 +95,7 @@ The desktop app runs locally. **AI features require a separately installed, conf
 | Cangzhi / 苍芷 | A quiet, considerate herbalist | Unfurling vines, drifting leaves and gentle firefly light |
 | Xiaomo / 小墨 | A steady charcoal turtle with golden cloud patterns | A little hop followed by expanding ink-and-gold ripples |
 
+<a id="desktop-motion"></a>
 <div align="center"><img src="docs/images/walking.gif" alt="Actual 24-phase walking cycles, including opposing arm/leg motion and quadruped turtle locomotion" width="720"></div>
 
 The supplied transparent artwork is animated locally: 24-phase gait, articulated elbows, subtle neck motion and independently timed expressions. No image-generation service is called during build or installation.
@@ -55,12 +118,22 @@ The supplied transparent artwork is animated locally: 24-phase gait, articulated
 
 ## Get started
 
-1. Download `XianPal-0.5.0-Setup.exe` from [Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) and verify its published SHA256 when available.
+1. Download `XianPal-0.6.11-Setup.exe` and its SHA256 checksum. [GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
 2. Install on Windows 10 / 11. The installer adds a Start menu shortcut and the current user's integration hooks.
-3. Right-click the pet to choose a character, set the Claude Code working directory or configure reminders and scheduled tasks.
+3. Right-click the pet to choose a character, configure reminders or open scheduled tasks. Set the Claude Code working directory and settings file under **Default settings**.
 4. Before using AI features, make sure Claude Code works normally in your terminal with your own account/service configuration.
 
 The release link becomes available after the maintainer publishes the release. Until then, build from source. The installer is unsigned; Windows may display an unknown-publisher warning.
+
+| Action | Result |
+| --- | --- |
+| Right-click the companion | Open the menu for characters, settings, reminders and tasks |
+| Drag the companion | Move it at your cursor's pace and dock it near a screen edge |
+| Double-click a reply bubble | Open the conversation beneath the companion and reply |
+| Drop a file or folder onto the companion | Prepare a file request and confirm its working directory |
+| Right-click the tray icon | Show or hide the companion, restore the window or exit |
+
+Open **Event planning / Team workshop (事件规划 / 门派协作…)** from the companion's menu to set up a team workflow.
 
 ## Build from source
 
@@ -76,13 +149,13 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 .\build\payload\OrbitPet.exe
 ```
 
-- Installer: `dist/XianPal-0.5.0-Setup.exe`
+- Installer: `dist/XianPal-0.6.11-Setup.exe`
 - App: `build/payload/OrbitPet.exe`
 - Offline animation preview: `build/previews/index.html`
 - Performance preview: `build/previews/performances.html`
 - README media: `docs/images/`
 
-Use `-SkipInstaller` for a development build. The application namespace is `XianPal`; the installer namespace is `XianPal.Installer`. The current public version is **0.5.0 (Preview)**.
+Use `-SkipInstaller` for a development build. The application namespace is `XianPal`; the installer namespace is `XianPal.Installer`. The current public version is **0.6.11 (Preview)**.
 
 The Windows startup entry and executable description use the software name, “仙伴 · AI桌面伴侣”. On normal launch, the updated app migrates an existing `OrbitPet` startup entry while preserving its command and Windows enabled/disabled state. It does not enable startup when no entry exists.
 
@@ -142,6 +215,7 @@ Discuss the scope in [Issues](https://github.com/AHuaWinliver/xianpal-ai-compani
 .\tests\startup-registration-test.ps1
 .\tests\character-pack-test.ps1
 .\tests\smoke-test.ps1
+.\tests\drag-gait-test.ps1
 .\tests\companion-motion-test.ps1
 .\tests\original-assets-test.ps1
 .\tests\reminder-performance-test.ps1

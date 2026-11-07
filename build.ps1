@@ -35,6 +35,10 @@ $generator = Join-Path $build 'BuildOriginalCharacters.exe'
 if ($LASTEXITCODE -ne 0) { throw 'Original character generator failed to compile.' }
 & $generator (Join-Path $payload 'assets') (Join-Path $build 'previews') (Join-Path $root 'art\rigs')
 if ($LASTEXITCODE -ne 0) { throw 'Original character generation failed.' }
+$sceneDirectory = Join-Path $payload 'scenes'
+$hallScene=Join-Path $root 'art/scenes/sect-hall-v2.png'
+New-Item -ItemType Directory -Force -Path $sceneDirectory | Out-Null
+Copy-Item -LiteralPath (Join-Path $root 'art/scenes/sect-hall-v2.png') -Destination $sceneDirectory
 $icon = Join-Path $build 'orbitpet.ico'
 $iconBuilder = Join-Path $build 'BuildAppIcon.exe'
 & $csc /nologo /target:exe /out:$iconBuilder /reference:System.dll /reference:System.Drawing.dll (Join-Path $root 'tools\BuildAppIcon.cs') (Join-Path $root 'src\DesktopTasks\XianPal\AppIcon.cs')
@@ -48,7 +52,7 @@ $shortVersion = ([Version]$version).ToString(3)
 Copy-Item -LiteralPath $icon -Destination (Join-Path $payload ('OrbitPet-' + $shortVersion + '.ico'))
 $sources = (Get-ChildItem -LiteralPath (Join-Path $root 'src\DesktopTasks\XianPal') -Filter '*.cs' -File).FullName
 $pet = Join-Path $payload 'OrbitPet.exe'
-& $csc /nologo /target:winexe /platform:anycpu /optimize+ /win32icon:$icon /out:$pet /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll $sources
+& $csc /nologo /target:winexe /platform:anycpu /optimize+ /win32icon:$icon /out:$pet /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll "/resource:$hallScene,XianPal.SectHall.Background.png" $sources
 if ($LASTEXITCODE -ne 0) { throw 'Application compilation failed.' }
 foreach ($notice in @('LICENSE','NOTICE','ASSET-LICENSE.md')) { Copy-Item -LiteralPath (Join-Path $root $notice) -Destination $payload }
 & (Join-Path $root 'tools/BuildReminderPreviews.ps1')

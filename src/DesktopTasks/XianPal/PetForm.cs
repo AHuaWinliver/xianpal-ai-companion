@@ -85,17 +85,16 @@ namespace XianPal
         private Point dragMouse;
         private Point dragWindow;
         private Point lastDragCursor;
-        private DateTime lastDragFrameAt;
+        private DateTime lastDragSampleAt;
         private DateTime lastDragMotionAt;
-        private double dragFrameDistance;
         private double locomotionSpeedPixelsPerSecond;
         private Point defaultLocation;
         private Point wanderOrigin;
         private Rectangle wanderWorkingArea;
         private ActivityRecord currentActivity;
         private ActivityRecord lastReplyActivity;
-        private ScheduledClaudeTask currentScheduledClaudeTask;
-        private string currentScheduledRunId;
+        private readonly List<ClaudeCliRunner> scheduledClaudeRunners = new List<ClaudeCliRunner>();
+        private ClaudeCliRunner blockingScheduledRunner;
         private ReminderOverlayForm reminderOverlay;
         private FileEatOverlayForm fileEatOverlay;
         private string[] pendingDroppedPaths = new string[0];
@@ -225,6 +224,7 @@ namespace XianPal
             promptForm.ReminderRequested += ShowReminderSettings;
             activityTray.ActivityViewed += ApplyActivityPriority;
             activityTray.ReplySubmitted += RunClaudeReply;
+            InitializeChatGroupDrag();
             replyBubble.ConversationRequested += OpenReplyConversation;
             reminderService.ReminderDue += QueueReminder;
             claudeTaskService.TaskDue += QueueScheduledClaudeTask;
@@ -256,7 +256,6 @@ namespace XianPal
                     {
                         currentActivity.AppendOutput(text);
                         currentActivity.Updated = DateTime.Now;
-                        if (currentScheduledClaudeTask != null) claudeTaskService.UpdateRunProgress(currentScheduledClaudeTask, currentScheduledRunId, currentActivity.Output);
                         RefreshActivities();
                     }
                 });
@@ -273,13 +272,6 @@ namespace XianPal
                     if (currentActivity != null) { currentActivity.State = "正在运行"; currentActivity.Updated = DateTime.Now; RefreshActivities(); }
                 });
             };
-            claudeRunner.ReactionChanged += delegate(string reaction)
-            {
-                RunOnUi(delegate
-                {
-                    if (currentScheduledClaudeTask != null && reaction != "Stop" && reaction != "StopFailure") SetClaudeEvent(reaction);
-                });
-            };
             claudeRunner.Completed += delegate(int code)
             {
                 RunOnUi(delegate
@@ -291,26 +283,18 @@ namespace XianPal
                         return;
                     }
                     replyBubble.FlushPendingReply();
-                    if (currentScheduledClaudeTask != null)
-                    {
-                        string summary = currentActivity == null ? "" : currentActivity.Output;
-                        claudeTaskService.CompleteRun(currentScheduledClaudeTask, currentScheduledRunId, code == 0, code, summary, DateTime.Now);
-                        MarkScheduledTaskFinished(currentScheduledClaudeTask);
-                    }
                     if (code == 0)
                     {
                         replyBubble.SetStatus("Claude 已完成");
                         CompleteCurrentActivity("就绪");
-                        SetClaudeEvent(activeScheduledTaskCounts.Count > 0 ? "UserPromptSubmit" : "Stop");
+                        SetClaudeEvent("Stop");
                     }
                     else
                     {
                         replyBubble.SetStatus("Claude CLI 已退出，代码 " + code.ToString());
                         CompleteCurrentActivity("受阻");
-                        SetClaudeEvent(activeScheduledTaskCounts.Count > 0 ? "UserPromptSubmit" : "StopFailure");
+                        SetClaudeEvent("StopFailure");
                     }
-                    if (currentScheduledClaudeTask != null) currentScheduledClaudeTask = null;
-                    currentScheduledRunId = null;
                     TryRunNextScheduledClaudeTask();
                 });
             };
@@ -328,6 +312,7 @@ namespace XianPal
             fileWipeTimer.Tick += delegate { fileWipeTimer.Stop(); OpenDroppedFilesPromptAfterWipe(); };
             reminderService.Start();
             claudeTaskService.Start();
+            InitializeWorkshop();
             SystemEvents.SessionSwitch += SystemSessionSwitch;
             SystemEvents.PowerModeChanged += SystemPowerModeChanged;
             ResetScreenSession(true);
@@ -342,7 +327,7 @@ namespace XianPal
             DragOver += PetDragOver;
             DragLeave += PetDragLeave;
             DragDrop += PetDragDrop;
-            Move += delegate { if (!dragging) AnchorAuxiliaryWindows(); };
+            Move += delegate { if (!dragging&&!chatGroupDragging&&!placingConversation) AnchorAuxiliaryWindows(); };
             FormClosing += delegate { SavePreferences(); DisposeResources(); };
             SetTemporaryState("waving", 2200, "idle");
             StartCharacterPackWatching();
@@ -390,6 +375,7 @@ namespace XianPal
         private void RenderCurrentFrame()
         {
             if (animations.Count == 0) return;
+            if(TryRenderArtifactTravel())return;
             List<Image> frames;
             if (!animations.TryGetValue(state, out frames) || frames.Count == 0)
                 frames = animations["idle"];
@@ -577,7 +563,7 @@ namespace XianPal
                 NativePoint destination = new NativePoint(Left, Top);
                 NativePoint source = new NativePoint(0, 0);
                 NativeSize size = new NativeSize(bitmapSize.Width, bitmapSize.Height);
-                BlendFunction blend = new BlendFunction { BlendOp = 0, BlendFlags = 0, SourceConstantAlpha = 255, AlphaFormat = AcSrcAlpha };
+                BlendFunction blend = new BlendFunction { BlendOp = 0, BlendFlags = 0, SourceConstantAlpha = PetWindowAlpha, AlphaFormat = AcSrcAlpha };
                 layeredRenderSucceeded = UpdateLayeredWindow(Handle, screenDc, ref destination, ref size, memoryDc, ref source, 0, ref blend, UlwAlpha);
                 layeredRenderError = layeredRenderSucceeded ? 0 : Marshal.GetLastWin32Error();
                 if (layeredRenderSucceeded) layeredRenderCount++;
@@ -768,7 +754,7 @@ namespace XianPal
             layeredFrameCache.Clear();
         }
 
-        private static Image LoadDetachedImage(string file)
+        internal static Image LoadDetachedImage(string file)
         {
             using (FileStream stream = File.OpenRead(file))
             using (Image source = Image.FromStream(stream)) return new Bitmap(source);
@@ -866,6 +852,8 @@ namespace XianPal
             ToolStripMenuItem scheduledTasks = new ToolStripMenuItem("Claude Code 定时任务…");
             scheduledTasks.Click += delegate { ShowClaudeTaskSettings(); };
             menu.Items.Add(scheduledTasks);
+            var workshop = new ToolStripMenuItem("事件规划 / 门派协作…");
+            workshop.Click += delegate { ShowWorkshop(); }; menu.Items.Add(workshop);
             menu.Items.Add(new ToolStripSeparator());
 
             menu.Items.Add(BuildCharacterMenu(true));
@@ -880,16 +868,18 @@ namespace XianPal
             };
             menu.Items.Add(pauseItem);
 
+            var defaults = new ToolStripMenuItem("默认设置");
+            ToolStripItemCollection settings = defaults.DropDownItems;
             startupItem = new ToolStripMenuItem("开机自动启动");
             startupItem.Checked = IsStartupEnabled();
             startupItem.Click += delegate { SetStartup(!startupItem.Checked); startupItem.Checked = IsStartupEnabled(); };
-            menu.Items.Add(startupItem);
+            settings.Add(startupItem);
 
             topmostItem = new ToolStripMenuItem("保持置顶");
             topmostItem.Checked = TopMost;
-            topmostItem.Click += delegate { TopMost = !TopMost; topmostItem.Checked = TopMost; };
-            menu.Items.Add(topmostItem);
-            AddDesktopVisibilityMenu(menu);
+            topmostItem.Click += delegate { TopMost = !TopMost; topmostItem.Checked = TopMost; SavePreferences(); };
+            settings.Add(topmostItem);
+            AddDesktopVisibilityMenu(settings);
 
             ToolStripMenuItem sizeMenu = new ToolStripMenuItem("宠物大小");
             foreach (int percent in new[] { 50, 75, 100, 125 })
@@ -903,11 +893,12 @@ namespace XianPal
             resetSize.Click += delegate { SetPetScale(0.5f, false); ResetPosition(); SavePreferences(); };
             sizeMenu.DropDownItems.Add(new ToolStripSeparator());
             sizeMenu.DropDownItems.Add(resetSize);
-            menu.Items.Add(sizeMenu);
+            settings.Add(sizeMenu);
 
-            menu.Items.Add(BuildTrailOpacityMenu());
-            menu.Items.Add(BuildPathModeMenu());
-            menu.Items.Add(BuildAiCareMenu());
+            settings.Add(BuildDockOpacityMenu());
+            settings.Add(BuildTrailOpacityMenu());
+            settings.Add(BuildPathModeMenu());
+            settings.Add(BuildAiCareMenu());
 
             reduceMotionItem = new ToolStripMenuItem("减少动画");
             reduceMotionItem.Checked = reduceMotion;
@@ -919,14 +910,16 @@ namespace XianPal
                 frameIndex = 0;
                 SavePreferences();
             };
-            menu.Items.Add(reduceMotionItem);
+            settings.Add(reduceMotionItem);
+            settings.Add(new ToolStripSeparator());
 
             ToolStripMenuItem openClaude = new ToolStripMenuItem("在 PowerShell 打开 Claude Code CLI");
             openClaude.Click += delegate { OpenClaudeCli(promptForm.WorkingDirectory); };
             menu.Items.Add(openClaude);
             ToolStripMenuItem defaultDirectory = new ToolStripMenuItem("设置 Claude CLI 默认目录…");
             defaultDirectory.Click += delegate { ChooseDefaultClaudeDirectory(); };
-            menu.Items.Add(defaultDirectory);
+            settings.Add(defaultDirectory);
+            settings.Add(BuildClaudeSettingsMenu());
             ToolStripMenuItem externalSessions = new ToolStripMenuItem("收集其他 Claude 会话（默认关闭）");
             externalSessions.Checked = integrationPreferences.MonitorExternalSessions;
             externalSessions.Click += delegate
@@ -940,7 +933,8 @@ namespace XianPal
                     MessageBox.Show(ex.Message, "保存会话监控设置失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             };
-            menu.Items.Add(externalSessions);
+            settings.Add(externalSessions);
+            menu.Items.Add(defaults);
             menu.Items.Add(new ToolStripSeparator());
 
             showPetItem = new ToolStripMenuItem("显示宠物");
@@ -953,7 +947,8 @@ namespace XianPal
             ToolStripMenuItem about = new ToolStripMenuItem("关于桌面宠物");
             about.Click += delegate
             {
-                MessageBox.Show("仙伴 · AI桌面伴侣 3.1.4\n\n青衡、绯笺、苍芷、小墨 · 国风原创形象\n透明分层动画 · Claude Code · 提醒与定时任务\n代码采用 Apache-2.0；素材来源及授权范围见 ASSET-LICENSE.md。\n本项目与任何模型厂商或影视作品无隶属关系。", "关于仙伴", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                string version = typeof(Program).Assembly.GetName().Version.ToString(3);
+                MessageBox.Show("仙伴 · AI桌面伴侣 " + version + "\n\n青衡、绯笺、苍芷、小墨 · 国风原创形象\n透明分层动画 · Claude Code · 提醒与定时任务\n代码采用 Apache-2.0；素材来源及授权范围见 ASSET-LICENSE.md。\n本项目与任何模型厂商或影视作品无隶属关系。", "关于仙伴", MessageBoxButtons.OK, MessageBoxIcon.Information);
             };
             menu.Items.Add(about);
 
@@ -1008,14 +1003,8 @@ namespace XianPal
             ToolStripMenuItem scheduledTasks = new ToolStripMenuItem("Claude Code 定时任务…");
             scheduledTasks.Click += delegate { ShowClaudeTaskSettings(); };
             clickActionsMenu.Items.Add(scheduledTasks);
-            ToolStripMenuItem defaultDirectory = new ToolStripMenuItem("设置 Claude CLI 默认目录…");
-            defaultDirectory.Click += delegate { ChooseDefaultClaudeDirectory(); };
-            clickActionsMenu.Items.Add(defaultDirectory);
             clickActionsMenu.Items.Add(new ToolStripSeparator());
             clickActionsMenu.Items.Add(BuildCharacterMenu());
-            clickActionsMenu.Items.Add(BuildTrailOpacityMenu());
-            clickActionsMenu.Items.Add(BuildPathModeMenu());
-            clickActionsMenu.Items.Add(BuildAiCareMenu());
             clickActionsMenu.Show(Cursor.Position);
         }
 
@@ -1158,6 +1147,7 @@ namespace XianPal
             DateTime animationNow = DateTime.UtcNow;
             double elapsedMs = Math.Max(0.0, Math.Min(250.0, (animationNow - lastAnimationTick).TotalMilliseconds));
             lastAnimationTick = animationNow;
+            if(dragging){TickDragAnimation(animationNow,elapsedMs);return;}
             animationAccumulatorMs += elapsedMs;
             int frameAdvances = 0;
             if (IsLocomotionState(state))
@@ -1189,20 +1179,11 @@ namespace XianPal
                 frameAdvances = Math.Min(8, (int)(animationAccumulatorMs / frameInterval));
                 if (frameAdvances > 0) animationAccumulatorMs -= frameAdvances * frameInterval;
             }
-            if (dragging)
-            {
-                // Releasing neither button nor window does not mean the pet is
-                // still walking. Settle naturally to its standing pose shortly
-                // after the cursor stops, and resume the gait on the next move.
-                if (dragMoved && IsLocomotionState(state) &&
-                    (DateTime.UtcNow - lastDragMotionAt).TotalMilliseconds >= 140.0)
-                    SetState("idle");
-                return;
-            }
-
             // Advance position on every scheduler tick instead of coupling it
             // to pose changes. The body moves near 60 FPS while gait poses keep
             // a readable cadence, eliminating the stepwise sliding impression.
+            bool wasLanding=artifactTravel.Landing;
+            artifactTravel.Advance(elapsedMs);
             bool wandered = !reduceMotion && TickWander(elapsedMs);
             if (wandered)
             {
@@ -1210,6 +1191,7 @@ namespace XianPal
                 RefreshPetVisual();
                 return;
             }
+            if(artifactTravel.Landing||wasLanding){RefreshPetVisual();return;}
             if (frameAdvances <= 0) return;
             if (reduceMotion)
             {
@@ -1446,6 +1428,7 @@ namespace XianPal
 
         private void StartRandomWander()
         {
+            artifactTravel.Reset();
             wanderPath.Clear();
             Rectangle area = Screen.FromPoint(Location).WorkingArea;
             wanderWorkingArea = area;
@@ -1469,6 +1452,7 @@ namespace XianPal
                 return;
             }
             Point first = wanderPath.Peek();
+            PrepareArtifactTravel();
             wanderFacingLeft = first.X < Left;
             SetState(wanderFacingLeft ? "running-left" : "running-right");
         }
@@ -1481,14 +1465,16 @@ namespace XianPal
             double dx = target.X - Left;
             double dy = target.Y - Top;
             double distance = Math.Sqrt((dx * dx) + (dy * dy));
-            double movementStep = MovementPixelsForElapsed(playfulRun, elapsedMs);
-            locomotionSpeedPixelsPerSecond = playfulRun ? 210.0 : 58.0;
+            double movementStep = artifactTravel.Active?artifactTravel.MovementStep(elapsedMs):MovementPixelsForElapsed(playfulRun, elapsedMs);
+            movementStep=Math.Min(distance,movementStep);
+            locomotionSpeedPixelsPerSecond = artifactTravel.Active?artifactTravel.Speed:playfulRun ? 210.0 : 58.0;
             if (HasReachedWanderTarget(distance, playfulRun))
             {
                 Location = target;
                 wanderPath.Dequeue();
                 if (wanderPath.Count == 0)
                 {
+                    if(artifactTravel.Active){artifactTravel.BeginLanding();ScheduleNextIdleAction();}
                     playfulRun = false;
                     wanderOrigin = Location;
                     SetState("idle");
@@ -1499,6 +1485,7 @@ namespace XianPal
                 dx = target.X - Left;
                 dy = target.Y - Top;
                 distance = Math.Sqrt((dx * dx) + (dy * dy));
+                movementStep=artifactTravel.Active?Math.Min(distance,artifactTravel.MovementStep(elapsedMs)):MovementPixelsForElapsed(playfulRun,elapsedMs);
             }
             int stepX = (int)Math.Round((dx / Math.Max(1.0, distance)) * movementStep);
             int stepY = (int)Math.Round((dy / Math.Max(1.0, distance)) * movementStep);
@@ -1557,6 +1544,8 @@ namespace XianPal
 
         private void CancelWander()
         {
+            bool wasRiding=artifactTravel.Active;artifactTravel.Reset();artifactFootSource=null;
+            if(wasRiding&&IsLocomotionState(state)){SetState("idle");if(IsHandleCreated&&!closingPet)RefreshPetVisual();}
             playfulRun = false;
             wanderWorkingArea = Rectangle.Empty;
             if (wanderPath.Count == 0) return;
@@ -1612,24 +1601,28 @@ namespace XianPal
             StartupRegistration.SetEnabled(enabled, ExecutablePath);
         }
 
-        internal static ProcessStartInfo BuildTerminalStartInfo(string workingDirectory)
+        internal static ProcessStartInfo BuildTerminalStartInfo(string workingDirectory, string characterId = null)
         {
             string directory = Directory.Exists(workingDirectory)
                 ? workingDirectory
                 : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string literalDirectory = directory.Replace("'", "''");
-            return new ProcessStartInfo("powershell.exe", "-NoLogo -NoExit -Command \"$env:FUFU_PET_MANAGED_SESSION='1'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + literalDirectory + "'; claude\"")
+            string settingsPath = ClaudeSettingsFile.CurrentPath(characterId);
+            string script = "$env:FUFU_PET_MANAGED_SESSION='1'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + literalDirectory + "'; " +
+                ClaudeSettingsFile.PowerShellSetup(settingsPath, "claude") +
+                (settingsPath.Length == 0 ? "claude" : "try { claude --settings $xianpalSettings } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }");
+            return new ProcessStartInfo("powershell.exe", "-NoLogo -NoExit -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)))
             {
                 WorkingDirectory = directory,
                 UseShellExecute = true
             };
         }
 
-        private static void OpenClaudeCli(string workingDirectory)
+        private void OpenClaudeCli(string workingDirectory)
         {
             try
             {
-                Process.Start(BuildTerminalStartInfo(workingDirectory));
+                Process.Start(BuildTerminalStartInfo(workingDirectory, currentCharacterId));
             }
             catch (Exception ex)
             {
@@ -1647,16 +1640,18 @@ namespace XianPal
                 dragMouse = Cursor.Position;
                 dragWindow = Location;
                 lastDragCursor = dragMouse;
-                lastDragFrameAt = DateTime.UtcNow;
-                lastDragMotionAt = lastDragFrameAt;
-                dragFrameDistance = 0;
+                lastDragSampleAt = DateTime.UtcNow;
+                lastDragMotionAt = lastDragSampleAt;
+                dragGait.Reset();
             }
         }
 
         private void ContinueDrag(object sender, MouseEventArgs e)
+        {ContinueDragAt(Cursor.Position,DateTime.UtcNow);}
+
+        private void ContinueDragAt(Point now,DateTime current)
         {
             if (!dragging) return;
-            Point now = Cursor.Position;
             if (!dragMoved && Math.Abs(now.X - dragMouse.X) + Math.Abs(now.Y - dragMouse.Y) > 5)
             {
                 dragMoved = true;
@@ -1669,41 +1664,20 @@ namespace XianPal
             if (dragMoved && !reduceMotion && distance > 0.1)
             {
                 AddTrailPoint();
-                SetState(deltaX < 0 ? "running-left" : "running-right");
-                DateTime current = DateTime.UtcNow;
-                double elapsed = Math.Max(1.0, (current - lastDragFrameAt).TotalMilliseconds);
-                double measuredSpeed = Math.Min(3000.0, distance * 1000.0 / elapsed);
-                locomotionSpeedPixelsPerSecond = locomotionSpeedPixelsPerSecond <= 0.0
-                    ? measuredSpeed
-                    : (locomotionSpeedPixelsPerSecond * 0.68) + (measuredSpeed * 0.32);
+                SetState(deltaX<0?"running-left":deltaX>0?"running-right":IsLocomotionState(state)?state:"running-right");
+                dragGait.RecordMotion(distance,(current-lastDragSampleAt).TotalMilliseconds);
                 lastDragMotionAt = current;
-                dragFrameDistance += distance;
-                double pixelsPerFrame = DragPixelsPerFrame(locomotionSpeedPixelsPerSecond / 1000.0);
-                int advances = (int)Math.Floor(dragFrameDistance / pixelsPerFrame);
-                if (advances == 0 && elapsed >= 180.0) advances = 1;
-                if (advances > 0)
-                {
-                    List<Image> frames;
-                    if (animations.TryGetValue(state, out frames) && frames.Count > 0)
-                        frameIndex = (frameIndex + Math.Min(advances, 5)) % frames.Count;
-                    dragFrameDistance = advances > 0 ? dragFrameDistance % pixelsPerFrame : dragFrameDistance;
-                    lastDragFrameAt = current;
-                }
             }
+            if(distance>.1)lastDragSampleAt=current;
             lastDragCursor = now;
             RefreshPetVisual();
-        }
-
-        internal static double DragPixelsPerFrame(double pixelsPerMillisecond)
-        {
-            double speed = Math.Max(0.0, Math.Min(3.0, pixelsPerMillisecond));
-            return Math.Max(3.0, 9.0 - (speed * 2.0));
         }
 
         private void EndDrag(object sender, MouseEventArgs e)
         {
             bool openPrompt = dragging && !dragMoved && e.Button == MouseButtons.Left;
             dragging = false;
+            dragGait.Reset();
             if (dragMoved)
             {
                 bool docked = TryDockAtScreenEdge();
@@ -1874,6 +1848,7 @@ namespace XianPal
         private void StartPlayfulRun()
         {
             if (claudeBusy || paused || reminderOverlay != null) return;
+            artifactTravel.Reset();
             ReleaseEdgeDock();
             wanderPath.Clear();
             Rectangle area = Screen.FromPoint(Location).WorkingArea;
@@ -1890,6 +1865,7 @@ namespace XianPal
             if (selectedPath.Count < 10) selectedPath = GeneratePlayfulPath(area, Size, origin, random.Next());
             foreach (Point target in selectedPath) wanderPath.Enqueue(target);
             if (wanderPath.Count == 0) return;
+            PrepareArtifactTravel();
             playfulRun = true;
             trailOverlay.Configure(trailColors, trailStyle, trailOpacity);
             trailOverlay.Begin(Screen.FromPoint(Location).Bounds);
@@ -2013,7 +1989,7 @@ namespace XianPal
             int rightDistance = Math.Abs(Right - area.Right);
             int bottomDistance = Math.Abs(Bottom - area.Bottom);
             int nearest = Math.Min(leftDistance, Math.Min(rightDistance, bottomDistance));
-            if (nearest > threshold) { dockedEdge = ""; return false; }
+            if (nearest > threshold) { ReleaseEdgeDock(); return false; }
             dockedEdge = nearest == leftDistance ? "left" : (nearest == rightDistance ? "right" : "bottom");
             ApplyEdgeDock(area);
             CancelWander();
@@ -2024,11 +2000,14 @@ namespace XianPal
         {
             if (String.IsNullOrEmpty(dockedEdge)) return;
             Location = CalculateDockedLocation(area, Size, Location, dockedEdge);
+            RefreshPetVisual();
         }
 
         private void ReleaseEdgeDock()
         {
+            if (String.IsNullOrEmpty(dockedEdge)) return;
             dockedEdge = "";
+            RefreshPetVisual();
         }
 
         internal static Point CalculateDockedLocation(Rectangle area, Size petSize, Point current, string edge)
@@ -2130,7 +2109,7 @@ namespace XianPal
                 string brainPrompt = brainRequestReason == "doubleclick"
                     ? PetBrain.BuildProactivePrompt(character, DateTime.Now, refillAiPaths)
                     : (historyToday ? PetBrain.BuildHistoryTodayPrompt(character, DateTime.Now) : PetBrain.BuildCarePrompt(character, DateTime.Now, brainRequestReason, brainScreenMinutes));
-                claudeRunner.Start(brainPrompt, directory);
+                claudeRunner.Start(brainPrompt, directory, null, null, character.Id);
             }
             catch (Exception ex)
             {
@@ -2181,6 +2160,7 @@ namespace XianPal
 
         private void RunClaudePrompt(string prompt, string workingDirectory)
         {
+            if(claudeRunner.IsRunning){MessageBox.Show(activityTray,"请等待当前回复完成后再发送。","仙伴");return;}
             try
             {
                 currentActivity = new ActivityRecord
@@ -2193,16 +2173,18 @@ namespace XianPal
                     Updated = DateTime.Now,
                     Unread = false
                 };
+                currentActivity.StartConversation(prompt);
                 activities.Insert(0, currentActivity);
                 lastReplyActivity = currentActivity;
                 while (activities.Count > 30) activities.RemoveAt(activities.Count - 1);
                 RefreshActivities();
                 BeginReplyBubble(prompt);
                 SetClaudeEvent("UserPromptSubmit");
-                claudeRunner.Start(PetBrain.BuildConversationPrompt(PetCharacter.Find(currentCharacterId), prompt), workingDirectory);
+                claudeRunner.Start(PetBrain.BuildConversationPrompt(PetCharacter.Find(currentCharacterId), prompt), workingDirectory, null, null, currentCharacterId);
             }
             catch (Exception ex)
             {
+                if(currentActivity!=null){currentActivity.AppendOutput("[无法启动] "+ex.Message+"\r\n");CompleteCurrentActivity("受阻");}
                 replyBubble.SetStatus("无法启动 Claude Code");
                 replyBubble.AppendReply(ex.Message);
                 ShowReplyBubble();
@@ -2212,7 +2194,7 @@ namespace XianPal
 
         private bool RunClaudeReply(ActivityRecord activity, string prompt)
         {
-            if (activity == null || activity.NativeInteractive || String.IsNullOrWhiteSpace(activity.SessionId) || String.IsNullOrWhiteSpace(prompt)) return false;
+            if (activity == null || String.IsNullOrWhiteSpace(activity.SessionId) || String.IsNullOrWhiteSpace(prompt)) return false;
             if (claudeRunner.IsRunning)
             {
                 MessageBox.Show(activityTray, "Claude 正在处理上一条消息，请完成后再回复。", "Claude Code", MessageBoxButtons.OK, MessageBoxIcon.Information);
@@ -2226,7 +2208,7 @@ namespace XianPal
                 activity.State = "正在运行";
                 activity.Unread = false;
                 activity.Updated = DateTime.Now;
-                activity.AppendOutput("\r\n\r\n你：" + prompt + "\r\n\r\n");
+                activity.AppendUserPrompt(prompt);
                 RefreshActivities();
                 BeginReplyBubble(prompt);
                 SetClaudeEvent("UserPromptSubmit");
@@ -2234,7 +2216,7 @@ namespace XianPal
                     ? activity.WorkingDirectory
                     : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
                 PetCharacter conversationCharacter = PetCharacter.Find(String.IsNullOrWhiteSpace(activity.CharacterId) ? currentCharacterId : activity.CharacterId);
-                claudeRunner.Start(PetBrain.BuildConversationPrompt(conversationCharacter, prompt), workingDirectory, activity.SessionId);
+                claudeRunner.Start(PetBrain.BuildConversationPrompt(conversationCharacter, prompt), workingDirectory, activity.SessionId, null, conversationCharacter.Id);
                 return true;
             }
             catch (Exception ex)
@@ -2376,9 +2358,9 @@ namespace XianPal
             }
             if (overlap == "parallel")
             {
-                // Parallel mode deliberately starts a fresh visible process for
-                // every trigger, even while an earlier instance is still alive.
-                RunVisibleScheduledClaudeTask(task);
+                if (ClaudeTaskService.NormalizeRunMode(task.RunMode) == "background")
+                    RunHeadlessScheduledClaudeTask(task, false);
+                else RunVisibleScheduledClaudeTask(task);
                 return;
             }
             scheduledClaudeTaskQueue.Enqueue(task);
@@ -2414,7 +2396,7 @@ namespace XianPal
 
         private void TryRunNextScheduledClaudeTask()
         {
-            if (paused || brainRequestActive || claudeRunner.IsRunning || currentScheduledClaudeTask != null || scheduledClaudeTaskQueue.Count == 0) return;
+            if (closingPet || paused || brainRequestActive || claudeRunner.IsRunning || blockingScheduledRunner != null || scheduledClaudeTaskQueue.Count == 0) return;
             ScheduledClaudeTask task = scheduledClaudeTaskQueue.Dequeue();
             if (task == null || !Directory.Exists(task.WorkingDirectory))
             {
@@ -2427,47 +2409,47 @@ namespace XianPal
                 TryRunNextScheduledClaudeTask();
                 return;
             }
-            string folder = Path.GetFileName(task.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (String.IsNullOrWhiteSpace(folder)) folder = task.WorkingDirectory;
+            RunHeadlessScheduledClaudeTask(task, true);
+        }
+
+        private void RunHeadlessScheduledClaudeTask(ScheduledClaudeTask task, bool blocksQueue)
+        {
+            ClaudeTaskRunRecord run = claudeTaskService.BeginRun(task, DateTime.Now);
+            if (run == null) return;
             MarkScheduledTaskStarted(task);
-            currentScheduledClaudeTask = task;
-            ClaudeTaskRunRecord runRecord = claudeTaskService.BeginRun(task, DateTime.Now);
-            currentScheduledRunId = runRecord == null ? null : runRecord.Id;
-            currentActivity = new ActivityRecord
+            var runner = new ClaudeCliRunner();
+            scheduledClaudeRunners.Add(runner);
+            if (blocksQueue) blockingScheduledRunner = runner;
+            runner.OutputReceived += delegate(string text)
             {
-                WorkingDirectory = task.WorkingDirectory,
-                CharacterId = currentCharacterId,
-                Title = "定时任务 · " + folder,
-                State = "正在运行",
-                Output = "[Claude Code 定时任务] " + task.ScheduleText + "\r\n工作目录：" + task.WorkingDirectory + "\r\n\r\n任务：" + task.Prompt + "\r\n\r\n",
-                Updated = DateTime.Now
+                RunOnUi(delegate
+                {
+                    if (!closingPet && scheduledClaudeRunners.Contains(runner))
+                        claudeTaskService.UpdateRunProgress(task, run.Id, run.Transcript + text);
+                });
             };
-            activities.Insert(0, currentActivity);
-            lastReplyActivity = currentActivity;
-            RefreshActivities();
-            BeginReplyBubble(task.Prompt);
+            runner.Completed += delegate(int code)
+            {
+                RunOnUi(delegate { FinishHeadlessScheduledRun(task, run, runner, code, run.Transcript); });
+            };
             try
             {
-                claudeRunner.Start(BuildScheduledTaskPrompt(task), task.WorkingDirectory, null, task.Id);
-                SetClaudeEvent("UserPromptSubmit");
+                runner.Start(BuildScheduledTaskPrompt(task), task.WorkingDirectory, null, task.Id, currentCharacterId);
             }
             catch (Exception ex)
             {
-                currentActivity.State = "受阻";
-                currentActivity.Unread = true;
-                currentActivity.AppendOutput("[无法执行定时任务] " + ex.Message + "\r\n");
-                currentActivity.Updated = DateTime.Now;
-                claudeTaskService.CompleteRun(task, currentScheduledRunId, false, -1, ex.Message, DateTime.Now);
-                MarkScheduledTaskFinished(task);
-                currentScheduledClaudeTask = null;
-                currentScheduledRunId = null;
-                currentActivity = null;
-                replyBubble.SetStatus("定时任务启动失败");
-                replyBubble.AppendReply(ex.Message);
-                ShowReplyBubble();
-                RefreshActivities();
-                TryRunNextScheduledClaudeTask();
+                FinishHeadlessScheduledRun(task, run, runner, -1, "[启动失败] " + ex.Message);
             }
+        }
+
+        private void FinishHeadlessScheduledRun(ScheduledClaudeTask task, ClaudeTaskRunRecord run, ClaudeCliRunner runner, int code, string output)
+        {
+            if (closingPet || !scheduledClaudeRunners.Remove(runner)) return;
+            if (blockingScheduledRunner == runner) blockingScheduledRunner = null;
+            runner.Dispose();
+            MarkScheduledTaskFinished(task);
+            try { claudeTaskService.CompleteRun(task, run.Id, code == 0, code, output, DateTime.Now); }
+            finally { TryRunNextScheduledClaudeTask(); }
         }
 
         internal static string BuildScheduledTaskPrompt(ScheduledClaudeTask task)
@@ -2478,111 +2460,38 @@ namespace XianPal
 
         private void RunVisibleScheduledClaudeTask(ScheduledClaudeTask task)
         {
-            MarkScheduledTaskStarted(task);
             ClaudeTaskRunRecord run = claudeTaskService.BeginRun(task, DateTime.Now);
-            // Parallel background tasks retain their existing visible-window
-            // behavior; history must describe the actual host used this run.
-            string requestedMode = ClaudeTaskService.NormalizeRunMode(task.RunMode);
-            string visibleMode = requestedMode == "background" ? "powershell" : requestedMode;
-            bool interactive = ClaudeTaskService.IsInteractiveMode(visibleMode);
-            if (run != null) run.RunMode = visibleMode;
-            string mode = ClaudeTaskService.RunModeLabel(visibleMode);
-            string folder = Path.GetFileName(task.WorkingDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
-            if (String.IsNullOrWhiteSpace(folder)) folder = task.WorkingDirectory;
-            string header = "[" + mode + " 定时任务] " + task.ScheduleText + "\r\n工作目录：" + task.WorkingDirectory + "\r\n\r\n任务：" + task.Prompt + "\r\n\r\n";
-            ActivityRecord activity = new ActivityRecord
-            {
-                WorkingDirectory = task.WorkingDirectory, CharacterId = currentCharacterId,
-                Title = mode + " 定时任务 · " + folder, State = "正在运行",
-                Output = header, Updated = DateTime.Now, NativeInteractive = interactive
-            };
-            activities.Insert(0, activity);
-            RefreshActivities();
-            bool ownsBubble = !claudeRunner.IsRunning && !brainRequestActive;
-            if (ownsBubble)
-            {
-                lastReplyActivity = activity;
-                BeginReplyBubble(task.Prompt);
-                replyBubble.SetStatus(mode + " 定时任务正在启动…");
-                SetClaudeEvent("UserPromptSubmit");
-            }
+            if (run == null) return;
+            MarkScheduledTaskStarted(task);
             string logDirectory = Path.Combine(Program.StateDirectory, "scheduled-task-runs");
-            string logPath = Path.Combine(logDirectory, (run == null ? Guid.NewGuid().ToString("N") : run.Id) + ".log");
+            string logPath = Path.Combine(logDirectory, run.Id + ".log");
             VisibleTaskMonitor monitor = null;
-            string receivedOutput = "";
             try
             {
                 Directory.CreateDirectory(logDirectory);
-                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath);
+                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, "claude", currentCharacterId);
                 monitor = new VisibleTaskMonitor(logPath, delegate(string output)
                 {
-                    activity.Output = header + output;
-                    activity.Updated = DateTime.Now;
-                    claudeTaskService.UpdateRunProgress(task, run == null ? null : run.Id, output);
-                    if (ownsBubble && lastReplyActivity == activity && !claudeRunner.IsRunning && !brainRequestActive)
-                    {
-                        string delta = output.StartsWith(receivedOutput, StringComparison.Ordinal) ? output.Substring(receivedOutput.Length) : output;
-                        replyBubble.AppendReply(delta);
-                        if (!replyBubble.Visible && !replyBubble.UserDismissed) ShowReplyBubble();
-                    }
-                    receivedOutput = output;
-                    RefreshActivities();
-                }, delegate(int completedCode, string completedOutput)
+                    claudeTaskService.UpdateRunProgress(task, run.Id, output);
+                }, delegate(int code, string output)
                 {
-                    activity.Output = header + completedOutput;
-                    activity.State = completedCode == 0 ? "就绪" : "受阻";
-                    activity.Unread = true;
-                    activity.Updated = DateTime.Now;
-                    claudeTaskService.CompleteRun(task, run == null ? null : run.Id, completedCode == 0, completedCode, completedOutput, DateTime.Now);
-                    RefreshActivities();
-                    MarkScheduledTaskFinished(task);
-                    if (!claudeRunner.IsRunning && !brainRequestActive && activeScheduledTaskCounts.Count == 0)
-                        SetClaudeEvent(completedCode == 0 ? "Stop" : "StopFailure");
-                    if (ownsBubble && lastReplyActivity == activity && !claudeRunner.IsRunning && !brainRequestActive)
-                    {
-                        string remaining = completedOutput.StartsWith(receivedOutput, StringComparison.Ordinal) ? completedOutput.Substring(receivedOutput.Length) : completedOutput;
-                        if (String.IsNullOrWhiteSpace(completedOutput)) remaining = completedCode == 0 ? mode + " 定时任务已完成。" : mode + " 定时任务执行失败，退出码 " + completedCode + "。";
-                        replyBubble.AppendReply(remaining);
-                        replyBubble.FlushPendingReply();
-                        replyBubble.SetStatus(mode + (completedCode == 0 ? " 定时任务已完成" : " 定时任务失败"));
-                        if (activeScheduledTaskCounts.Count > 0) SetClaudeEvent("UserPromptSubmit");
-                    }
                     visibleTaskMonitors.Remove(monitor);
-                    // Preserve per-run script/log/markers: an open Terminal
-                    // window can still display its output after the pet exits.
-                    TryRunNextScheduledClaudeTask();
-                }, delegate(string status, string sessionId, string reaction)
-                {
-                    activity.SessionId = sessionId;
-                    activity.State = status;
-                    activity.Updated = DateTime.Now;
-                    if (ownsBubble && lastReplyActivity == activity && !claudeRunner.IsRunning && !brainRequestActive)
-                    {
-                        replyBubble.SetStatus(status);
-                        SetClaudeEvent(!interactive && (reaction == "Stop" || reaction == "StopFailure") ? "PostToolUse" : reaction);
-                    }
-                    RefreshActivities();
+                    MarkScheduledTaskFinished(task);
+                    try { claudeTaskService.CompleteRun(task, run.Id, code == 0, code, output, DateTime.Now); }
+                    finally { TryRunNextScheduledClaudeTask(); }
                 });
                 visibleTaskMonitors.Add(monitor);
                 monitor.Start(info);
             }
             catch (Exception ex)
             {
-                if (monitor != null) { visibleTaskMonitors.Remove(monitor); monitor.Dispose(); }
-                activity.AppendOutput("[启动失败] " + ex.Message + "\r\n");
-                activity.State = "受阻";
-                activity.Unread = true;
-                activity.Updated = DateTime.Now;
-                claudeTaskService.CompleteRun(task, run == null ? null : run.Id, false, -1, ex.Message, DateTime.Now);
-                MarkScheduledTaskFinished(task);
-                if (!claudeRunner.IsRunning && !brainRequestActive && activeScheduledTaskCounts.Count == 0) SetClaudeEvent("StopFailure");
-                if (ownsBubble && lastReplyActivity == activity && !claudeRunner.IsRunning && !brainRequestActive)
+                if (monitor != null)
                 {
-                    replyBubble.AppendReply("[启动失败] " + ex.Message);
-                    replyBubble.SetStatus("定时任务启动失败");
-                    SetClaudeEvent("StopFailure");
+                    visibleTaskMonitors.Remove(monitor);
+                    monitor.Dispose();
                 }
-                RefreshActivities();
+                MarkScheduledTaskFinished(task);
+                claudeTaskService.CompleteRun(task, run.Id, false, -1, "[启动失败] " + ex.Message, DateTime.Now);
             }
         }
 
@@ -2593,8 +2502,15 @@ namespace XianPal
 
         internal static ProcessStartInfo BuildVisibleTaskStartInfo(ScheduledClaudeTask task, string logPath, string claudeCommand)
         {
+            return BuildVisibleTaskStartInfo(task, logPath, claudeCommand, null);
+        }
+
+        internal static ProcessStartInfo BuildVisibleTaskStartInfo(ScheduledClaudeTask task, string logPath, string claudeCommand, string characterId)
+        {
             if (task == null) throw new ArgumentNullException("task");
             if (!Directory.Exists(task.WorkingDirectory)) throw new DirectoryNotFoundException("任务目录不存在：" + task.WorkingDirectory);
+            string settingsPath = ClaudeSettingsFile.CurrentPath(characterId);
+            string settingsArguments = settingsPath.Length == 0 ? "" : " --settings $xianpalSettings";
             string directory = Path.GetFullPath(task.WorkingDirectory);
             bool interactive = ClaudeTaskService.IsInteractiveMode(task.RunMode);
             bool terminal = ClaudeTaskService.NormalizeRunMode(task.RunMode) == "terminal" || ClaudeTaskService.NormalizeRunMode(task.RunMode) == "interactive-terminal";
@@ -2634,12 +2550,12 @@ namespace XianPal
                     "[IO.File]::AppendAllText('" + safeLog + "','[原生 CLI] 回复、输入框、权限确认及斜杠命令均由 Claude Code 自己显示。'+[Environment]::NewLine,$utf8); " +
                     "[IO.File]::WriteAllText('" + safeLog + ".state','Claude 原生 CLI 交互中'+[Environment]::NewLine+'" + session + "'+[Environment]::NewLine+'UserPromptSubmit',$utf8); " +
                     // Native CLI owns the console: no -p, pipes or SendKeys.
-                    "& '" + safeClaude + "' --session-id '" + session + "' $prompt; ";
+                    "& '" + safeClaude + "' --session-id '" + session + "' $prompt" + settingsArguments + "; ";
             }
             else
                 invocation = "Remove-Item Env:FUFU_PET_NATIVE_RUN_LOG,Env:FUFU_PET_NATIVE_RUN_TOKEN -ErrorAction SilentlyContinue; " +
                     "[void][Reflection.Assembly]::LoadFrom('" + safePet + "'); $renderer=New-Object XianPal.ClaudeTaskStreamRenderer; $previousState=''; " +
-                    "& '" + safeClaude + "' -p $prompt --verbose --output-format stream-json --include-partial-messages 2>&1 | ForEach-Object { " +
+                    "& '" + safeClaude + "' -p $prompt --verbose --output-format stream-json --include-partial-messages" + settingsArguments + " 2>&1 | ForEach-Object { " +
                     "$chunk=$renderer.Consume([string]$_); if($chunk.Length -gt 0){Write-Host -NoNewline $chunk; [IO.File]::AppendAllText('" + safeLog + "',$chunk,$utf8)}; " +
                     "$state=$renderer.Status+[Environment]::NewLine+$renderer.SessionId+[Environment]::NewLine+$renderer.Reaction; " +
                     "if($state -ne $previousState){[IO.File]::WriteAllText('" + safeLog + ".state',$state,$utf8); $previousState=$state} }; ";
@@ -2651,13 +2567,15 @@ namespace XianPal
                 "$env:FUFU_PET_MANAGED_SESSION='1'; $env:PWD='" + safeDirectory + "'; " +
                 "$prompt=[Text.Encoding]::UTF8.GetString([Convert]::FromBase64String('" + promptBase64 + "')); " +
                 desktopScript +
+                ClaudeSettingsFile.PowerShellSetup(settingsPath, claudeCommand) +
                 "Write-Host ('[任务] '+$prompt); [IO.File]::AppendAllText('" + safeLog + "','[任务] '+$prompt+[Environment]::NewLine,$utf8); " +
                 "$ErrorActionPreference='Continue'; " +
                 invocation +
                 "$code=$LASTEXITCODE; if($null -eq $code){$code=1} " +
                 "} catch { $line='[执行失败] '+[string]$_; Write-Host $line; [IO.File]::AppendAllText('" + safeLog + "',$line+[Environment]::NewLine,$utf8) } " +
                 "finally { [IO.File]::WriteAllText('" + safeLog + ".completed.tmp',[string][int]$code,$utf8); [IO.File]::Move('" + safeLog + ".completed.tmp','" + safeLog + ".completed'); " +
-                (interactive ? "Remove-Item Env:FUFU_PET_NATIVE_RUN_LOG,Env:FUFU_PET_NATIVE_RUN_TOKEN,Env:FUFU_PET_INTERNAL_TASK_ID,Env:FUFU_PET_MANAGED_SESSION -ErrorAction SilentlyContinue; " : "") + "}; " +
+                (interactive ? "Remove-Item Env:FUFU_PET_NATIVE_RUN_LOG,Env:FUFU_PET_NATIVE_RUN_TOKEN,Env:FUFU_PET_INTERNAL_TASK_ID,Env:FUFU_PET_MANAGED_SESSION -ErrorAction SilentlyContinue; " : "") +
+                (settingsPath.Length > 0 ? "Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue; " : "") + "}; " +
                 (terminal || interactive ? "Write-Host ('[任务结束] 退出码：'+$code)" : "exit [int]$code");
             string scriptPath = Path.GetFullPath(logPath) + ".ps1";
             Directory.CreateDirectory(Path.GetDirectoryName(scriptPath));
@@ -2929,6 +2847,10 @@ namespace XianPal
                 {
                     if (key != null)
                     {
+                        int savedDockOpacity;
+                        if (Int32.TryParse(Convert.ToString(key.GetValue("DockOpacity")), out savedDockOpacity))
+                            dockOpacityPercent = Math.Max(20, Math.Min(100, savedDockOpacity));
+                        TopMost = Convert.ToString(key.GetValue("AlwaysOnTop", 1)) != "0";
                         desktopScope = Convert.ToString(key.GetValue("DesktopScope")) == "first" ? "first" : "all";
                         object revisionValue = key.GetValue("ScaleDefaultRevision");
                         bool useHalfSizeDefault = revisionValue == null || Convert.ToInt32(revisionValue) < 1;
@@ -2999,6 +2921,8 @@ namespace XianPal
                     key.SetValue("ReduceMotion", reduceMotion ? 1 : 0, RegistryValueKind.DWord);
                     key.SetValue("Character", currentCharacterId, RegistryValueKind.String);
                     key.SetValue("DockEdge", dockedEdge, RegistryValueKind.String);
+                    key.SetValue("DockOpacity", dockOpacityPercent, RegistryValueKind.DWord);
+                    key.SetValue("AlwaysOnTop", TopMost ? 1 : 0, RegistryValueKind.DWord);
                     key.SetValue("TrailOpacity", trailOpacity.ToString(System.Globalization.CultureInfo.InvariantCulture), RegistryValueKind.String);
                     key.SetValue("MovementPathMode", movementPathMode, RegistryValueKind.String);
                     key.SetValue("AiCareEnabled", aiCareEnabled ? 1 : 0, RegistryValueKind.DWord);
@@ -3035,6 +2959,8 @@ namespace XianPal
         private void DisposeResources()
         {
             closingPet = true;
+            artifactTravel.Reset();DisposeArtifactCanvas();
+            DisposeWorkshop();
             DisposeCharacterPackWatching();
             backgroundTaskSupervisor.Dispose();
             visibilityTimer.Stop();
@@ -3047,6 +2973,8 @@ namespace XianPal
             clickDelayTimer.Dispose();
             fileWipeTimer.Dispose();
             claudeRunner.Dispose();
+            foreach (ClaudeCliRunner scheduledRunner in scheduledClaudeRunners) scheduledRunner.Dispose();
+            scheduledClaudeRunners.Clear();
             reminderService.Dispose();
             claudeTaskService.Dispose();
             promptForm.Dispose();

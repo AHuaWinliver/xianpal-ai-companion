@@ -60,7 +60,7 @@ namespace XianPal
             visibilityTimer.Start();
         }
 
-        private void AddDesktopVisibilityMenu(ContextMenuStrip menu)
+        private void AddDesktopVisibilityMenu(ToolStripItemCollection items)
         {
             ToolStripMenuItem scope = new ToolStripMenuItem("虚拟桌面显示范围");
             desktopOneItem = new ToolStripMenuItem("仅在桌面 1 显示");
@@ -69,7 +69,7 @@ namespace XianPal
             desktopAllItem.Click += delegate { SelectDesktopScope("all"); };
             scope.DropDownItems.Add(desktopOneItem);
             scope.DropDownItems.Add(desktopAllItem);
-            menu.Items.Add(scope);
+            items.Add(scope);
             UpdateVisibilityMenu();
         }
 
@@ -136,6 +136,7 @@ namespace XianPal
 
         private void EnsurePetOnMonitor()
         {
+            if(chatGroupDragging)return;
             Rectangle[] areas = Array.ConvertAll(Screen.AllScreens, delegate(Screen screen) { return screen.WorkingArea; });
             if (!HasVisiblePetArea(Bounds, areas))
             {

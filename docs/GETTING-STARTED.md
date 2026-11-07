@@ -2,7 +2,7 @@
 
 ## 1. 安装桌面程序
 
-从 [Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) 下载 `XianPal-0.5.0-Setup.exe`；若尚未发布安装包，可按仓库 README 从源码构建。
+从 [Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) 下载 `XianPal-0.6.11-Setup.exe`。若尚未发布安装包，可按仓库 README 从源码构建。
 
 自行构建时建议将源码放在类似 `C:\src\xianpal` 的短目录，避免 .NET Framework 的传统路径长度限制。安装/快捷方式专项测试默认使用独立的临时短目录，不会修改真实开始菜单。
 

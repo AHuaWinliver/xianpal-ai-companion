@@ -7,6 +7,13 @@ function Get-PublicProjectFiles([string]$ProjectRoot) {
     $names += @('tests/reminder-performance-test.ps1','tests/ReminderPerformanceTests.cs','tools/BuildReminderPreviews.cs','tools/BuildReminderPreviews.ps1')
     $names += @('tools/BuildReadmeMedia.cs','tools/BuildReadmeMedia.ps1','tests/release-source-test.ps1')
     $names += @('tests/startup-registration-test.ps1','tests/StartupRegistrationTests.cs')
+    $names += @('tests/workshop-test.ps1','tests/WorkshopTests.cs')
+    $names += @('tests/chat-bubble-test.ps1','tests/ChatBubbleTests.cs')
+    $names += @('tests/chat-drag-test.ps1','tests/ChatDragTests.cs')
+    $names += @('tests/hall-scene-install-test.ps1','tests/HallSceneTests.cs')
+    $names += @('tests/hall-layout-test.ps1','tests/HallLayoutTests.cs')
+    $names += @('tests/artifact-travel-test.ps1','tests/ArtifactTravelTests.cs')
+    $names += @('tests/drag-gait-test.ps1','tests/DragGaitTests.cs')
     $names += @('tools/CharacterPackTool.cs','tools/ValidateCharacterPack.ps1','tools/ExportCharacterPack.ps1','tests/character-pack-test.ps1','tests/CharacterPackTests.cs')
     foreach ($name in $names) {
         $file = Join-Path $ProjectRoot $name

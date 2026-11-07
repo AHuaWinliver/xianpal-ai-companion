@@ -422,7 +422,7 @@ namespace XianPal
             if (task == null || task.History == null) return;
             const int MaximumHistory = 50;
             for (int i = task.History.Count - 1; i >= MaximumHistory; i--)
-                if (task.History[i].RunMode != "claude-background" || task.History[i].Status != "running") task.History.RemoveAt(i);
+                if (task.History[i].Status != "running") task.History.RemoveAt(i);
         }
 
         private void SaveAndNotify()

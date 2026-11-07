@@ -47,7 +47,7 @@ namespace XianPal
             Font = UiText.Font(9f);
 
             Label title = new Label { Text = "Claude Code 定时任务", Font = UiText.Font(11f, FontStyle.Bold), ForeColor = Color.FromArgb(34, 34, 32), AutoSize = true, Location = new Point(20, 17) };
-            Label subtitle = new Label { Text = "到点后在指定目录自动执行", ForeColor = Color.FromArgb(112, 112, 106), AutoSize = true, Location = new Point(188, 20) };
+            Label subtitle = new Label { Text = "任务输出在「运行情况」查看", ForeColor = Color.FromArgb(112, 112, 106), AutoSize = true, Location = new Point(188, 20) };
             Button close = TextButton("×", new Point(564, 8), new Size(30, 30));
             close.Font = new Font("Segoe UI", 13f);
             close.Click += delegate { Hide(); };
@@ -69,14 +69,14 @@ namespace XianPal
             directory.Click += ChooseDirectory;
 
             runMode.DropDownStyle = ComboBoxStyle.DropDownList;
-            runMode.Items.AddRange(new object[] { "后台运行（旧）", "PowerShell 窗口", "终端窗口", "CLI 交互·PS", "CLI 交互·终端", "Claude BG·关窗" });
+            runMode.Items.AddRange(new object[] { "后台运行", "PowerShell 窗口", "终端窗口", "CLI 交互·PS", "CLI 交互·终端", "Claude BG·关窗" });
             runMode.DropDownWidth = 240;
-            runMode.SelectedIndex = 3;
+            runMode.SelectedIndex = 0;
             runMode.Location = new Point(296, 102);
             runMode.Size = new Size(126, 28);
 
             overlapMode.DropDownStyle = ComboBoxStyle.DropDownList;
-            overlapMode.Items.AddRange(new object[] { "阻塞模式", "并行开窗" });
+            overlapMode.Items.AddRange(new object[] { "阻塞模式", "并行模式" });
             overlapMode.SelectedIndex = 0;
             overlapMode.Location = new Point(430, 102);
             overlapMode.Size = new Size(130, 28);
@@ -150,7 +150,6 @@ namespace XianPal
             {
                 note.Text = runMode.SelectedIndex == 5 ? "Claude 原生 Background：创建成功后关窗；阻塞等待后台完成，需已支持 --bg 的 CLI。" : runMode.SelectedIndex >= 3 ? "原生 CLI 可继续追问及确认权限；阻塞模式等待此 CLI 会话退出，不自动关窗。" : "任务由本机 claude CLI 执行；电脑休眠期间不会唤醒，恢复后补执行到期任务。";
             };
-            note.Text = "原生 CLI 可继续追问及确认权限；阻塞模式等待此 CLI 会话退出，不自动关窗。";
 
             editor.Controls.Add(promptLabel);
             editor.Controls.Add(prompt);
@@ -438,7 +437,7 @@ namespace XianPal
             BackColor = Color.FromArgb(253, 253, 252);
             Font = UiText.Font(9f);
 
-            Label title = new Label { Text = "运行情况  ·  双击记录查看历史对话", Font = UiText.Font(12f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 16), ForeColor = Color.FromArgb(34, 34, 32) };
+            Label title = new Label { Text = "运行情况  ·  双击记录查看输出", Font = UiText.Font(12f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 16), ForeColor = Color.FromArgb(34, 34, 32) };
             Label taskText = new Label { Text = task == null ? "" : task.Prompt, AutoEllipsis = true, Location = new Point(18, 48), Size = new Size(644, 25), ForeColor = Color.FromArgb(70, 70, 66) };
             Label path = new Label { Text = task == null ? "" : "目录：" + task.WorkingDirectory, AutoEllipsis = true, Location = new Point(18, 74), Size = new Size(644, 23), ForeColor = Color.FromArgb(112, 112, 106), Font = UiText.Font(8f) };
 
@@ -564,7 +563,7 @@ namespace XianPal
         private readonly Timer liveRefresh = new Timer { Interval = 400 };
         internal ClaudeTaskRunTranscriptForm(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
         {
-            Text = "Claude Code 历史对话";
+            Text = "Claude Code 定时任务运行详情";
             Icon = AppIcon.WindowIcon;
             ClientSize = new Size(760, 560);
             StartPosition = FormStartPosition.CenterParent;
@@ -575,7 +574,7 @@ namespace XianPal
             Font = UiText.Font(9f);
 
             string status = record == null ? "未知" : record.StatusText;
-            Label title = new Label { Text = "Claude Code 历史对话 · " + status, Font = UiText.Font(11.5f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 15), ForeColor = Color.FromArgb(34, 34, 32) };
+            Label title = new Label { Text = "定时任务运行详情 · " + status, Font = UiText.Font(11.5f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 15), ForeColor = Color.FromArgb(34, 34, 32) };
             Label meta = new Label
             {
                 Text = BuildMeta(task, record),

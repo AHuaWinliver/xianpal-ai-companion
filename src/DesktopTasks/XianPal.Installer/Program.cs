@@ -1,4 +1,4 @@
-﻿using Microsoft.Win32;
+using Microsoft.Win32;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -9,21 +9,23 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 [assembly: AssemblyTitle("仙伴 · AI桌面伴侣 安装程序")]
 [assembly: AssemblyProduct(XianPal.StartupRegistration.DisplayName)]
-[assembly: AssemblyVersion("0.5.0.0")]
-[assembly: AssemblyFileVersion("0.5.0.0")]
+[assembly: AssemblyVersion("0.6.11.0")]
+[assembly: AssemblyFileVersion("0.6.11.0")]
 
 namespace XianPal.Installer
 {
     internal static class Program
     {
         internal const string AppName = XianPal.StartupRegistration.DisplayName;
-        internal const string Version = "0.5.0";
+        internal const string Version = "0.6.11";
         internal static readonly string InstallDirectory = ResolveInstallDirectory();
         internal static readonly string PetExe = Path.Combine(InstallDirectory, "OrbitPet.exe");
 
@@ -52,7 +54,11 @@ namespace XianPal.Installer
             if (args.Length > 0 && String.Equals(args[0], "--silent", StringComparison.OrdinalIgnoreCase))
             {
                 try { Install(); Environment.ExitCode = 0; }
-                catch { Environment.ExitCode = 1; }
+                catch (Exception ex)
+                {
+                    Console.Error.WriteLine(TestMode ? ex.ToString() : ex.GetBaseException().Message);
+                    Environment.ExitCode = 1;
+                }
                 return;
             }
             Application.EnableVisualStyles();
@@ -99,10 +105,13 @@ namespace XianPal.Installer
         {
             string staging = Path.Combine(InstallDirectory, ".payload-" + Guid.NewGuid().ToString("N"));
             string assets = Path.Combine(InstallDirectory, "assets");
+            string scenes = Path.Combine(InstallDirectory,"scenes");
             string backup = Path.Combine(InstallDirectory, "asset-backups", DateTime.Now.ToString("yyyyMMdd-HHmmss") + "-" + Guid.NewGuid().ToString("N"));
             string backupAssets = Path.Combine(backup, "assets");
+            string backupScenes=Path.Combine(backup,"scenes");
             string backupExe = Path.Combine(backup, "OrbitPet.exe");
             bool savedExe = false, movedOldAssets = false, promotedAssets = false;
+            bool movedOldScenes=false,promotedScenes=false;
             Directory.CreateDirectory(staging);
             try
             {
@@ -149,6 +158,18 @@ namespace XianPal.Installer
                 Directory.Move(stagedAssets, assets);
                 promotedAssets = true;
             }
+            // Scene artwork is a separate resource tree, not part of assets/. Promote
+            // it transactionally too; top-level file copying otherwise silently drops it.
+            string stagedScenes=Path.Combine(staging,"scenes");
+            if(!AssetTreesMatch(stagedScenes,scenes))
+            {
+                if(Directory.Exists(scenes))
+                {
+                    if((File.GetAttributes(scenes)&FileAttributes.ReparsePoint)!=0)throw new InvalidOperationException("场景目录不能是目录链接。");
+                    Directory.CreateDirectory(backup);Directory.Move(scenes,backupScenes);movedOldScenes=true;
+                }
+                Directory.Move(stagedScenes,scenes);promotedScenes=true;
+            }
             foreach (string file in Directory.GetFiles(staging, "*", SearchOption.TopDirectoryOnly))
                 File.Copy(file, Path.Combine(InstallDirectory, Path.GetFileName(file)), true);
             ValidatePayload(InstallDirectory);
@@ -157,6 +178,8 @@ namespace XianPal.Installer
             }
             catch
             {
+                if(promotedScenes&&Directory.Exists(scenes))Directory.Move(scenes,Path.Combine(staging,"failed-scenes"));
+                if(movedOldScenes&&Directory.Exists(backupScenes))Directory.Move(backupScenes,scenes);
                 // Only remove the newly promoted tree from the active path;
                 // never delete the old assets. Keep their backup on success.
                 if (promotedAssets && Directory.Exists(assets)) Directory.Move(assets, Path.Combine(staging, "failed-assets"));
@@ -176,6 +199,10 @@ namespace XianPal.Installer
 
         private static void ValidatePayload(string directory)
         {
+            string scene=Path.Combine(directory,"scenes","sect-hall-v2.png");
+            if(!File.Exists(scene))throw new InvalidOperationException("安装资源缺少门派大堂背景图。");
+            using(Image image=Image.FromFile(scene))
+                if(image.Width<320||image.Height<200||image.Width>8192||image.Height>8192)throw new InvalidOperationException("门派大堂背景图校验失败。");
             using (Process test = Process.Start(new ProcessStartInfo(Path.Combine(directory, "OrbitPet.exe"), "--self-test") { UseShellExecute = false, CreateNoWindow = true, WorkingDirectory = directory }))
             {
                 if (!test.WaitForExit(30000))
@@ -393,56 +420,74 @@ namespace XianPal.Installer
 
         private static string StartMenuShortcut { get { return Path.Combine(StartMenuFolder, "仙伴 AI桌面伴侣.lnk"); } }
 
-        private static object OpenShortcut(object shell, string path)
+        // Keep these declarations in Win32 vtable order, including unused methods.
+        [ComImport, Guid("000214F9-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IShellLinkW
         {
-            return shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { path });
+            void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int capacity, IntPtr findData, uint flags);
+            void GetIDList(out IntPtr itemList);
+            void SetIDList(IntPtr itemList);
+            void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder description, int capacity);
+            void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string description);
+            void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder directory, int capacity);
+            void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string directory);
+            void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder arguments, int capacity);
+            void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string arguments);
+            void GetHotkey(out ushort hotkey);
+            void SetHotkey(ushort hotkey);
+            void GetShowCmd(out int showCommand);
+            void SetShowCmd(int showCommand);
+            void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int capacity, out int iconIndex);
+            void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string path, int iconIndex);
+            void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string relativePath, uint reserved);
+            void Resolve(IntPtr owner, uint flags);
+            void SetPath([MarshalAs(UnmanagedType.LPWStr)] string path);
         }
 
-        private static void SetShortcutProperty(object shortcut, string property, object value)
+        private static IShellLinkW CreateShellLink()
         {
-            shortcut.GetType().InvokeMember(property, BindingFlags.SetProperty, null, shortcut, new object[] { value });
+            return (IShellLinkW)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("00021401-0000-0000-C000-000000000046"), true));
         }
 
-        private static bool ShortcutBelongsToPet(object shell, string path)
+        private static bool ShortcutBelongsToPet(string path)
         {
-            object shortcut = null;
+            IShellLinkW shortcut = CreateShellLink();
             try
             {
-                shortcut = OpenShortcut(shell, path);
-                string target = Convert.ToString(shortcut.GetType().InvokeMember("TargetPath", BindingFlags.GetProperty, null, shortcut, null));
+                ((IPersistFile)shortcut).Load(path, 0);
+                var targetPath = new StringBuilder(260);
+                shortcut.GetPath(targetPath, targetPath.Capacity, IntPtr.Zero, 0);
+                string target = targetPath.ToString();
                 return !String.IsNullOrWhiteSpace(target) && String.Equals(Path.GetFullPath(target), Path.GetFullPath(PetExe), StringComparison.OrdinalIgnoreCase);
             }
-            finally { if (shortcut != null && Marshal.IsComObject(shortcut)) Marshal.FinalReleaseComObject(shortcut); }
+            finally { Marshal.FinalReleaseComObject(shortcut); }
         }
 
         private static void RegisterStartMenuShortcut()
         {
             Directory.CreateDirectory(StartMenuFolder);
-            object shell = null, shortcut = null;
+            IShellLinkW shortcut = null;
             string temporary = Path.Combine(StartMenuFolder, ".orbit-" + Guid.NewGuid().ToString("N") + ".lnk");
             try
             {
-                shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
-                if (File.Exists(StartMenuShortcut) && !ShortcutBelongsToPet(shell, StartMenuShortcut))
+                if (File.Exists(StartMenuShortcut) && !ShortcutBelongsToPet(StartMenuShortcut))
                     throw new InvalidOperationException("开始菜单中存在指向其他程序的同名快捷方式，未覆盖：" + StartMenuShortcut);
-                shortcut = OpenShortcut(shell, temporary);
-                SetShortcutProperty(shortcut, "TargetPath", PetExe);
-                SetShortcutProperty(shortcut, "WorkingDirectory", InstallDirectory);
-                SetShortcutProperty(shortcut, "Arguments", "");
-                SetShortcutProperty(shortcut, "Description", "仙伴 AI桌面伴侣 · 连接本机 Claude Code CLI");
-                SetShortcutProperty(shortcut, "WindowStyle", 1);
+                shortcut = CreateShellLink();
+                shortcut.SetPath(PetExe);
+                shortcut.SetWorkingDirectory(InstallDirectory);
+                shortcut.SetDescription("仙伴 AI桌面伴侣 · 连接本机 Claude Code CLI");
+                shortcut.SetShowCmd(1);
                 // Versioned file avoids reusing Explorer's stale transparent icon.
                 string icon = Path.Combine(InstallDirectory, "OrbitPet-" + Version + ".ico");
-                SetShortcutProperty(shortcut, "IconLocation", (File.Exists(icon) ? icon : PetExe) + ",0");
-                shortcut.GetType().InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+                shortcut.SetIconLocation(File.Exists(icon) ? icon : PetExe, 0);
+                ((IPersistFile)shortcut).Save(temporary, true);
                 Marshal.FinalReleaseComObject(shortcut); shortcut = null;
                 if (File.Exists(StartMenuShortcut)) File.Replace(temporary, StartMenuShortcut, null);
                 else File.Move(temporary, StartMenuShortcut);
             }
             finally
             {
-                if (shortcut != null && Marshal.IsComObject(shortcut)) Marshal.FinalReleaseComObject(shortcut);
-                if (shell != null && Marshal.IsComObject(shell)) Marshal.FinalReleaseComObject(shell);
+                if (shortcut != null) Marshal.FinalReleaseComObject(shortcut);
                 if (File.Exists(temporary)) File.Delete(temporary);
             }
         }
@@ -450,9 +495,7 @@ namespace XianPal.Installer
         private static void RemoveStartMenuShortcut()
         {
             if (!File.Exists(StartMenuShortcut)) return;
-            object shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
-            try { if (ShortcutBelongsToPet(shell, StartMenuShortcut)) File.Delete(StartMenuShortcut); }
-            finally { Marshal.FinalReleaseComObject(shell); }
+            if (ShortcutBelongsToPet(StartMenuShortcut)) File.Delete(StartMenuShortcut);
             if (Directory.Exists(StartMenuFolder) && Directory.GetFileSystemEntries(StartMenuFolder).Length == 0)
                 Directory.Delete(StartMenuFolder, false);
         }
