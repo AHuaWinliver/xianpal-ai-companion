@@ -4,7 +4,11 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+#else
 using System.Web.Script.Serialization;
+#endif
 
 namespace XianPal
 {
@@ -218,7 +222,21 @@ namespace XianPal
             }
         }
         internal static bool DirectoriesOverlap(string a, string b)
-        { a = Path.GetFullPath(a).TrimEnd('\\') + "\\"; b = Path.GetFullPath(b).TrimEnd('\\') + "\\"; return a.StartsWith(b, StringComparison.OrdinalIgnoreCase) || b.StartsWith(a, StringComparison.OrdinalIgnoreCase); }
+        {
+            char separator = Path.DirectorySeparatorChar;
+#if XIANPAL_LINUX
+            a = Linux.NativePaths.ResolveDirectory(a);
+            b = Linux.NativePaths.ResolveDirectory(b);
+            const StringComparison comparison = StringComparison.Ordinal;
+#else
+            a = Path.GetFullPath(a);
+            b = Path.GetFullPath(b);
+            const StringComparison comparison = StringComparison.OrdinalIgnoreCase;
+#endif
+            a = a.TrimEnd(separator) + separator;
+            b = b.TrimEnd(separator) + separator;
+            return a.StartsWith(b, comparison) || b.StartsWith(a, comparison);
+        }
         private static string Limit(string s) { return s.Length <= 16000 ? s : s.Substring(0, 15960) + "\n[输出已达到本地记录上限]"; }
         private void Complete(string id, int code, string message, string status)
         {
