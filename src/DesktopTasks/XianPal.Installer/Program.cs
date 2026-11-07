@@ -54,7 +54,7 @@ namespace XianPal.Installer
                 try { Install(); Environment.ExitCode = 0; }
                 catch (Exception ex)
                 {
-                    Console.Error.WriteLine(ex.Message);
+                    Console.Error.WriteLine(TestMode ? ex.ToString() : ex.GetBaseException().Message);
                     Environment.ExitCode = 1;
                 }
                 return;

@@ -23,16 +23,13 @@ The desktop app runs locally. **AI features require a separately installed, conf
 <a id="whats-new"></a>
 ## What's new in 0.6.11
 
-- The workshop hall uses the same full-resolution animation frames as the desktop companions. Each character scales to its workstation with its original proportions.
+- The workshop hall uses the same full-resolution animation frames as the desktop companions. Each character scales to its workstation with its original proportions. [See the hall](#sect-hall)
 
 ### Features added in 0.6.10
 
-- **Default settings (默认设置)** groups startup, window behavior, size, trails, roaming, proactive care and Claude defaults.
-- **Docked opacity (贴边不透明度)** ranges from 20% to 100%. The companion returns to full opacity when undocked.
-- **Claude settings files** can be set globally and per companion. Open **Default settings → Claude settings file → By companion (默认设置 → Claude 配置文件 → 按角色设置)** to select a JSON file. Companions without an override use the global file. When both are unset, Claude uses its own settings. Team members use their own companion profiles, and scheduled tasks use the companion active at launch. [Claude CLI settings flag](https://code.claude.com/docs/en/cli-reference)
-- **Scheduled tasks** run in the background by default. Open **Claude Code scheduled tasks → Run history (Claude Code 定时任务 → 运行情况)** and double-click a run to follow its output. Choose a terminal mode when the task needs terminal interaction.
-
-The companion's steps follow the cursor speed while dragging. **Default settings → Reduce motion (默认设置 → 减少动画)** turns off the drag animation.
+- [Default settings and per-companion Claude profiles](#claude-settings) group desktop behavior, the working directory and companion configuration.
+- [Dedicated scheduled-task history](#scheduled-task-history) keeps each run's progress, result and reply together.
+- [Drag animation](#desktop-motion) follows the cursor speed. **Default settings → Reduce motion (默认设置 → 减少动画)** turns off the drag animation.
 
 [Full changelog in Chinese](CHANGELOG.md)
 
@@ -58,7 +55,34 @@ Right-click the companion to open the event and team workshop. Define members, r
 
 [Workshop guide in Chinese](docs/WORKSHOP.md)
 
+<a id="sect-hall"></a>
 ![Four full-resolution companions at their workstations in a local workshop demonstration](docs/images/sect-hall.png)
+
+*The hall shows synthetic agent activity from an offline demonstration.*
+
+<a id="claude-settings"></a>
+## Default settings and per-companion Claude profiles
+
+Right-click the companion and open **Default settings (默认设置)** to manage startup, window behavior, size, trails, roaming, proactive care and the Claude working directory. **Docked opacity (贴边不透明度)** ranges from 20% to 100%. The companion returns to full opacity when undocked.
+
+1. Open **Claude settings file → Global default (Claude 配置文件 → 全局默认)** to choose a shared Claude JSON file.
+2. Open **By companion (按角色设置)** to choose a JSON file for a specific companion. Select **Use global settings (沿用全局配置)** to restore inheritance. When both are unset, Claude uses its own settings.
+3. Team members use their own companion profiles. Scheduled tasks use the companion active when the run starts. [Claude CLI settings flag](https://code.claude.com/docs/en/cli-reference)
+
+![The Default settings menu with the per-companion Claude file options expanded for Feijian](docs/images/claude-settings.png)
+
+*The menu shows the demonstration file `feijian.json`.*
+
+<a id="scheduled-task-history"></a>
+## Scheduled tasks and dedicated run history
+
+1. Right-click the companion and open **Claude Code scheduled tasks (Claude Code 定时任务)**. Enter a request, working directory and a daily, weekly or interval schedule.
+2. **Background (后台运行)** is the default. When a task starts on its schedule, output goes to its run record and regular chat stays separate. Choose a terminal mode when you want to interact with the CLI directly.
+3. Select the task and open **Run history (运行情况)** to see each run's status, times, duration and exit code. Double-click an active run to follow its captured output, or a completed run to read the saved task and Claude reply.
+
+![Scheduled-task run history and the saved Claude reply opened by double-clicking a row](docs/images/scheduled-task-history.png)
+
+*Run history is on the left and the detail opened by double-clicking is on the right. Both use demonstration data.*
 
 ## Four companions, four personalities
 
@@ -71,6 +95,7 @@ Right-click the companion to open the event and team workshop. Define members, r
 | Cangzhi / 苍芷 | A quiet, considerate herbalist | Unfurling vines, drifting leaves and gentle firefly light |
 | Xiaomo / 小墨 | A steady charcoal turtle with golden cloud patterns | A little hop followed by expanding ink-and-gold ripples |
 
+<a id="desktop-motion"></a>
 <div align="center"><img src="docs/images/walking.gif" alt="Actual 24-phase walking cycles, including opposing arm/leg motion and quadruped turtle locomotion" width="720"></div>
 
 The supplied transparent artwork is animated locally: 24-phase gait, articulated elbows, subtle neck motion and independently timed expressions. No image-generation service is called during build or installation.
