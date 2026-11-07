@@ -21,6 +21,7 @@ function Get-PublicProjectFiles([string]$ProjectRoot) {
         Get-Item -LiteralPath $file -Force
     }
     foreach ($folder in @('src/DesktopTasks','docs','.github','art')) {
-        Get-ChildItem -LiteralPath (Join-Path $ProjectRoot $folder) -Recurse -File -Force
+        Get-ChildItem -LiteralPath (Join-Path $ProjectRoot $folder) -Recurse -File -Force |
+            Where-Object { $_.FullName.Substring($ProjectRoot.Length + 1) -notmatch '(?:^|[\\/])(?:bin|obj)(?:[\\/]|$)' }
     }
 }
