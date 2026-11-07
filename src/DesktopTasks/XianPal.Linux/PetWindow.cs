@@ -62,7 +62,7 @@ internal sealed class PetWindow : Window
         Title = "仙伴 · XianPal";
         Width = Math.Clamp(preferences.Size, 80, 260); Height = Width * 416 / 384;
         CanResize = false;
-        SystemDecorations = SystemDecorations.None;
+        WindowDecorations = WindowDecorations.None;
         TransparencyLevelHint = new[] { WindowTransparencyLevel.Transparent };
         TransparencyBackgroundFallback = new SolidColorBrush(Color.Parse("#F6F1E7"));
         Background = Brushes.Transparent;
@@ -235,7 +235,7 @@ internal sealed class PetWindow : Window
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
         if (e.ClickCount == 2) { OpenConversation(); return; }
         dragPointer = e.Pointer;
-        pointerOrigin = lastPointer = PointToScreen(e.GetPosition(this));
+        pointerOrigin = lastPointer = this.PointToScreen(e.GetPosition(this));
         dragOrigin = Position;
         lastMotion = clock.ElapsedMilliseconds;
         gait.Reset();
@@ -245,7 +245,7 @@ internal sealed class PetWindow : Window
     private void Moved(object sender, PointerEventArgs e)
     {
         if (e.Pointer != dragPointer) return;
-        PixelPoint pointer = PointToScreen(e.GetPosition(this));
+        PixelPoint pointer = this.PointToScreen(e.GetPosition(this));
         var delta = pointer - pointerOrigin;
         if (!dragging && Math.Abs(delta.X) + Math.Abs(delta.Y) < 6) return;
         var change = pointer - lastPointer;
@@ -336,7 +336,7 @@ internal sealed class PetWindow : Window
             replyLabel = DesktopUi.Label("");
             reply = DesktopUi.Dialog("Claude", DesktopUi.Stack(replyLabel, DesktopUi.Action("隐藏", () => reply.Hide())), 315, 112);
             reply.MinHeight = 75; reply.MinWidth = 180;
-            reply.SystemDecorations = SystemDecorations.None;
+            reply.WindowDecorations = WindowDecorations.None;
             reply.Topmost = true;
             reply.ShowInTaskbar = false;
             reply.PointerPressed += (_, e) => { if (e.ClickCount == 2) OpenConversation(); };

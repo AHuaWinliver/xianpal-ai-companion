@@ -93,7 +93,7 @@ internal static class ReminderWindows
         var screen = pet.Screens.ScreenFromWindow(pet) ?? pet.Screens.Primary;
         var overlay = new Window
         {
-            Title = "仙伴 · 全屏提醒", SystemDecorations = SystemDecorations.None, Topmost = true,
+            Title = "仙伴 · 全屏提醒", WindowDecorations = WindowDecorations.None, Topmost = true,
             ShowInTaskbar = false, CanResize = false, Background = new SolidColorBrush(Color.Parse("#E6192628")), Content = grid,
             Position = screen?.Bounds.Position ?? default
         };
