@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <AssemblyName>xianpal</AssemblyName>
+    <RootNamespace>XianPal</RootNamespace>
+    <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../../VERSION').Trim())</Version>
+    <DefineConstants>$(DefineConstants);XIANPAL_LINUX</DefineConstants>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia.Desktop" Version="12.1.5" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="12.1.5" />
+    <Compile Include="../XianPal/ClaudeCliRunner.cs;../XianPal/ClaudeSettingsFile.cs;../XianPal/ClaudeTaskService.cs;../XianPal/ClaudeTaskStreamRenderer.cs;../XianPal/IntegrationPreferences.cs;../XianPal/ReminderService.cs;../XianPal/CompanionRolePresets.cs;../XianPal/PetCharacter.cs;../XianPal/PetBrain.cs;../XianPal/SectWorkshop.cs;../XianPal/DragGaitClock.cs;../XianPal/CharacterPackCatalog.cs" LinkBase="Shared" />
+  </ItemGroup>
+</Project>

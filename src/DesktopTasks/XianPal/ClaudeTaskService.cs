@@ -2,8 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+using Timer = XianPal.Linux.UiTimer;
+#else
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
+#endif
 
 namespace XianPal
 {

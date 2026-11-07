@@ -3,7 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+#else
 using System.Web.Script.Serialization;
+#endif
 
 namespace XianPal
 {
