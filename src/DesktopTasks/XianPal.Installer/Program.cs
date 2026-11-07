@@ -9,6 +9,8 @@ using System.IO.Compression;
 using System.Reflection;
 using System.Security.Cryptography;
 using System.Runtime.InteropServices;
+using System.Runtime.InteropServices.ComTypes;
+using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
@@ -418,56 +420,74 @@ namespace XianPal.Installer
 
         private static string StartMenuShortcut { get { return Path.Combine(StartMenuFolder, "仙伴 AI桌面伴侣.lnk"); } }
 
-        private static object OpenShortcut(object shell, string path)
+        // Keep these declarations in Win32 vtable order, including unused methods.
+        [ComImport, Guid("000214F9-0000-0000-C000-000000000046"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+        private interface IShellLinkW
         {
-            return shell.GetType().InvokeMember("CreateShortcut", BindingFlags.InvokeMethod, null, shell, new object[] { path });
+            void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int capacity, IntPtr findData, uint flags);
+            void GetIDList(out IntPtr itemList);
+            void SetIDList(IntPtr itemList);
+            void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder description, int capacity);
+            void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string description);
+            void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder directory, int capacity);
+            void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string directory);
+            void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder arguments, int capacity);
+            void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string arguments);
+            void GetHotkey(out ushort hotkey);
+            void SetHotkey(ushort hotkey);
+            void GetShowCmd(out int showCommand);
+            void SetShowCmd(int showCommand);
+            void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder path, int capacity, out int iconIndex);
+            void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string path, int iconIndex);
+            void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string relativePath, uint reserved);
+            void Resolve(IntPtr owner, uint flags);
+            void SetPath([MarshalAs(UnmanagedType.LPWStr)] string path);
         }
 
-        private static void SetShortcutProperty(object shortcut, string property, object value)
+        private static IShellLinkW CreateShellLink()
         {
-            shortcut.GetType().InvokeMember(property, BindingFlags.SetProperty, null, shortcut, new object[] { value });
+            return (IShellLinkW)Activator.CreateInstance(Type.GetTypeFromCLSID(new Guid("00021401-0000-0000-C000-000000000046"), true));
         }
 
-        private static bool ShortcutBelongsToPet(object shell, string path)
+        private static bool ShortcutBelongsToPet(string path)
         {
-            object shortcut = null;
+            IShellLinkW shortcut = CreateShellLink();
             try
             {
-                shortcut = OpenShortcut(shell, path);
-                string target = Convert.ToString(shortcut.GetType().InvokeMember("TargetPath", BindingFlags.GetProperty, null, shortcut, null));
+                ((IPersistFile)shortcut).Load(path, 0);
+                var targetPath = new StringBuilder(260);
+                shortcut.GetPath(targetPath, targetPath.Capacity, IntPtr.Zero, 0);
+                string target = targetPath.ToString();
                 return !String.IsNullOrWhiteSpace(target) && String.Equals(Path.GetFullPath(target), Path.GetFullPath(PetExe), StringComparison.OrdinalIgnoreCase);
             }
-            finally { if (shortcut != null && Marshal.IsComObject(shortcut)) Marshal.FinalReleaseComObject(shortcut); }
+            finally { Marshal.FinalReleaseComObject(shortcut); }
         }
 
         private static void RegisterStartMenuShortcut()
         {
             Directory.CreateDirectory(StartMenuFolder);
-            object shell = null, shortcut = null;
+            IShellLinkW shortcut = null;
             string temporary = Path.Combine(StartMenuFolder, ".orbit-" + Guid.NewGuid().ToString("N") + ".lnk");
             try
             {
-                shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
-                if (File.Exists(StartMenuShortcut) && !ShortcutBelongsToPet(shell, StartMenuShortcut))
+                if (File.Exists(StartMenuShortcut) && !ShortcutBelongsToPet(StartMenuShortcut))
                     throw new InvalidOperationException("开始菜单中存在指向其他程序的同名快捷方式，未覆盖：" + StartMenuShortcut);
-                shortcut = OpenShortcut(shell, temporary);
-                SetShortcutProperty(shortcut, "TargetPath", PetExe);
-                SetShortcutProperty(shortcut, "WorkingDirectory", InstallDirectory);
-                SetShortcutProperty(shortcut, "Arguments", "");
-                SetShortcutProperty(shortcut, "Description", "仙伴 AI桌面伴侣 · 连接本机 Claude Code CLI");
-                SetShortcutProperty(shortcut, "WindowStyle", 1);
+                shortcut = CreateShellLink();
+                shortcut.SetPath(PetExe);
+                shortcut.SetWorkingDirectory(InstallDirectory);
+                shortcut.SetDescription("仙伴 AI桌面伴侣 · 连接本机 Claude Code CLI");
+                shortcut.SetShowCmd(1);
                 // Versioned file avoids reusing Explorer's stale transparent icon.
                 string icon = Path.Combine(InstallDirectory, "OrbitPet-" + Version + ".ico");
-                SetShortcutProperty(shortcut, "IconLocation", (File.Exists(icon) ? icon : PetExe) + ",0");
-                shortcut.GetType().InvokeMember("Save", BindingFlags.InvokeMethod, null, shortcut, null);
+                shortcut.SetIconLocation(File.Exists(icon) ? icon : PetExe, 0);
+                ((IPersistFile)shortcut).Save(temporary, true);
                 Marshal.FinalReleaseComObject(shortcut); shortcut = null;
                 if (File.Exists(StartMenuShortcut)) File.Replace(temporary, StartMenuShortcut, null);
                 else File.Move(temporary, StartMenuShortcut);
             }
             finally
             {
-                if (shortcut != null && Marshal.IsComObject(shortcut)) Marshal.FinalReleaseComObject(shortcut);
-                if (shell != null && Marshal.IsComObject(shell)) Marshal.FinalReleaseComObject(shell);
+                if (shortcut != null) Marshal.FinalReleaseComObject(shortcut);
                 if (File.Exists(temporary)) File.Delete(temporary);
             }
         }
@@ -475,9 +495,7 @@ namespace XianPal.Installer
         private static void RemoveStartMenuShortcut()
         {
             if (!File.Exists(StartMenuShortcut)) return;
-            object shell = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
-            try { if (ShortcutBelongsToPet(shell, StartMenuShortcut)) File.Delete(StartMenuShortcut); }
-            finally { Marshal.FinalReleaseComObject(shell); }
+            if (ShortcutBelongsToPet(StartMenuShortcut)) File.Delete(StartMenuShortcut);
             if (Directory.Exists(StartMenuFolder) && Directory.GetFileSystemEntries(StartMenuFolder).Length == 0)
                 Directory.Delete(StartMenuFolder, false);
         }

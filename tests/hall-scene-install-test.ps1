@@ -17,6 +17,8 @@ try{
             $detail=Get-Content -LiteralPath $diagnostics -Raw -Encoding utf8
             throw ('Isolated installation failed ('+$process.ExitCode+'): '+$detail)
         }
+        $shortcut=Join-Path $env:FUFU_INSTALL_ROOT 'test-start-menu/仙伴 AI桌面伴侣/仙伴 AI桌面伴侣.lnk'
+        if(-not(Test-Path -LiteralPath $shortcut -PathType Leaf)){throw 'Chinese Start menu shortcut missing after installation'}
     }
     Install-Fixture
     $scene=Join-Path $env:FUFU_INSTALL_ROOT 'scenes/sect-hall-v2.png'
