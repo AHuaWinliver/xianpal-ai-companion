@@ -1,109 +1,107 @@
 <div align="center">
 
-# 仙伴 XianPal
+# XianPal
 
-**连接本机 Claude Code 的 Windows AI 桌面伴侣。**
+**An animated desktop companion for Claude Code.**
 
-[English](README.en.md) · [快速开始](#quick-start) · [功能](#features) · [定制角色](#custom-characters) · [下载](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
+[简体中文](README.zh-CN.md) · [Get started](#get-started) · [Features](#features) · [Create a companion](#custom-characters) · [Download](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
 
-<img src="docs/images/hero.png" alt="仙伴的四位原创国风 Q 版桌面伙伴" width="100%">
+<img src="docs/images/hero.png" alt="XianPal's four original cultivation-inspired desktop companions" width="100%">
 
 </div>
 
-在桌面和四位国风伙伴对话，拖入文件交给 Claude Code 处理，或安排定时任务。需要分工时，可以组建门派，在大堂查看道友的进度与交接。
+Chat beside one of four animated companions, drop a file into a Claude Code conversation, or schedule recurring work. For tasks that need several roles, set up a team and follow each agent's progress and handoffs in the workshop hall.
 
-<a id="quick-start"></a>
-## 快速开始
+## Get started
 
-1. 在 Windows 10 / 11 上下载并运行 `XianPal-*-Setup.exe`，按发布页提供的 SHA256 核对文件。需要仓库中的最新功能时，可以[从源码构建](#build)。[GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
-2. 使用 AI 功能前，先在终端确认本机 `claude` 能启动并连接你配置的服务。桌面互动与本地提醒可独立使用。
-3. 右键宠物，从 **默认设置** 选择工作目录和 Claude 配置。双击回复气泡可继续对话，右键托盘图标可隐藏或找回宠物。
+1. On Windows 10 or 11, download and run `XianPal-*-Setup.exe`. Verify the file against the published SHA256 checksum. To try the features in the current source tree, [build from source](#build-from-source). [GitHub Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
+2. Before using AI features, make sure `claude` starts in your terminal and connects to the service you configured. Desktop interactions and local reminders work independently.
+3. Right-click the companion and open **Default settings (默认设置)** to choose a working directory and Claude configuration. Double-click a reply bubble to continue the conversation. Use the tray menu to hide or restore the companion.
 
-[完整安装与使用说明](docs/GETTING-STARTED.md) · [更新日志](CHANGELOG.md)
+[Setup guide in Chinese](docs/GETTING-STARTED.md) · [Changelog](CHANGELOG.md)
 
 <a id="features"></a>
-## 功能
+## Features
 
-### 桌面对话与文件处理
+### Desktop chat and files
 
-双击回复气泡，在角色下方打开对话。你的消息靠右，道友回复靠左，正文可选择和复制。拖动对话标题可让窗口和角色一起移动。把文件或文件夹拖给宠物，确认需求与工作目录后再发送给 Claude Code。
+Double-click a reply bubble to open the chat beneath your companion. Your messages appear on the right and replies on the left. You can select and copy text or drag the chat header to move the window and companion together. Drop a file or folder onto the companion, then confirm the request and working directory before sending it to Claude Code.
 
-![仙伴的左右对话气泡与回复输入框](docs/images/chat-bubbles.png)
+![XianPal's left and right chat bubbles and reply field](docs/images/chat-bubbles.png)
 
-### 定时任务与运行记录
+### Scheduled tasks and run history
 
-右键进入 **Claude Code 定时任务**，填写需求和工作目录，设置每日、每周或间隔运行。可选择后台或终端模式，也可设定上一次仍在执行时跳过或并行启动。
+Open **Claude Code scheduled tasks (Claude Code 定时任务)** from the companion menu. Enter a request and working directory, then choose a daily, weekly or interval schedule. Choose a background or terminal mode and decide whether to skip or start a run while the previous one is still active.
 
-任务输出集中在 **运行情况**，与日常对话分开。双击记录可跟踪已捕获的输出，也可查看已保存的任务和回复。
+Scheduled output appears in **Run history (运行情况)**, separate from regular chat. Double-click a record to follow captured output or read the saved task and reply.
 
 <a id="scheduled-task-history"></a>
 
-![定时任务运行记录和双击打开的 Claude 回复详情](docs/images/scheduled-task-history.png)
+![Scheduled-task history and the saved Claude reply opened by double-clicking a row](docs/images/scheduled-task-history.png)
 
-### 事件规划与门派协作
+### Events and multi-agent teams
 
-从右键菜单进入 **事件规划 / 门派协作**，安排事件或创建门派。可用青衡统筹、绯笺实施、苍芷审查、小墨验证的职责预设，也可自定义角色职责、工作目录和任务依赖。
+Open **Event planning / Team workshop (事件规划 / 门派协作)** to schedule an event or create a team. Start with Qingheng as planner, Feijian as implementer, Cangzhi as reviewer and Xiaomo as verifier, or define your own roles, working directories and dependencies.
 
-大堂使用桌面角色的原始动画帧，随窗口缩放。光点显示成员之间已发生的交接，点击成员可查看输出和传递摘要。事件到点会通知你确认后再执行。[门派操作指南](docs/WORKSHOP.md) · [道友职责](docs/COMPANION-ROLES.md)
+The hall uses the desktop companions' original animation frames and scales them with the window. Light pulses show recorded handoffs. Select a team member to see output and handoff summaries. Scheduled events ask for confirmation before execution. [Workshop guide](docs/WORKSHOP.md) · [Companion roles](docs/COMPANION-ROLES.md)
 
 <a id="sect-hall"></a>
 
-![门派大堂的四位道友、工位状态与交接信息](docs/images/sect-hall.png)
+![Four companions at their workstations with status and handoff information](docs/images/sect-hall.png)
 
-### 为每位道友设置 Claude
+### Claude settings for each companion
 
-右键打开 **默认设置 → Claude 配置文件**，可选全局默认 JSON，也可在 **按角色设置** 指定专用文件。角色可继承全局配置。门派成员按各自角色取配置，定时任务按启动时的当前角色取配置。同一菜单还可调整默认工作目录、贴边不透明度和桌面显示范围。
+Right-click the companion and open **Default settings → Claude settings file (默认设置 → Claude 配置文件)**. Choose a shared JSON file or set an override under **By companion (按角色设置)**. Team members use their own profiles. Scheduled tasks use the companion active when the run starts. The same menu also gives you control over the working directory, docked opacity and virtual desktop visibility.
 
 <a id="claude-settings"></a>
 
-![默认设置中展开了绯笺的 Claude 配置选项](docs/images/claude-settings.png)
+![The Default settings menu expanded to show Feijian's Claude configuration](docs/images/claude-settings.png)
 
-*界面图片使用演示数据。*
+*UI images use demonstration data.*
 
 <a id="desktop-motion"></a>
-### 桌面互动与提醒
+### Desktop interactions and reminders
 
-四位伙伴有各自的动作和表情。拖动时步频随鼠标速度变化，靠近边缘可吸附，长距离漫游时会乘上各自的灵器。
+Each companion has its own animations and expressions. Steps follow the cursor's speed while dragging. Companions can dock at the screen edge and ride their own artifacts on long roaming routes.
 
-![四位道友的步行动画循环](docs/images/walking.gif)
+![Walking loops for all four companions](docs/images/walking.gif)
 
-![四位道友各自的灵器和双向飞行姿态](docs/images/artifact-travel.png)
+![The four companions riding their artifacts in both directions](docs/images/artifact-travel.png)
 
-设置每日提醒或倒计时。每日提醒可选角色专属演出或提示框，倒计时以提示框报时。下图是青衡的御剑演绎，可按 **Esc** 退出。[全屏演绎说明](docs/REMINDER-PERFORMANCES.md)
+Set a daily reminder or countdown. Daily reminders can play a character-specific performance or show a popup. Countdowns use a popup. Below is Qingheng's sword flight, which you can dismiss with **Esc**. [Performance guide](docs/REMINDER-PERFORMANCES.md)
 
-<img src="docs/images/sword-flight.gif" alt="青衡召剑、御剑飞行并回落，沿途留下半透明剑光" width="640">
+<img src="docs/images/sword-flight.gif" alt="Qingheng summons and rides a flying sword with a translucent wake" width="640">
 
 <a id="custom-characters"></a>
-## 定制自己的角色
+## Create a companion
 
-<img src="docs/images/characters.png" alt="青衡、绯笺、苍芷与墨黑灵龟小墨的角色素材" width="100%">
+<img src="docs/images/characters.png" alt="Character art for Qingheng, Feijian, Cangzhi and Xiaomo the charcoal turtle" width="100%">
 
-右键选择 **切换形象 → 打开角色资源目录**，复制完整的角色包。仙伴会校验资源并自动加载，适合在安装后添加或更新角色。
+Right-click the companion, open the character menu and select **Open character resource folder (打开角色资源目录)**. Copy a complete character pack into the folder. XianPal validates and loads character packs while it runs.
 
-1. 复制[人物定制规格单](docs/templates/CHARACTER-SPEC.md)和[角色配置模板](docs/templates/character-profile.json)，定义造型、人设、台词、素材来源和提醒风格。
-2. 绘制透明动作帧，检查双向步态、关节连接、表情和画面边缘。双足动作采用对侧手脚，四足动作采用对角交替。外置角色使用自己的动作帧与内置演绎时间线。
-3. 按[角色包教程](docs/CHARACTER-PACKS.md)导出并热加载。在桌面和离线预览中检查待机、移动、交互和全屏演出。
+1. Use the [character specification](docs/templates/CHARACTER-SPEC.md) and [profile template](docs/templates/character-profile.json) to define the look, personality, quotes, art sources and reminder style.
+2. Draw transparent frames and check both walking directions, joint connections, expressions and clipping. Use opposite arm and leg motion for bipeds and diagonal alternation for quadrupeds. External characters use their own frames with built-in performance timelines.
+3. Follow the [character pack guide](docs/CHARACTER-PACKS.md) to export and load your pack. Check idle, motion, interaction and performance states on the desktop and in the offline previews.
 
-要修改内置人物、动作骨架或演绎时间线，可查阅[人物定制与动画规范](docs/CHARACTER-CUSTOMIZATION.md)中的素材入口、连接锚点与验收清单。
+To extend built-in characters, rigs or performance timelines, see the asset entry points, anchors and review checklist in the [character customization guide](docs/CHARACTER-CUSTOMIZATION.md).
 
-<a id="build"></a>
-## 从源码构建
+## Build from source
 
-需要 Windows 10 / 11、PowerShell 和系统 .NET Framework 4.x 编译器。克隆仓库或解压源码后，在项目根目录运行以下命令。
+You need Windows 10 or 11, PowerShell and the system .NET Framework 4.x compiler. Clone or extract the source, then run these commands from the repository root.
 
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 .\build\payload\OrbitPet.exe
 ```
 
-安装包在 `dist/`，动作和演出预览在 `build/previews/`。只需要程序和预览时，可给构建脚本加上 `-SkipInstaller`。[开发与验证指南](docs/DEVELOPMENT.md)
+Find the installer in `dist/` and offline animation and performance previews in `build/previews/`. Pass `-SkipInstaller` to build the app and previews only. [Development and testing guide](docs/DEVELOPMENT.md)
 
-## 贡献
+## Contributing
 
-欢迎贡献原创角色、动画工具、桌面体验修复、测试和翻译。通过 [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) 讨论改动，再按[贡献指南](CONTRIBUTING.md)提交。大功能更新需同步提供中英文 README 图文说明。
+Original characters, animation tools, desktop fixes, tests and translations are welcome. Discuss changes in [Issues](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) and follow the [contribution guide](CONTRIBUTING.md). Major features include images and instructions in both READMEs.
 
-## 隐私与许可
+## Privacy and license
 
-AI 请求、文件权限和额度由本机 Claude Code 与所选服务管理。安装器会为当前用户添加联动 Hooks，备份 Claude 设置并保留其他处理器。[隐私与配置](docs/PRIVACY.md) · [安全报告](SECURITY.md)
+Your Claude Code configuration and service determine AI requests, file permissions and usage. The installer adds current-user integration hooks and backs up the Claude settings, preserving existing handlers. [Privacy and configuration](docs/PRIVACY.md) · [Security reporting](SECURITY.md)
 
-代码采用 [Apache-2.0](LICENSE)。角色素材的授权范围与来源见[素材许可](ASSET-LICENSE.md)和[来源记录](art/PROVENANCE.md)。
+Code is licensed under [Apache-2.0](LICENSE). See the [asset license](ASSET-LICENSE.md) and [art provenance](art/PROVENANCE.md) for the bundled characters.
