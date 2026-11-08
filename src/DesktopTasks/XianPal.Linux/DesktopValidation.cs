@@ -2,6 +2,7 @@
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
 
@@ -34,7 +35,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
 """);
         File.SetUnixFileMode(fixture, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", fixture);
-        return AppBuilder.Configure<DesktopValidation>().UsePlatformDetect().StartWithClassicDesktopLifetime(Array.Empty<string>());
+        return AppBuilder.Configure<DesktopValidation>().UsePlatformDetect().WithDesktopFonts().StartWithClassicDesktopLifetime(Array.Empty<string>());
     }
 
     public override void Initialize() => Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
@@ -48,6 +49,8 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
         {
             try
             {
+                VerifyGlyphs(DesktopFonts.TextFamily, new uint[] { '道', '友', '中', '文', '回', '复' });
+                VerifyGlyphs(DesktopFonts.EmojiFamily, new uint[] { 0x1f331, 0x1f642, 0x1f680 });
                 await Task.Delay(400);
                 foreach (PetCharacter character in PetCharacter.All)
                 {
@@ -74,18 +77,18 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 if (pet.Conversation.LastReply != before) throw new Exception("A scheduled task leaked into regular chat.");
                 TaskWindow.Show(pet, tasks);
                 ReminderWindows.ShowSettings(pet, pet.Services.Reminders);
-                pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "ARM64 提醒测试", Effect = "popup" });
+                pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "仙伴提醒测试", Effect = "popup" });
                 await Task.Delay(200);
                 Window popup = desktop.Windows.Last(window => window.Title.Contains("提醒") && !window.Title.Contains("倒计时"));
                 Capture(popup, "reminder-popup.png");
                 popup.Close();
-                pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "ARM64 演绎测试", Effect = "impact" });
+                pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "仙伴演绎测试", Effect = "impact" });
                 await Task.Delay(1200);
                 Window performance = desktop.Windows.Single(window => window.Title == "仙伴 · 全屏提醒");
                 if (performance.WindowState != WindowState.FullScreen) throw new Exception("Reminder performance did not enter full screen.");
                 Capture(performance, "reminder-performance.png");
                 performance.Close();
-                var sect = CompanionRolePresets.Create("ARM64 验证门派", Program.StateDirectory, true);
+                var sect = CompanionRolePresets.Create("仙伴验证门派", Program.StateDirectory, true);
                 sect.Goal = "读取隔离样例并记录结果，供本次桌面测试验证。";
                 pet.Services.Workshop.Sects.Add(sect);
                 pet.Services.SaveWorkshop();
@@ -118,6 +121,21 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
         {
             if (DateTime.UtcNow > deadline) throw new TimeoutException("Native desktop validation timed out.");
             await Task.Delay(60);
+        }
+    }
+
+    private static void VerifyGlyphs(string family, uint[] scalars)
+    {
+        if (!FontManager.Current.TryGetGlyphTypeface(new Typeface(family), out var font))
+            throw new Exception("Required bundled font or glyph is unavailable: " + family);
+        foreach (uint scalar in scalars)
+        {
+#if XIANPAL_LINUX_COMPAT
+            bool found = font.TryGetGlyph(scalar, out ushort glyph) && glyph != 0;
+#else
+            bool found = font.CharacterToGlyphMap.TryGetGlyph((int)scalar, out ushort glyph) && glyph != 0;
+#endif
+            if (!found) throw new Exception("Required bundled glyph is unavailable: " + family + " U+" + scalar.ToString("X"));
         }
     }
 

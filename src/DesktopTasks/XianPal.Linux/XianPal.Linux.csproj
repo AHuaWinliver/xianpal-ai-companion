@@ -11,10 +11,17 @@
     <Version>$([System.IO.File]::ReadAllText('$(MSBuildThisFileDirectory)../../../VERSION').Trim())</Version>
     <DefineConstants>$(DefineConstants);XIANPAL_LINUX</DefineConstants>
     <ImplicitUsings>enable</ImplicitUsings>
+    <FontAssetsPath>$(MSBuildProjectDirectory)/../../../build/linux-resources/fonts</FontAssetsPath>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Avalonia.Desktop" Version="$(AvaloniaVersion)" />
     <PackageReference Include="Avalonia.Themes.Fluent" Version="$(AvaloniaVersion)" />
     <Compile Include="../XianPal/ClaudeCliRunner.cs;../XianPal/ClaudeSettingsFile.cs;../XianPal/ClaudeTaskService.cs;../XianPal/ClaudeTaskStreamRenderer.cs;../XianPal/IntegrationPreferences.cs;../XianPal/ReminderService.cs;../XianPal/CompanionRolePresets.cs;../XianPal/PetCharacter.cs;../XianPal/PetBrain.cs;../XianPal/SectWorkshop.cs;../XianPal/DragGaitClock.cs;../XianPal/CharacterPackCatalog.cs" LinkBase="Shared" />
   </ItemGroup>
+  <ItemGroup>
+    <AvaloniaResource Include="$(FontAssetsPath)/*.otf;$(FontAssetsPath)/*.ttf" Link="Fonts/%(Filename)%(Extension)" />
+  </ItemGroup>
+  <Target Name="RequireBundledFonts" BeforeTargets="BeforeBuild">
+    <Error Condition="!Exists('$(FontAssetsPath)/NotoSansCJKsc-Regular.otf') Or !Exists('$(FontAssetsPath)/NotoColorEmoji.ttf')" Text="Prepare bundled fonts before building: python3 src/DesktopTasks/XianPal.Linux/fetch-fonts.py build/linux-resources/fonts" />
+  </Target>
 </Project>
