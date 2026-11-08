@@ -13,10 +13,14 @@ CI 覆盖 Ubuntu 22.04、24.04 的原生 x86_64 与 ARM64，并增加固定镜�
 ```sh
 # 旧系统兼容候选
 dotnet publish src/DesktopTasks/XianPal.Linux -p:LinuxCompat=true -r linux-x64 --self-contained true -c Release -o build/linux-compat-x64
+python3 src/DesktopTasks/XianPal.Linux/bundle-runtime.py build/linux-compat-x64
+build/linux-compat-x64/launch.sh --self-test
 
 # 在部署目标上采集环境信息
 sh src/DesktopTasks/XianPal.Linux/diagnose-linux.sh
 ```
+
+兼容包将 C++ 运行库放在应用的 `runtime/` 下，由 `launch.sh` 为该进程加载。制作机在打包时下载固定版本并核对 SHA256，同时附带 GCC 运行库许可、例外条款及构建配方。部署机使用已准备好的文件，不需要在内网执行下载脚本。
 
 ## 已完成的原生验证
 

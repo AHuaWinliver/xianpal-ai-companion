@@ -20,6 +20,7 @@ internal sealed class DesktopValidation : Application
         Directory.CreateDirectory(state);
         Environment.SetEnvironmentVariable("FUFU_TEST_MODE", "1");
         Environment.SetEnvironmentVariable("FUFU_STATE_DIR", state);
+        Environment.SetEnvironmentVariable("PYTHONIOENCODING", "utf-8");
         string fixture = Path.Combine(evidence, "claude-fixture.py");
         File.WriteAllText(fixture, """
 #!/usr/bin/env python3
@@ -60,7 +61,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 pet.Conversation.SendMessage("请输出中文和表情。");
                 await WaitUntil(() => !pet.Conversation.IsRunning);
                 if (pet.Conversation.LastReply != "道友，中文🌱回复已完成。")
-                    throw new Exception("Native conversation did not display the complete Unicode stream.");
+                    throw new Exception("Native conversation did not display the complete Unicode stream. Received: " + pet.Conversation.LastReply);
                 Capture(pet.Conversation, "conversation.png");
                 string before = pet.Conversation.LastReply;
                 ClaudeTaskService tasks = pet.Services.Tasks;
