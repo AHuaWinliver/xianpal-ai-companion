@@ -127,6 +127,7 @@ jobs:
           path: build/centos7-app
           retention-days: 7
   distributions:
+    name: Distribution · ${{ matrix.name }}
     needs: [centos7-x64, modern]
     strategy:
       fail-fast: false
