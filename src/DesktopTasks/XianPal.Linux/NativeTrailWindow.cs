@@ -32,7 +32,7 @@ internal sealed class NativeTrailWindow : Window
         {
             ClickThrough = X11Overlay.MakeClickThrough(this, pet);
             attempted = true;
-            available = ClickThrough && ActualTransparencyLevel != WindowTransparencyLevel.None;
+            available = ClickThrough && ActualTransparencyLevel != WindowTransparencyLevel.None && X11Overlay.HasCompositor();
             if (!available) Hide();
         };
         Closed += (_, _) => timer.Stop();

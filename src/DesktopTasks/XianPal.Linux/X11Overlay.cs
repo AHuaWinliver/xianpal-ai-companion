@@ -9,6 +9,8 @@ internal static class X11Overlay
     [DllImport("libX11.so.6")] private static extern IntPtr XOpenDisplay(IntPtr name);
     [DllImport("libX11.so.6")] private static extern int XCloseDisplay(IntPtr display);
     [DllImport("libX11.so.6")] private static extern nuint XDefaultRootWindow(IntPtr display);
+    [DllImport("libX11.so.6")] private static extern int XDefaultScreen(IntPtr display);
+    [DllImport("libX11.so.6")] private static extern nuint XGetSelectionOwner(IntPtr display, nuint selection);
     [DllImport("libX11.so.6")] private static extern nuint XInternAtom(IntPtr display, string name, bool onlyIfExists);
     [DllImport("libX11.so.6")] private static extern int XSendEvent(IntPtr display, nuint window, bool propagate, nint mask, ref Message message);
     [DllImport("libX11.so.6")] private static extern int XSync(IntPtr display, bool discard);
@@ -26,6 +28,20 @@ internal static class X11Overlay
         internal nuint Time, Idle, EventMask;
     }
     private static bool screenQueryAvailable = true;
+
+    internal static bool HasCompositor()
+    {
+        IntPtr display = IntPtr.Zero;
+        try
+        {
+            display = XOpenDisplay(IntPtr.Zero);
+            if (display == IntPtr.Zero) return false;
+            nuint selection = XInternAtom(display, "_NET_WM_CM_S" + XDefaultScreen(display), true);
+            return selection != 0 && XGetSelectionOwner(display, selection) != 0;
+        }
+        catch (Exception error) when (error is DllNotFoundException or EntryPointNotFoundException) { return false; }
+        finally { if (display != IntPtr.Zero) XCloseDisplay(display); }
+    }
 
     internal static bool? ScreenActive()
     {

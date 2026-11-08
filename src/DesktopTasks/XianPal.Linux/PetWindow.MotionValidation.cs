@@ -86,7 +86,7 @@ internal sealed partial class PetWindow
                 overlay.AddPoint(new Point(30, 40), Width, .5, trailColors);
                 await Task.Delay(80);
                 if (!overlay.ClickThrough) throw new Exception("X11 trail overlay has a nonempty native input region.");
-                if (overlay.IsVisible && overlay.ActualTransparencyLevel == WindowTransparencyLevel.None)
+                if (overlay.IsVisible && (overlay.ActualTransparencyLevel == WindowTransparencyLevel.None || !X11Overlay.HasCompositor()))
                     throw new Exception("Noncomposited desktop retained an opaque trail window.");
             }
             finally { overlay.Close(); }

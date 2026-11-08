@@ -26,7 +26,7 @@ printf '\nNative library inventory\n'
 linker_cache=$(command -v ldconfig 2>/dev/null || true)
 if [ -z "$linker_cache" ] && [ -x /sbin/ldconfig ]; then linker_cache=/sbin/ldconfig; fi
 if [ -n "$linker_cache" ]; then
-    "$linker_cache" -p 2>/dev/null | awk '/lib(X11|Xext|Xrender|ICE|SM|fontconfig|GL|EGL|icuuc|ssl|crypto|stdc\+\+|gcc_s)/ {print}' || true
+    "$linker_cache" -p 2>/dev/null | awk '/lib(X11|Xext|Xrender|Xfixes|Xss|ICE|SM|fontconfig|GL|EGL|icuuc|ssl|crypto|stdc\+\+|gcc_s)/ {print}' || true
 else
     printf 'ldconfig is unavailable; inspect dependencies in the prepared package.\n'
 fi
