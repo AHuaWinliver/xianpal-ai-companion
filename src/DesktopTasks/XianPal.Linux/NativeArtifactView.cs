@@ -15,6 +15,13 @@ internal sealed class NativeArtifactView : Control
     private double foot, envelope, seconds;
     private bool left;
 
+    internal void Clear()
+    {
+        rider = null; character = null; foot = envelope = seconds = 0;
+        IsVisible = false;
+        InvalidateVisual();
+    }
+
     internal static int FootRow(Bitmap image)
     {
         int width = image.PixelSize.Width, height = image.PixelSize.Height, stride = width * 4;

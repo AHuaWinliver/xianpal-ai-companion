@@ -11,6 +11,7 @@ internal sealed class NativePackPerformance : Control, IDisposable
 {
     private readonly CharacterAnimationSet frames;
     private readonly string style;
+    private bool disposed;
     internal double Seconds { get; set; }
 
     internal NativePackPerformance(PetCharacter character)
@@ -23,7 +24,7 @@ internal sealed class NativePackPerformance : Control, IDisposable
     public override void Render(DrawingContext context)
     {
         base.Render(context);
-        if (Bounds.Width <= 0 || Bounds.Height <= 0) return;
+        if (disposed || Bounds.Width <= 0 || Bounds.Height <= 0) return;
         var pose = ReminderPerformance.Sample(new System.Drawing.Size((int)Bounds.Width, (int)Bounds.Height), style, Seconds, false);
         var box = new Rect(pose.Bounds.X, pose.Bounds.Y, pose.Bounds.Width, pose.Bounds.Height);
         if (Seconds > ReminderPerformance.EntranceEnd && Seconds < ReminderPerformance.CardAt)
@@ -68,5 +69,5 @@ internal sealed class NativePackPerformance : Control, IDisposable
         context.DrawImage(image, box);
     }
 
-    public void Dispose() => frames.Dispose();
+    public void Dispose() { disposed = true; frames.Dispose(); InvalidateVisual(); }
 }

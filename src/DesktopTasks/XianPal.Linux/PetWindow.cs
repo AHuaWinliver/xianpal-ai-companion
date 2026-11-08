@@ -137,6 +137,7 @@ internal sealed partial class PetWindow : Window
 
     private void DisposeFrames()
     {
+        artifact.Clear();
         foreach (Bitmap image in frames.Values) image.Dispose();
         frames.Clear();
     }

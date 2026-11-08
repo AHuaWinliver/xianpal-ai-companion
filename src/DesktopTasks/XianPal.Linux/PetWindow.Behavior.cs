@@ -35,7 +35,7 @@ internal sealed partial class PetWindow
     {
         Action complete = arrived; arrived = null; urgentRoute = false;
         route.Clear(); roamTarget = null; flight.Reset(); gait.Reset();
-        artifact.IsVisible = false; sprite.IsVisible = true;
+        artifact.Clear(); sprite.IsVisible = true;
         trail?.Clear();
         if (!IsClosing) complete?.Invoke();
     }
