@@ -115,6 +115,8 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                     await Task.Delay(100);
                     if (!hall.HasBackground || hall.SeatCount != 4 || hall.Bounds.Width > workshop.ClientSize.Width || hall.Bounds.Height < 200)
                         throw new Exception("Native hall lost its background or proportional workstations after resize.");
+                    if (size.Width == 800 && !hall.FitsViewport)
+                        throw new Exception("The four default desks require scrolling and hide their status badges.");
                 }
                 pet.Services.StartSect(sect);
                 await WaitUntil(() => !pet.Services.Execution.IsRunning);

@@ -24,6 +24,7 @@ internal sealed class NativeHallView : Control, IDisposable
     internal event Action<string> MemberSelected;
     internal bool HasBackground => background != null;
     internal int SeatCount => seats.Count;
+    internal bool FitsViewport => Bounds.Height <= viewport.Height + 1;
 
     internal NativeHallView()
     {
@@ -56,7 +57,10 @@ internal sealed class NativeHallView : Control, IDisposable
 
     protected override Size MeasureOverride(Size availableSize)
     {
-        var size = SectHallLayout.CanvasSize(new Drawing.Size(Math.Max(1, (int)viewport.Width), Math.Max(1, (int)viewport.Height)), Labels().Count, 1);
+        // Native labels use a fixed readable font. A 0.8 layout unit keeps the
+        // four default desks and their status badges visible in the normal hall;
+        // dense teams can still expand the canvas and scroll vertically.
+        var size = SectHallLayout.CanvasSize(new Drawing.Size(Math.Max(1, (int)viewport.Width), Math.Max(1, (int)viewport.Height)), Labels().Count, .8f);
         return new Size(size.Width, size.Height);
     }
 
