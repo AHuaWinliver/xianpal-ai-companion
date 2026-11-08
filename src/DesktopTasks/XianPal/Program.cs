@@ -22,6 +22,7 @@ namespace XianPal
         [STAThread]
         private static void Main(string[] args)
         {
+            UiLanguageBindings.Initialize();
             if (args.Length == 4 && (args[0] == "--place-task-console" || args[0] == "--place-task-terminal"))
             {
                 try

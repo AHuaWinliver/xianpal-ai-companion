@@ -104,6 +104,11 @@ namespace XianPal
                 if (File.Exists(logPath + ".started"))
                 {
                     string[] identity = File.ReadAllText(logPath + ".started", Encoding.UTF8).Trim().Split('|');
+#if XIANPAL_LINUX
+                    bool? match = XianPal.Linux.LinuxProcessIdentity.IsAlive(identity);
+                    if (!match.HasValue) return;
+                    bool alive = match.Value;
+#else
                     int pid; long ticks;
                     if (identity.Length != 2 || !Int32.TryParse(identity[0], out pid) || !Int64.TryParse(identity[1], out ticks)) return;
                     bool alive = false;
@@ -115,6 +120,7 @@ namespace XianPal
                     catch (ArgumentException) { }
                     catch (InvalidOperationException) { }
                     catch (System.ComponentModel.Win32Exception) { return; }
+#endif
                     if (!alive)
                     {
                         // Allow the final atomic marker to arrive before treating

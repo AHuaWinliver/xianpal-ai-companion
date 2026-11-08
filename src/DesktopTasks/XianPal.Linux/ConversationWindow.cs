@@ -31,6 +31,7 @@ internal sealed class ConversationWindow : Window
     {
         this.pet = pet;
         Title = "仙伴 · Claude Code";
+        LinuxLanguageBindings.Window(this);
         Width = 480; Height = 410; MinWidth = 340; MinHeight = 260;
         ShowInTaskbar = false;
         var heading = DesktopUi.Label("Claude Code");
@@ -107,7 +108,7 @@ internal sealed class ConversationWindow : Window
         string directory = pet.DirectoryPath;
         if (sessionCharacter != character.Id || sessionDirectory != directory) session = null;
         sessionCharacter = character.Id; sessionDirectory = directory;
-        Bubble("你", prompt, true);
+        Bubble(UiLanguage.Text("You"), prompt, true);
         response = Bubble(character.Name, "", false);
         pending.Clear();
         input.Text = "";

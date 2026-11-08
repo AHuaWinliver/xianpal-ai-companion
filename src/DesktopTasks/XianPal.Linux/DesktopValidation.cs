@@ -21,6 +21,7 @@ internal sealed class DesktopValidation : Application
         Directory.CreateDirectory(state);
         Environment.SetEnvironmentVariable("FUFU_TEST_MODE", "1");
         Environment.SetEnvironmentVariable("FUFU_STATE_DIR", state);
+        UiLanguage.Set("zh-CN");
         Environment.SetEnvironmentVariable("PYTHONIOENCODING", "utf-8");
         string fixture = Path.Combine(evidence, "claude-fixture.py");
         File.WriteAllText(fixture, """

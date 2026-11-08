@@ -84,7 +84,7 @@ namespace XianPal
             service = taskService;
             Text = "Claude Code 定时任务";
             Icon = AppIcon.WindowIcon;
-            ClientSize = new Size(610, 674);
+            ClientSize = new Size(610, 698);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             AutoScaleMode = AutoScaleMode.None;
@@ -95,7 +95,7 @@ namespace XianPal
             Font = UiText.Font(9f);
 
             Label title = new Label { Text = "Claude Code 定时任务", Font = UiText.Font(11f, FontStyle.Bold), ForeColor = Color.FromArgb(34, 34, 32), AutoSize = true, Location = new Point(20, 17) };
-            Label subtitle = new Label { Text = "任务输出在「运行情况」查看", ForeColor = Color.FromArgb(112, 112, 106), AutoSize = true, Location = new Point(188, 20) };
+            Label subtitle = new Label { Text = "任务输出在「运行情况」查看", ForeColor = Color.FromArgb(112, 112, 106), AutoSize = true, Location = new Point(20, 42) };
             Button close = TextButton("×", new Point(564, 8), new Size(30, 30));
             close.Font = new Font("Segoe UI", 13f);
             close.Click += delegate { Hide(); };
@@ -271,9 +271,10 @@ namespace XianPal
             Controls.Add(edit);
             Controls.Add(history);
             Controls.Add(runNow);
-            taskTitle.Top += 88;
-            listCard.Top += 88;
-            foreach (Button button in new Button[] { toggle, delete, edit, history, runNow }) button.Top += 88;
+            editor.Top += 24;
+            taskTitle.Top += 112;
+            listCard.Top += 112;
+            foreach (Button button in new Button[] { toggle, delete, edit, history, runNow }) button.Top += 112;
             FormClosed += delegate { foreach (Image image in avatars.Values) image.Dispose(); avatars.Clear(); };
             FormClosing += delegate(object sender, FormClosingEventArgs e) { if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); } };
             Resize += delegate { ApplyRoundedRegion(); };
@@ -404,7 +405,7 @@ namespace XianPal
         {
             string clean = (workingDirectory ?? "").TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
             string name = Path.GetFileName(clean);
-            directory.Text = "目录  ·  " + (String.IsNullOrEmpty(name) ? clean : name);
+            directory.Text = UiLanguage.Text("目录") + " · " + (String.IsNullOrEmpty(name) ? clean : name);
         }
 
         private void RefreshList(ScheduledClaudeTask selected)
@@ -443,12 +444,12 @@ namespace XianPal
             Rectangle scheduleBounds = new Rectangle(e.Bounds.Left + 173, e.Bounds.Top + 7, e.Bounds.Width - 181, 23);
             Rectangle promptBounds = new Rectangle(e.Bounds.Left + 67, e.Bounds.Top + 28, e.Bounds.Width - 75, 23);
             Rectangle pathBounds = new Rectangle(e.Bounds.Left + 67, e.Bounds.Top + 51, e.Bounds.Width - 75, 20);
-            TextRenderer.DrawText(e.Graphics, PetCharacter.OwnerName(task.CharacterId), list.Font, ownerBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
-            string scheduleText = (ClaudeTaskService.RunModeLabel(task.RunMode) + "/") + (task.OverlapMode == "parallel" ? "并行 · " : "阻塞 · ") + task.ScheduleText;
+            TextRenderer.DrawText(e.Graphics, TaskPresentation.Owner(task.CharacterId), list.Font, ownerBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+            string scheduleText = TaskPresentation.Mode(task.RunMode) + " · " + TaskPresentation.Schedule(task);
             using (Font bold = new Font(list.Font, FontStyle.Bold)) TextRenderer.DrawText(e.Graphics, scheduleText, bold, scheduleBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(e.Graphics, task.Prompt, list.Font, promptBounds, task.Enabled ? Color.FromArgb(38, 38, 36) : Color.FromArgb(130, 130, 126), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             using (Font pathFont = UiText.Font(7.5f))
-                TextRenderer.DrawText(e.Graphics, (task.RunMode != "background" ? (task.DesktopNumber == 0 ? "当前桌面" : "桌面 " + task.DesktopNumber) + " · " : "") + task.WorkingDirectory, pathFont, pathBounds, Color.FromArgb(118, 118, 112), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                TextRenderer.DrawText(e.Graphics, (task.RunMode != "background" ? TaskPresentation.Desktop(task.DesktopNumber) + " · " : "") + task.WorkingDirectory, pathFont, pathBounds, Color.FromArgb(118, 118, 112), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
         }
 
         private static Label NewLabel(string text, Point location, Color backColor)
@@ -503,6 +504,7 @@ namespace XianPal
 
             Label title = new Label { Text = "运行情况  ·  双击记录查看输出", Font = UiText.Font(12f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 16), ForeColor = Color.FromArgb(34, 34, 32) };
             Label taskText = new Label { Text = task == null ? "" : task.Prompt, AutoEllipsis = true, Location = new Point(18, 48), Size = new Size(644, 25), ForeColor = Color.FromArgb(70, 70, 66) };
+            UiLanguageBindings.PreserveContent(taskText);
             Label path = new Label { Text = task == null ? "" : "目录：" + task.WorkingDirectory, AutoEllipsis = true, Location = new Point(18, 74), Size = new Size(644, 23), ForeColor = Color.FromArgb(112, 112, 106), Font = UiText.Font(8f) };
 
             runs.View = View.Details;
@@ -545,7 +547,8 @@ namespace XianPal
                 {
                     ClaudeTaskRunRecord record = item.Tag as ClaudeTaskRunRecord;
                     if (record == null) continue;
-                    item.Text = record.StatusText;
+                    item.Text = UiLanguage.Text(record.StatusText);
+                    item.SubItems[1].Text = TaskPresentation.Mode(record.RunMode);
                     DateTime completed, started;
                     bool done = DateTime.TryParse(record.CompletedAt, out completed);
                     item.SubItems[3].Text = done ? completed.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") : "—";
@@ -578,9 +581,9 @@ namespace XianPal
                 bool hasStart = DateTime.TryParse(record.StartedAt, out started);
                 bool hasCompleted = DateTime.TryParse(record.CompletedAt, out completed);
                 string duration = hasStart && hasCompleted ? FormatDuration(completed - started) : "—";
-                ListViewItem item = new ListViewItem(record.StatusText);
+                ListViewItem item = new ListViewItem(UiLanguage.Text(record.StatusText));
                 item.ForeColor = record.Status == "success" ? Color.FromArgb(40, 132, 84) : (record.Status == "failed" ? Color.FromArgb(178, 64, 56) : Color.FromArgb(177, 116, 38));
-                item.SubItems.Add(ClaudeTaskService.RunModeLabel(record.RunMode));
+                item.SubItems.Add(TaskPresentation.Mode(record.RunMode));
                 item.SubItems.Add(hasStart ? started.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") : "—");
                 item.SubItems.Add(hasCompleted ? completed.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") : "—");
                 item.SubItems.Add(duration);

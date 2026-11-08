@@ -127,9 +127,7 @@ internal sealed class LinuxTerminalJob
             string log = LogPath(record);
             if (File.Exists(log + ".completed")) return true;
             string[] fields = File.ReadAllText(log + ".started").Trim().Split('|');
-            if (fields.Length != 2 || !int.TryParse(fields[0], out int id) || !long.TryParse(fields[1], out long ticks)) return false;
-            using var process = Process.GetProcessById(id);
-            return !process.HasExited && process.StartTime.ToUniversalTime().Ticks == ticks;
+            return LinuxProcessIdentity.IsAlive(fields) == true;
         }
         catch (Exception error) when (error is IOException or UnauthorizedAccessException or ArgumentException or InvalidOperationException) { return false; }
     }
@@ -174,8 +172,7 @@ internal sealed class LinuxTerminalJob
             !Guid.TryParse(job.SessionId, out _) || !System.IO.Directory.Exists(job.Directory)) throw new ArgumentException("任务描述无效。");
         int code = 1;
         string settings = job.Log + ".settings.json";
-        using var own = Process.GetCurrentProcess();
-        WritePrivate(job.Log + ".started", own.Id + "|" + own.StartTime.ToUniversalTime().Ticks);
+        WritePrivate(job.Log + ".started", LinuxProcessIdentity.CurrentMarker());
         try
         {
             string cli = ClaudeCliRunner.FindClaudeCommand(job.CharacterId) ?? throw new FileNotFoundException("未找到 Claude Code CLI。");

@@ -16,6 +16,8 @@ namespace XianPal
             get
             {
                 string root = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
+                if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
+                    root = Environment.GetEnvironmentVariable("XIANPAL_TEST_ASSETS") ?? root;
 #if XIANPAL_LINUX
                 root = Environment.GetEnvironmentVariable("XIANPAL_ASSETS") ?? root;
 #endif

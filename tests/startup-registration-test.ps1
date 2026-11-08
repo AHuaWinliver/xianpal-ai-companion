@@ -18,7 +18,10 @@ try {
     & $compiler /nologo /target:winexe /out:$pet /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll $sources
     if ($LASTEXITCODE -ne 0) { throw 'Application compilation failed.' }
     # Compile and inspect only: do not install, run UI or modify real startup entries.
-    & $compiler /nologo /target:winexe /out:$installer /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll (Join-Path $projectRoot 'src/DesktopTasks/XianPal.Installer/Program.cs') $shared
+    $installerSources = @(Get-ChildItem -LiteralPath (Join-Path $projectRoot 'src/DesktopTasks/XianPal.Installer') -Filter '*.cs' -File | ForEach-Object FullName)
+    $installerSources += $shared
+    $installerSources += Join-Path $projectRoot 'src/DesktopTasks/XianPal/UiLanguage.cs'
+    & $compiler /nologo /target:winexe /out:$installer /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll $installerSources
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
     & $compiler /nologo /target:exe /out:$test /reference:System.dll /reference:System.Core.dll (Join-Path $PSScriptRoot 'StartupRegistrationTests.cs') $shared
     if ($LASTEXITCODE -ne 0) { throw 'Startup test compilation failed.' }

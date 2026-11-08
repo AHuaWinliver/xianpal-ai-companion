@@ -23,6 +23,9 @@ jobs:
       - name: Startup display name and isolated legacy migration
         shell: pwsh
         run: ./tests/startup-registration-test.ps1
+      - name: Language switching, companion profiles and task ownership (no model calls)
+        shell: pwsh
+        run: ./tests/profile-settings-test.ps1
       - name: Offline smoke tests (no Claude calls)
         shell: pwsh
         run: ./tests/smoke-test.ps1

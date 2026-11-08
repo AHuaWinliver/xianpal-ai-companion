@@ -20,10 +20,17 @@ namespace XianPal
 
         internal string ExecutablePathFor(string characterId)
         {
+            string selected = ExecutableOverrideFor(characterId);
+            return String.IsNullOrWhiteSpace(selected) ? ClaudeExecutablePath ?? "" : selected;
+        }
+
+        internal string ExecutableOverrideFor(string characterId)
+        {
+            if (String.IsNullOrEmpty(characterId)) return ClaudeExecutablePath ?? "";
             string value;
             if (!String.IsNullOrEmpty(characterId) && CharacterClaudeExecutables != null &&
                 CharacterClaudeExecutables.TryGetValue(characterId.ToLowerInvariant(), out value) && !String.IsNullOrWhiteSpace(value)) return value;
-            return ClaudeExecutablePath ?? "";
+            return "";
         }
 
         internal void SetExecutablePath(string characterId, string path)

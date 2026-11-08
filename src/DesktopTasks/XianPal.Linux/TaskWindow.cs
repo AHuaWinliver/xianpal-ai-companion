@@ -21,7 +21,7 @@ internal static class TaskWindow
         ScheduledClaudeTask active = null;
         var profiles = PetCharacter.Available;
         var ownerIds = profiles.Select(profile => profile.Id).ToList();
-        var ownerNames = profiles.Select(profile => profile.Name).ToList();
+        var ownerNames = profiles.Select(profile => UiLanguage.Text(profile.Name)).ToList();
         var companion = new ComboBox { ItemsSource = ownerNames.ToArray(), SelectedIndex = Math.Max(0, ownerIds.IndexOf(pet.Character.Id)) };
         var avatars = new Dictionary<string, Bitmap>();
         Bitmap Avatar(string id)
@@ -44,8 +44,8 @@ internal static class TaskWindow
         list.ItemTemplate = new FuncDataTemplate<ScheduledClaudeTask>((task, _) =>
         {
             var image = new Image { Source = Avatar(task.CharacterId), Width = 44, Height = 48, Stretch = Stretch.Uniform };
-            var body = DesktopUi.Stack(DesktopUi.Label(PetCharacter.OwnerName(task.CharacterId) + (task.Enabled ? " · ●" : " · ○")),
-                DesktopUi.Label(task.Prompt.Split('\n')[0]), DesktopUi.Label(task.ScheduleText + " · " + task.WorkingDirectory));
+            var body = DesktopUi.Stack(DesktopUi.DataLabel(TaskPresentation.Owner(task.CharacterId) + (task.Enabled ? " · ●" : " · ○")),
+                DesktopUi.DataLabel(task.Prompt.Split('\n')[0]), DesktopUi.DataLabel(TaskPresentation.Schedule(task) + " · " + task.WorkingDirectory));
             body.Spacing = 3;
             var row = new Grid { ColumnDefinitions = new ColumnDefinitions("54,*"), Margin = new Avalonia.Thickness(3, 5) };
             row.Children.Add(image); Grid.SetColumn(body, 1); row.Children.Add(body);
@@ -159,7 +159,7 @@ internal static class TaskWindow
             }
             catch (Exception error) { DesktopUi.Notice(owner, "无法打开会话", error.Message); }
         });
-        Window window = DesktopUi.Dialog("任务运行情况", DesktopUi.Stack(DesktopUi.Label(task.Prompt), DesktopUi.Label(task.WorkingDirectory), records, detail, resume), 645, 520);
+        Window window = DesktopUi.Dialog("任务运行情况", DesktopUi.Stack(DesktopUi.DataLabel(task.Prompt), DesktopUi.DataLabel(task.WorkingDirectory), records, detail, resume), 645, 520);
         void Refresh()
         {
             refreshing = true;

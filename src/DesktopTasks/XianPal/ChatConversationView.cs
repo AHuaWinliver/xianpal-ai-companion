@@ -97,7 +97,7 @@ namespace XianPal
             body.ReadOnly=true;body.BorderStyle=BorderStyle.None;body.BackColor=card.FillColor;body.ForeColor=Color.FromArgb(37,48,42);body.Font=UiText.ContentFont(10.5f);body.DetectUrls=false;body.WordWrap=true;body.ScrollBars=RichTextBoxScrollBars.None;
             body.ContentsResized+=delegate(object sender,ContentsResizedEventArgs e){naturalHeight=Math.Max(28,e.NewRectangle.Height+5);};
             label.Font=UiText.Font(8.5f);label.ForeColor=Color.FromArgb(111,124,116);label.AutoSize=false;
-            label.Text=(IsUser?"你":characterId.Length==0?"Claude Code":PetCharacter.Find(characterId).Name)+"   "+message.At.ToString("HH:mm");
+            label.Text=(IsUser?UiLanguage.Text("你"):characterId.Length==0?"Claude Code":TaskPresentation.Owner(characterId))+"   "+message.At.ToString("HH:mm");
             avatar.SizeMode=PictureBoxSizeMode.Zoom;avatar.Size=new Size(36,36);avatar.BackColor=Color.Transparent;
             if(!IsUser&&characterId.Length>0)avatar.Image=LoadAvatar(characterId);
             avatar.Paint+=delegate(object sender,PaintEventArgs e){if(IsUser||avatar.Image==null){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var brush=new SolidBrush(Color.FromArgb(57,88,74)))e.Graphics.FillEllipse(brush,0,0,34,34);TextRenderer.DrawText(e.Graphics,IsUser?"我":"AI",label.Font,new Rectangle(0,0,34,34),Color.White,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);}};

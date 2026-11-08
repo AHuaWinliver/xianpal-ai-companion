@@ -103,9 +103,6 @@ namespace XianPal
         private int layeredRenderError;
         private int layeredRenderCount;
         private ToolStripMenuItem pauseItem;
-        private ToolStripMenuItem startupItem;
-        private ToolStripMenuItem topmostItem;
-        private ToolStripMenuItem reduceMotionItem;
         private const int HotkeyId = 0x4B41;
         private const int WmHotkey = 0x0312;
         private const int WmPowerBroadcast = 0x0218;
@@ -869,72 +866,11 @@ namespace XianPal
             };
             menu.Items.Add(pauseItem);
 
-            var defaults = new ToolStripMenuItem("默认设置");
-            ToolStripItemCollection settings = defaults.DropDownItems;
-            startupItem = new ToolStripMenuItem("开机自动启动");
-            startupItem.Checked = IsStartupEnabled();
-            startupItem.Click += delegate { SetStartup(!startupItem.Checked); startupItem.Checked = IsStartupEnabled(); };
-            settings.Add(startupItem);
-
-            topmostItem = new ToolStripMenuItem("保持置顶");
-            topmostItem.Checked = TopMost;
-            topmostItem.Click += delegate { TopMost = !TopMost; topmostItem.Checked = TopMost; SavePreferences(); };
-            settings.Add(topmostItem);
-            AddDesktopVisibilityMenu(settings);
-
-            ToolStripMenuItem sizeMenu = new ToolStripMenuItem("宠物大小");
-            foreach (int percent in new[] { 50, 75, 100, 125 })
-            {
-                int selectedPercent = percent;
-                ToolStripMenuItem sizeItem = new ToolStripMenuItem(percent.ToString() + "%");
-                sizeItem.Click += delegate { SetPetScale(selectedPercent / 100.0f, true); };
-                sizeMenu.DropDownItems.Add(sizeItem);
-            }
-            ToolStripMenuItem resetSize = new ToolStripMenuItem("重置大小和位置");
-            resetSize.Click += delegate { SetPetScale(0.5f, false); ResetPosition(); SavePreferences(); };
-            sizeMenu.DropDownItems.Add(new ToolStripSeparator());
-            sizeMenu.DropDownItems.Add(resetSize);
-            settings.Add(sizeMenu);
-
-            settings.Add(BuildDockOpacityMenu());
-            settings.Add(BuildTrailOpacityMenu());
-            settings.Add(BuildPathModeMenu());
-            settings.Add(BuildAiCareMenu());
-
-            reduceMotionItem = new ToolStripMenuItem("减少动画");
-            reduceMotionItem.Checked = reduceMotion;
-            reduceMotionItem.Click += delegate
-            {
-                reduceMotion = !reduceMotion;
-                reduceMotionItem.Checked = reduceMotion;
-                if (reduceMotion) CancelWander();
-                frameIndex = 0;
-                SavePreferences();
-            };
-            settings.Add(reduceMotionItem);
-            settings.Add(new ToolStripSeparator());
-
+            var defaults = new ToolStripMenuItem(UiLanguage.Text("Default settings"));
+            defaults.Click += delegate { ShowDefaultSettings(); };
             ToolStripMenuItem openClaude = new ToolStripMenuItem("在 PowerShell 打开 Claude Code CLI");
             openClaude.Click += delegate { OpenClaudeCli(promptForm.WorkingDirectory); };
             menu.Items.Add(openClaude);
-            ToolStripMenuItem defaultDirectory = new ToolStripMenuItem("设置 Claude CLI 默认目录…");
-            defaultDirectory.Click += delegate { ChooseDefaultClaudeDirectory(); };
-            settings.Add(defaultDirectory);
-            settings.Add(BuildClaudeSettingsMenu());
-            ToolStripMenuItem externalSessions = new ToolStripMenuItem("收集其他 Claude 会话（默认关闭）");
-            externalSessions.Checked = integrationPreferences.MonitorExternalSessions;
-            externalSessions.Click += delegate
-            {
-                bool previous = integrationPreferences.MonitorExternalSessions;
-                integrationPreferences.MonitorExternalSessions = !previous;
-                try { integrationPreferences.Save(); externalSessions.Checked = !previous; }
-                catch (Exception ex)
-                {
-                    integrationPreferences.MonitorExternalSessions = previous;
-                    MessageBox.Show(ex.Message, "保存会话监控设置失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            };
-            settings.Add(externalSessions);
             menu.Items.Add(defaults);
             menu.Items.Add(new ToolStripSeparator());
 
@@ -959,6 +895,7 @@ namespace XianPal
 
             tray.Text = Program.ProductName;
             tray.ContextMenuStrip = menu;
+            menu.Opening += delegate { UiLanguageBindings.ApplyItems(menu.Items); };
             ContextMenuStrip = menu;
             menu.Opening += delegate { replyBubble.Dismiss(); quoteBubble.Hide(); UpdateVisibilityMenu(); };
             tray.Visible = true;

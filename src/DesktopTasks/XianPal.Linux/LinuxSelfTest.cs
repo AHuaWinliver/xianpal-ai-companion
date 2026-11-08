@@ -29,6 +29,11 @@ internal static class LinuxSelfTest
             if (!roundtrip.Contains(model.Name) || model.Members.Count != 4) throw new Exception("Workshop storage failed.");
             if (OperatingSystem.IsLinux())
             {
+                string[] identity = LinuxProcessIdentity.CurrentMarker().Split('|');
+                if (LinuxProcessIdentity.IsAlive(identity) != true) throw new Exception("Current process identity was unstable.");
+                identity[1] = (ulong.Parse(identity[1]) + 1).ToString();
+                if (LinuxProcessIdentity.IsAlive(identity) != false) throw new Exception("Reused process ID was accepted.");
+                if (LinuxProcessIdentity.IsAlive(new[] { "partial" }) != null) throw new Exception("Partial process marker was treated as exited.");
                 if (SectExecution.DirectoriesOverlap("/tmp/Project", "/tmp/project")) throw new Exception("Case-sensitive paths overlap.");
                 if (!SectExecution.DirectoriesOverlap("/tmp/project", "/tmp/project/sub")) throw new Exception("Parent directory overlap missed.");
             }

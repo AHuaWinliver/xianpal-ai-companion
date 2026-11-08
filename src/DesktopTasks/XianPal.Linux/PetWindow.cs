@@ -336,7 +336,7 @@ internal sealed class PetWindow : Window
         if (conversation?.IsVisible == true || string.IsNullOrWhiteSpace(currentReply)) return;
         if (reply == null)
         {
-            replyLabel = DesktopUi.Label("");
+            replyLabel = DesktopUi.DataLabel("");
             reply = DesktopUi.Dialog("Claude", DesktopUi.Stack(replyLabel, DesktopUi.Action("隐藏", () => reply.Hide())), 315, 112);
             reply.MinHeight = 75; reply.MinWidth = 180;
             DesktopUi.RemoveDecorations(reply);
@@ -380,6 +380,7 @@ internal sealed class PetWindow : Window
     private MenuItem Item(string label, Action action)
     {
         var item = new MenuItem { Header = label };
+        LinuxLanguageBindings.Caption(item);
         item.Click += (_, _) =>
         {
             try { action(); }
@@ -391,6 +392,7 @@ internal sealed class PetWindow : Window
     private ContextMenu BuildMenu()
     {
         var characters = new MenuItem { Header = "切换形象" };
+        LinuxLanguageBindings.Caption(characters);
         foreach (PetCharacter profile in PetCharacter.Available)
             characters.Items.Add(Item(profile.Name, () => { LoadCharacter(profile); Save(); }));
         characters.Items.Add(Item("打开角色资源目录", () => DesktopUi.OpenFolder(catalog.Root)));
@@ -416,21 +418,49 @@ internal sealed class PetWindow : Window
         var size = new Slider { Minimum = 80, Maximum = 260, Value = Width };
         var opacity = new Slider { Minimum = 20, Maximum = 100, Value = preferences.DockedOpacity * 100 };
         var integration = IntegrationPreferences.Load();
+        var language = new ComboBox { ItemsSource = new[] { "English", "简体中文" }, SelectedIndex = UiLanguage.IsEnglish ? 0 : 1 };
         var scope = new ComboBox { ItemsSource = new[] { "全局默认" }.Concat(PetCharacter.Available.Select(p => p.Name)).ToArray(), SelectedIndex = 0 };
         var configuration = new TextBox { Watermark = "继承全局 / CLI 自身配置", Text = integration.ClaudeSettingsPath };
+        var executable = new TextBox { Watermark = UiLanguage.Text("Leave empty to use the global executable or PATH"), Text = integration.ExecutableOverrideFor(null) };
         var profiles = PetCharacter.Available;
         Window dialog = null;
-        scope.SelectionChanged += (_, _) => configuration.Text = scope.SelectedIndex <= 0 ? integration.ClaudeSettingsPath : integration.SettingsPathFor(profiles[scope.SelectedIndex - 1].Id);
+        string editingScope = null;
+        var dirtyScopes = new HashSet<string>();
+        void StoreFields()
+        {
+            string key = editingScope ?? "";
+            if (integration.SettingsPathFor(editingScope) != configuration.Text || integration.ExecutableOverrideFor(editingScope) != executable.Text) dirtyScopes.Add(key);
+            integration.SetSettingsPath(editingScope, configuration.Text);
+            if (editingScope == null) integration.ClaudeExecutablePath = executable.Text;
+            else
+            {
+                integration.CharacterClaudeExecutables ??= new();
+                integration.CharacterClaudeExecutables[editingScope] = executable.Text;
+            }
+        }
+        scope.SelectionChanged += (_, _) =>
+        {
+            if (scope.SelectedIndex < 0) return;
+            StoreFields();
+            string id = scope.SelectedIndex <= 0 ? null : profiles[scope.SelectedIndex - 1].Id;
+            editingScope = id;
+            configuration.Text = integration.SettingsPathFor(id);
+            executable.Text = integration.ExecutableOverrideFor(id);
+        };
         var browse = DesktopUi.Action("选择目录…", async () => { string folder = await DesktopUi.Folder(dialog, "Claude 默认目录"); if (folder != null) directory.Text = folder; });
         var browseJson = DesktopUi.Action("选择 JSON…", async () => { string path = await DesktopUi.JsonFile(dialog, "Claude 配置文件"); if (path != null) configuration.Text = path; });
+        var browseExecutable = DesktopUi.Action("Browse…", async () => { string path = await DesktopUi.ExecutableFile(dialog); if (path != null) executable.Text = path; });
         var apply = DesktopUi.Action("保存", () =>
         {
             try
             {
                 if (!Directory.Exists(directory.Text)) throw new DirectoryNotFoundException("工作目录不存在。");
-                string path = ClaudeSettingsFile.Validate(configuration.Text);
-                if (scope.SelectedIndex <= 0) integration.ClaudeSettingsPath = path;
-                else integration.SetSettingsPath(profiles[scope.SelectedIndex - 1].Id, path);
+                StoreFields();
+                foreach (string id in dirtyScopes)
+                {
+                    integration.SetSettingsPath(id, ClaudeSettingsFile.Validate(integration.SettingsPathFor(id)));
+                    integration.SetExecutablePath(id, integration.ExecutableOverrideFor(id));
+                }
                 integration.Save();
                 preferences.Directory = Path.GetFullPath(directory.Text);
                 preferences.Topmost = Topmost = top.IsChecked == true;
@@ -440,13 +470,15 @@ internal sealed class PetWindow : Window
                 Width = preferences.Size; Height = Width * 416 / 384;
                 Position = Fit(Position);
                 Save();
+                UiLanguage.Set(language.SelectedIndex == 1 ? "zh-CN" : "en");
                 dialog.Close();
             }
             catch (Exception error) { DesktopUi.Notice(dialog, "设置未保存", error.Message); }
         });
-        dialog = DesktopUi.Dialog("默认设置", DesktopUi.Stack(DesktopUi.Label("Claude 默认工作目录"), directory, browse,
+        dialog = DesktopUi.Dialog("默认设置", new ScrollViewer { Content = DesktopUi.Stack(DesktopUi.Label("Language"), language, DesktopUi.Label("Claude 默认工作目录"), directory, browse,
             DesktopUi.Row(top, motion), DesktopUi.Label("角色大小"), size, DesktopUi.Label("贴边不透明度"), opacity,
-            DesktopUi.Label("Claude 配置文件"), scope, configuration, DesktopUi.Row(browseJson, apply)), 510, 510);
+            DesktopUi.Label("Companions"), scope, DesktopUi.Label("Claude executable"), executable, browseExecutable,
+            DesktopUi.Label("Claude 配置文件"), configuration, DesktopUi.Row(browseJson, apply)) }, 590, 650);
         dialog.Show(this);
     }
 }

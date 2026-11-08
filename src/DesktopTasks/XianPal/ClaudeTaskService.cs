@@ -268,6 +268,7 @@ namespace XianPal
             if (task.History == null) task.History = new List<ClaudeTaskRunRecord>();
             ClaudeTaskRunRecord record = new ClaudeTaskRunRecord
             {
+                CharacterId = NormalizeCharacterId(task.CharacterId),
                 StartedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 CompletedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 Status = "skipped",
