@@ -25,7 +25,7 @@ RUN set -eu; \
       suse) \
         zypper --non-interactive install --no-recommends libicu libopenssl3 \
           ca-certificates fontconfig libX11-6 libXext6 libXrender1 libICE6 libSM6 \
-          Mesa-libGL1 Mesa-libEGL1 xorg-x11-server-Xvfb openbox dbus-1 dbus-1-x11 \
+          Mesa-libGL1 Mesa-libEGL1 xorg-x11-server-Xvfb openbox dbus-1-daemon dbus-1-x11 \
           dejavu-fonts python3; \
         zypper clean --all ;; \
       *) echo 'Unknown validation image family' >&2; exit 1 ;; \
