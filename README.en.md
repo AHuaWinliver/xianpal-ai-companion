@@ -2,9 +2,9 @@
 
 # XianPal
 
-**A Windows AI desktop companion for your local Claude Code CLI.**
+**An animated desktop companion for Claude Code.**
 
-[简体中文](README.md) · [Get started](#get-started) · [Features](#features) · [Create a companion](#custom-characters) · [Download](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
+[简体中文](README.zh-CN.md) · [Get started](#get-started) · [Features](#features) · [Create a companion](#custom-characters) · [Download](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
 
 <img src="docs/images/hero.png" alt="XianPal's four original cultivation-inspired desktop companions" width="100%">
 

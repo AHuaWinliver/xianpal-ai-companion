@@ -1,32 +1,51 @@
-# 贡献指南
+# Contributing to XianPal
 
-仙伴当前为 **0.6.11 开放预览版**，欢迎持续提交代码、测试、文档与原创角色。
-先在 issue 讨论范围，再拆成便于审阅的小 PR；说明动机、复现步骤、兼容性影响和测试结果。
-角色或界面改动附预览。优先修复可复现问题，不绕过测试、不混入无关大规模重构。
+[简体中文](CONTRIBUTING.zh-CN.md)
 
-欢迎先通过 issue 描述 Windows/CLI 版本、复现步骤与预期表现。不要粘贴真实凭据、
-内网聊天或用户配置。提交 PR 前请运行构建、smoke 与受影响模块的专项测试。
+Contributions to code, tests, documentation, translations and original character
+packs are welcome. For a substantial change, open an
+[issue](https://github.com/AHuaWinliver/xianpal-ai-companion/issues) first to agree on
+scope. Keep pull requests focused and describe the user-visible result.
 
-只提交自己有权授权的贡献；按 Apache-2.0 贡献代码及原创资源。不要上传影视/游戏角色、
-换色临摹、未经授权图片或大段台词。保持造型独立；图像贡献应附来源、授权与绘制/生成过程，
-AI 辅助素材应保留实际提示词、参考图授权与切分区域，不能仅因“由 AI 生成”而视为已获授权。
+## Development
 
-避免在 UI 线程进行阻塞 CLI 查询，不绕过 CLI 权限确认，不停止其他用户会话。
-测试必须隔离状态、配置和安装目录；不在 CI 调用真实付费模型。
+Follow the [build and testing guide](docs/DEVELOPMENT.md). Run the build, smoke tests
+and checks relevant to the changed modules. Include reproduction steps, test results,
+compatibility implications and any unverified environments in your pull request.
+Use isolated state, settings and installation directories in tests. Automated tests
+must not call a paid model or modify a user's real Claude configuration.
 
-## 大功能更新的 README
+Avoid blocking CLI queries on the UI thread. Preserve Claude Code's permission and
+workspace-trust checks. Manage only sessions started by XianPal; do not terminate
+unrelated Claude processes. Do not include credentials, private conversations or
+intranet configuration in commits, issues or screenshots.
 
-新增或大幅改动用户可见功能时，在同一个 PR 更新 [中文 README](README.md) 和 [英文 README](README.en.md)。说明功能用途、打开入口、关键操作和预期结果，并附能展示该功能的界面截图、动图或流程图。
+## Documentation and language
 
-把展示素材放在 `docs/images/`，使用相对路径和描述性的替代文字。用演示数据展示界面，标注演示内容。在 PR 描述中列出对应的 README 小节。
+English is the default language for public project information. Keep
+[README.md](README.md) and [README.zh-CN.md](README.zh-CN.md) aligned; retain
+[README.en.md](README.en.md) as a compatible English entry point.
 
-## 人物与动作贡献
+For a substantial feature, document its purpose, entry point, essential steps and
+expected behavior in the same pull request. Add screenshots, animation or a diagram
+under `docs/images/`, using relative paths and descriptive alternative text. Label
+demonstration data. Put release-specific details in the changelog and release notes.
+Describe measured behavior and distinguish automated checks from target-machine tests.
 
-先阅读 [人物定制与动画规范](docs/CHARACTER-CUSTOMIZATION.md)，复制
-[人物定制规格单](docs/templates/CHARACTER-SPEC.md) 记录造型、来源、分层裁区、
-连接锚点、步态、表情和全屏演出。修复动作时不更改已确认人物造型；双足保持对侧协调，
-四足保持对角交替；两条手臂/前肢遵守当前始终最外层的规则。
+## Characters and animation
 
-PR 应附可重建输入、实际提示词/授权来源、左右行走与其他受影响状态的循环预览、
-专项测试结果及未验证项。新增人物须扩展四角色假设与数量断言，不可直接删除测试。
-先确认静态及动画视觉效果，再制作安装包；不要把任务权限或 CLI 行为变更混入人物修复。
+Read the [character customization guide](docs/CHARACTER-CUSTOMIZATION.md) and use the
+[character specification](docs/templates/CHARACTER-SPEC.md). Include rebuildable
+inputs, source and permission information, rig regions and anchors, and previews
+for both walking directions and other affected states.
+
+Preserve approved character designs when fixing motion. Bipeds use opposite arm
+and leg movement; quadrupeds use diagonal coordination. Keep both arms or forelimbs
+in the established front rendering layer. Adding a character must update assumptions
+and tests about the number of profiles rather than remove those checks.
+
+Contribute only work you have permission to license. Record the source, license and
+creation process of visual assets, including reference permissions and prompts for
+AI-assisted art. AI generation alone does not establish rights to a reference.
+Code contributions use [Apache-2.0](LICENSE); consult the separate
+[asset terms](ASSET-LICENSE.md) for artwork.

@@ -1,14 +1,30 @@
-# 安全报告
+# Security policy
 
-不要在公开 issue 中放漏洞利用细节、令牌、真实路径或敏感日志。
-仓库上线后，请维护者启用 GitHub Private vulnerability reporting，并通过仓库
-Security 页私密报告；若尚未启用，先要求维护者提供私密渠道，不要公开泄露。
+[简体中文](SECURITY.zh-CN.md)
 
-本项目是桌面 CLI 集成，不是安全沙箱。Claude 能做的事情取决于用户权限及其配置。
-测试通过不代表可对未经信任的文件、目录或提示词自动授权。
+## Reporting a vulnerability
 
-外置角色包只接受配置和PNG，不加载DLL、脚本或可执行内容；具有尺寸、数量、大小和逐帧摘要校验。
-SHA256清单用于检测复制不完整与文件损坏，不是作者签名，也不能证明来源可信或素材授权。
-角色人设会进入AI提示词，导入前仍需审阅；它不应改变CLI的信任、文件访问或权限确认规则。
+Please do not disclose exploit details, credentials, private paths or sensitive logs
+in public issues. Use the repository's **Security → Report a vulnerability** option
+when private reporting is available. Otherwise, ask a maintainer for a private
+reporting channel before sharing sensitive details.
 
-目前针对最新公开版本提供尽力维护，不提供 SLA。0.6.7 发布前，维护者应确认上述私密报告渠道已建立；旧内部研发快照不构成单独的长期支持版本。
+Include the affected release or commit, operating system, reproduction steps,
+expected impact and a minimal redacted example. Security fixes are maintained on
+a best-effort basis for the latest public release; the project does not offer an SLA.
+
+## Security boundaries
+
+XianPal integrates with a locally installed Claude Code CLI. Claude's configuration,
+the operating-system user and the service selected by that user determine its
+permissions and data processing. XianPal is not an execution sandbox and must not
+bypass Claude Code's workspace-trust or permission prompts.
+
+External character packs contain configuration and PNG frames; they do not load
+DLLs, scripts or executable plugins. Packs are checked for dimensions, frame counts,
+size limits and per-frame hashes. Checksums detect corruption and incomplete copies;
+they are not signatures and do not establish the identity or rights of an author.
+Review a character's persona before importing it because it can become model input.
+
+Tests isolate state, settings and installation directories. A passing automated test
+does not grant permission to execute tasks against untrusted files or prompts.

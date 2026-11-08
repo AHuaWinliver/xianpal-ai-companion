@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: Apache-2.0
 function Get-PublicProjectFiles([string]$ProjectRoot) {
-    $names = @('README.md','README.en.md','VERSION','LICENSE','NOTICE','ASSET-LICENSE.md','CONTRIBUTING.md','SECURITY.md','CHANGELOG.md','.gitignore','.gitattributes','.editorconfig','build.ps1')
+    $names = @('README.md','README.en.md','README.zh-CN.md','VERSION','LICENSE','NOTICE','ASSET-LICENSE.md','CONTRIBUTING.md','CONTRIBUTING.zh-CN.md','SECURITY.md','SECURITY.zh-CN.md','CHANGELOG.md','.gitignore','.gitattributes','.editorconfig','build.ps1')
     $names += @('tools/BuildOriginalCharacters.cs','tools/BuildAppIcon.cs','tools/PublicFiles.ps1','tools/TestRepository.ps1','tools/ExportOpenSource.ps1')
     $names += @('tests/smoke-test.ps1','tests/integration-task-test.ps1','tests/IntegrationTaskTests.cs','tests/desktop-visibility-test.ps1','tests/DesktopVisibilityTests.cs','tests/icon-shortcut-test.ps1','tests/IconShortcutTests.cs','tests/claude-background-test.ps1','tests/ClaudeBackgroundTests.cs')
     $names += @('tests/original-assets-test.ps1','tests/companion-motion-test.ps1','tests/CompanionMotionTests.cs','tools/WalkingPreview.js')
