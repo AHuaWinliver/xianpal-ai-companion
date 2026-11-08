@@ -320,7 +320,12 @@ namespace XianPal
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 #if XIANPAL_LINUX
             string[] commandNames = { "claude" };
-            string[] candidates = { Path.Combine(home, ".local", "bin", "claude") };
+            string[] candidates = {
+                Path.Combine(home, ".local", "bin", "claude"),
+                Path.Combine(home, "APP", "claude"),
+                Path.Combine(home, "APP", "claude", "claude"),
+                Path.Combine(home, "APP", "claude", "bin", "claude")
+            };
 #else
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string[] candidates = {

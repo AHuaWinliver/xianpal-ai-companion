@@ -13,7 +13,7 @@ internal sealed class ConversationWindow : Window
 {
     private readonly PetWindow pet;
     private readonly StackPanel messages = new() { Spacing = 10 };
-    private readonly TextBox input = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, PlaceholderText = "给 Claude Code 一条需求…" };
+    private readonly TextBox input = new() { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, Watermark = "给 Claude Code 一条需求…" };
     private readonly ScrollViewer history;
     private readonly Button send;
     private readonly Button stop;

@@ -15,8 +15,8 @@ internal static class TaskWindow
     {
         Window dialog = null;
         ScheduledClaudeTask active = null;
-        var prompt = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 65, PlaceholderText = "执行任务" };
-        var directory = new TextBox { Text = pet.DirectoryPath, PlaceholderText = "工作目录" };
+        var prompt = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 65, Watermark = "执行任务" };
+        var directory = new TextBox { Text = pet.DirectoryPath, Watermark = "工作目录" };
         var period = new ComboBox { ItemsSource = new[] { "每天", "每周", "固定间隔" }, SelectedIndex = 0 };
         var time = new TimePicker { SelectedTime = TimeSpan.FromHours(9), ClockIdentifier = "24HourClock" };
         var weekday = new ComboBox { ItemsSource = new[] { "周日", "周一", "周二", "周三", "周四", "周五", "周六" }, SelectedIndex = 1 };

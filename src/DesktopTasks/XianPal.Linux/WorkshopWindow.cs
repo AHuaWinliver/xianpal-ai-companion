@@ -21,7 +21,7 @@ internal static class WorkshopWindow
         var output = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 80 };
         var editor = new TextBox { AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 160 };
         var events = new ListBox { Height = 110 };
-        var eventTitle = new TextBox { PlaceholderText = "事件名称" };
+        var eventTitle = new TextBox { Watermark = "事件名称" };
         var eventDate = new CalendarDatePicker { SelectedDate = DateTime.Today };
         var eventTime = new TimePicker { ClockIdentifier = "24HourClock", SelectedTime = DateTime.Now.TimeOfDay };
         var repeat = new ComboBox { ItemsSource = new[] { "一次", "每日", "每周" }, SelectedIndex = 0 };

@@ -9,6 +9,15 @@ namespace XianPal.Linux;
 
 internal static class DesktopUi
 {
+    internal static void RemoveDecorations(Window window)
+    {
+#if XIANPAL_LINUX_COMPAT
+        window.SystemDecorations = SystemDecorations.None;
+#else
+        window.WindowDecorations = WindowDecorations.None;
+#endif
+    }
+
     internal static Button Action(string label, Action perform)
     {
         var button = new Button { Content = label };

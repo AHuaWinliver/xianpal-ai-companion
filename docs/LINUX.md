@@ -2,6 +2,22 @@
 
 Linux 桌面端在 `linux` 分支开发，使用 .NET 10 与 Avalonia，复用 Windows 端的角色配置、任务调度、提醒与门派依赖执行代码。发布条件是功能移植和原生 ARM64 验证全部通过。
 
+## 目标环境与兼容构建
+
+当前内网部署目标为 CentOS 7、x86_64、内核 3.10.0-1160.el7、glibc 2.17、GCC 4.8.5，通过 TurboVNC 使用 X11。目标机已有 Node.js 18.20.15、Python 3.10.14，Claude Code 位于 `~/APP/claude`。
+
+现代构建使用 .NET 10 与 Avalonia 12。兼容构建通过 `-p:LinuxCompat=true` 选择 .NET 8 与 Avalonia 11，单独验证旧 glibc 环境，发布时分别标明运行时和原生依赖。两种构建共享人物、对话、任务和门派逻辑。
+
+CI 覆盖 Ubuntu 22.04、24.04 的原生 x86_64 与 ARM64，并增加固定镜像的 CentOS 7 x86_64 用户空间验证。CentOS 容器复用 CI 主机内核，目标机的 3.10 内核与 TurboVNC 仍需实际验收。其他发行版根据系统库、架构和图形会话继续扩展验证。
+
+```sh
+# 旧系统兼容候选
+dotnet publish src/DesktopTasks/XianPal.Linux -p:LinuxCompat=true -r linux-x64 --self-contained true -c Release -o build/linux-compat-x64
+
+# 在部署目标上采集环境信息
+sh src/DesktopTasks/XianPal.Linux/diagnose-linux.sh
+```
+
 ## 已完成的原生验证
 
 Ubuntu ARM64 上已通过程序构建、共享业务逻辑和原生窗口自动化检查。界面测试在 Xvfb 与 Openbox 中使用模拟 Claude，验证四个人物加载、中文与表情流式回复、后台任务独立记录和四道友依赖交接。[首轮 ARM64 验证](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42342609755)

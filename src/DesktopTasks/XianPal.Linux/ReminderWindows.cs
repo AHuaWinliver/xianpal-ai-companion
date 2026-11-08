@@ -15,7 +15,7 @@ internal static class ReminderWindows
     internal static void ShowSettings(PetWindow pet, ReminderService service)
     {
         Window window = null;
-        var input = new TextBox { PlaceholderText = "例如：起来活动一下" };
+        var input = new TextBox { Watermark = "例如：起来活动一下" };
         var time = new TimePicker { ClockIdentifier = "24HourClock", SelectedTime = DateTime.Now.TimeOfDay };
         var effect = new ComboBox { ItemsSource = new[] { "角色演绎", "仅提示框" }, SelectedIndex = 0 };
         var list = new ListBox { MinHeight = 120, MaxHeight = 180 };
@@ -93,10 +93,11 @@ internal static class ReminderWindows
         var screen = pet.Screens.ScreenFromWindow(pet) ?? pet.Screens.Primary;
         var overlay = new Window
         {
-            Title = "仙伴 · 全屏提醒", WindowDecorations = WindowDecorations.None, Topmost = true,
+            Title = "仙伴 · 全屏提醒", Topmost = true,
             ShowInTaskbar = false, CanResize = false, Background = new SolidColorBrush(Color.Parse("#E6192628")), Content = grid,
             Position = screen?.Bounds.Position ?? default
         };
+        DesktopUi.RemoveDecorations(overlay);
         var clock = new Stopwatch();
         Bitmap current = null;
         int frame = -1;
