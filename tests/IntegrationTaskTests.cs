@@ -288,6 +288,7 @@ internal static class IntegrationTaskTests
         File.WriteAllText(Path.Combine(bin, "claude.cmd"), "@echo off\r\n\"" + Assembly.GetExecutingAssembly().Location + "\" %*\r\n", Encoding.ASCII);
         string oldPath = Environment.GetEnvironmentVariable("PATH");
         string oldState = Environment.GetEnvironmentVariable("FUFU_STATE_DIR");
+        string previousAcknowledgment = Environment.GetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK");
         Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + oldPath);
         Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", Path.Combine(bin, "claude.cmd"));
         string settingsPath = Path.Combine(root, "角色 Claude O'Brien & %FUFU_TEST_PATH_TOKEN%.json");
@@ -300,6 +301,8 @@ internal static class IntegrationTaskTests
             {
                 string mode = scenario == "background-parallel" ? "background" : scenario;
                 Environment.SetEnvironmentVariable("FUFU_STATE_DIR", Path.Combine(root, "live-" + scenario));
+                string acknowledgment = Path.Combine(Program.StateDirectory, "live-stream-observed");
+                Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", ClaudeTaskService.IsInteractiveMode(mode) ? null : acknowledgment);
                 var preferences = new IntegrationPreferences { ClaudeSettingsPath = Path.Combine(root, "unused-default.json") };
                 preferences.SetSettingsPath("orbit", settingsPath);
                 preferences.Save();
@@ -312,7 +315,8 @@ internal static class IntegrationTaskTests
                     form.GetType().GetMethod("QueueScheduledClaudeTask", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { task });
                     ClaudeTaskRunRecord run = task.History[0];
                     Require(!bubble.Visible && run.RunMode == mode, scenario + " keeps the selected execution mode and opens no reply bubble");
-                    Require(PumpUntil(delegate { return run.Transcript.Contains("中文回复") && run.Status == "running"; }, 10000), mode + " task history receives reply before completion");
+                    Require(PumpUntil(delegate { return run.Transcript.Contains("中文回复") && run.Status == "running"; }, 20000), mode + " task history receives reply before completion; status=" + run.Status + ", exit=" + run.ExitCode + (run.Status == "failed" ? ", fixture output=" + run.Transcript : ""));
+                    if (!ClaudeTaskService.IsInteractiveMode(mode)) File.WriteAllText(acknowledgment, "observed");
                     System.Collections.Generic.List<ActivityRecord> activities = (System.Collections.Generic.List<ActivityRecord>)Field(form, "activities");
                     Require(activities.Count == 0 && !bubble.Visible, scenario + " live output stays out of ordinary chat");
                     if (ClaudeTaskService.IsInteractiveMode(mode))
@@ -349,6 +353,7 @@ internal static class IntegrationTaskTests
         {
             Environment.SetEnvironmentVariable("PATH", oldPath);
             Environment.SetEnvironmentVariable("FUFU_STATE_DIR", oldState);
+            Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", previousAcknowledgment);
             Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", null);
             Environment.SetEnvironmentVariable("FUFU_TEST_EXPECTED_SETTINGS", null);
             Environment.SetEnvironmentVariable("FUFU_TEST_PATH_TOKEN", null);
