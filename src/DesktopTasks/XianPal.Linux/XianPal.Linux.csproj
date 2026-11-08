@@ -19,7 +19,7 @@
     <Compile Include="../XianPal/ClaudeCliRunner.cs;../XianPal/ClaudeSettingsFile.cs;../XianPal/ClaudeTaskService.cs;../XianPal/ClaudeTaskStreamRenderer.cs;../XianPal/IntegrationPreferences.cs;../XianPal/ReminderService.cs;../XianPal/CompanionRolePresets.cs;../XianPal/PetCharacter.cs;../XianPal/PetBrain.cs;../XianPal/SectWorkshop.cs;../XianPal/DragGaitClock.cs;../XianPal/CharacterPackCatalog.cs" LinkBase="Shared" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="../XianPal/NativeTaskHooks.cs;../XianPal/VisibleTaskMonitor.cs;../XianPal/BackgroundTaskSupervisor.cs;../XianPal/UiLanguage.cs;../XianPal/TaskPresentation.cs;../XianPal/CompanionRoutes.cs;../XianPal/ArtifactTravelClock.cs;../XianPal/WalkingExpressionClock.cs;../XianPal/ReminderPerformanceTimeline.cs" LinkBase="Shared" />
+    <Compile Include="../XianPal/NativeTaskHooks.cs;../XianPal/VisibleTaskMonitor.cs;../XianPal/BackgroundTaskSupervisor.cs;../XianPal/UiLanguage.cs;../XianPal/TaskPresentation.cs;../XianPal/CompanionRoutes.cs;../XianPal/ArtifactTravelClock.cs;../XianPal/WalkingExpressionClock.cs;../XianPal/ReminderPerformanceTimeline.cs;../XianPal/SectHallLayout.cs" LinkBase="Shared" />
     <AvaloniaResource Include="$(FontAssetsPath)/*.otf;$(FontAssetsPath)/*.ttf" Link="Fonts/%(Filename)%(Extension)" />
     <Content Include="launch.sh;diagnose-linux.sh;install.sh" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
     <Content Include="../../../LICENSE;../../../NOTICE;../../../ASSET-LICENSE.md" Link="%(Filename)%(Extension)" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />

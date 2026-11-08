@@ -15,7 +15,7 @@ internal static class WorkshopWindow
         var sects = new ComboBox { ItemsSource = service.Workshop.Sects, SelectedIndex = 0, MinWidth = 220 };
         if (selectedName != null) sects.SelectedItem = service.Workshop.Sects.Find(sect => sect.Name == selectedName);
         var goal = DesktopUi.DataLabel("");
-        var hall = new UniformGrid { Columns = 2, Margin = new Thickness(20), MinHeight = 220 };
+        var hall = new NativeHallView();
         var detail = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 100, MaxHeight = 240 };
         var logs = new ComboBox { MinWidth = 220 };
         var output = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 80 };
@@ -25,59 +25,52 @@ internal static class WorkshopWindow
         var eventDate = new CalendarDatePicker { SelectedDate = DateTime.Today };
         var eventTime = new TimePicker { ClockIdentifier = "24HourClock", SelectedTime = DateTime.Now.TimeOfDay };
         var repeat = new ComboBox { ItemsSource = new[] { "一次", "每日", "每周" }, SelectedIndex = 0 };
-        var cache = new Dictionary<string, Bitmap>();
-        string selectedStep = null;
+        string selectedMember = null;
+        SectRun selectedRun = null;
+        string logSignature = null;
+        bool updatingLogs = false;
         Window window = null;
         var json = new CompatibleJson { MaxJsonLength = 8388608 };
-        var scene = new Border { Child = hall, CornerRadius = new CornerRadius(12) };
-        string background = Path.Combine(AppContext.BaseDirectory, "scenes", "sect-hall-v2.png");
-        if (File.Exists(background))
+        var hallScroll = new ScrollViewer { Content = hall, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled, MinHeight = 180 };
+        hallScroll.SizeChanged += (_, _) => hall.SetViewport(hallScroll.Viewport);
+        hallScroll.ScrollChanged += (_, _) => hall.SetViewport(hallScroll.Viewport);
+        var scene = new Border { Child = hallScroll, CornerRadius = new CornerRadius(12) };
+        void InspectMember()
         {
-            var bitmap = new Bitmap(background);
-            cache.Add(background, bitmap);
-            scene.Background = new ImageBrush(bitmap) { Stretch = Stretch.UniformToFill };
+            var step = selectedRun?.Steps.LastOrDefault(item => item.Member == selectedMember);
+            string text = step == null ? (sects.SelectedItem as CompanionSect)?.Members.Find(member => member.Name == selectedMember)?.Role ?? "" :
+                UiLanguage.Text("Task:") + "\n" + step.Prompt + "\n\n" + UiLanguage.Text("Claude reply:") + "\n" + step.Output;
+            if (detail.Text != text) detail.Text = text;
         }
-        Bitmap Frame(PetCharacter character, string state, int frame)
-        {
-            string root = character.ResourceRoot ?? (character.Id == "orbit" ? PetWindow.Assets : Path.Combine(PetWindow.Assets, "characters", character.Id));
-            string file = Path.Combine(root, state, frame.ToString("00") + ".png");
-            if (!cache.TryGetValue(file, out Bitmap image)) cache.Add(file, image = new Bitmap(file));
-            return image;
-        }
-
+        hall.MemberSelected += name => { selectedMember = name; InspectMember(); };
         void RefreshHall()
         {
-            CompanionSect sect = sects.SelectedItem as CompanionSect;
-            goal.Text = sect?.Goal ?? "创建一个门派并填写共同目标。";
-            SectRun run = service.Workshop.History.FirstOrDefault(run => run.Sect == sect?.Name);
-            hall.Children.Clear();
-            if (sect == null) return;
-            long frame = Environment.TickCount64 / 120;
-            foreach (SectMember member in sect.Members)
+            if (updatingLogs) return;
+            var sect = sects.SelectedItem as CompanionSect;
+            goal.Text = sect?.Goal ?? UiLanguage.Text("创建一个门派并填写共同目标。");
+            var records = service.Workshop.History.Where(record => record.Sect == sect?.Name).ToArray();
+            string signature = string.Join("|", records.Select(record => record.Started + record.Status));
+            if (signature != logSignature)
             {
-                SectStepRun step = run?.Steps.LastOrDefault(step => step.Member == member.Name || sect.Steps.Find(item => item.Id == step.Id)?.Member == member.Id);
-                string state = step?.Status switch { "running" => "waiting", "failed" => "failed", "success" => "waving", _ => "idle" };
-                var sprite = new Image { Source = Frame(PetCharacter.Find(member.CharacterId), state, (int)(frame % CharacterPackCatalog.FrameCount(state))), Height = 105 };
-                var title = DesktopUi.Label(member.Name + " · " + (step?.Status ?? "就绪"));
-                title.Foreground = Brushes.White;
-                var desk = new Border
+                string previous = selectedRun?.Started;
+                bool latest = logs.SelectedIndex <= 0;
+                updatingLogs = true;
+                try
                 {
-                    Background = new SolidColorBrush(Color.Parse("#DB314B48")), Padding = new Thickness(8),
-                    CornerRadius = new CornerRadius(8), Child = DesktopUi.Stack(sprite, title)
-                };
-                desk.PointerPressed += (_, _) =>
-                {
-                    selectedStep = step?.Id;
-                    detail.Text = step == null ? member.Role : step.Output;
-                };
-                hall.Children.Add(desk);
+                    logs.ItemsSource = new[] { UiLanguage.Text("Latest run") }.Concat(records.Select(record => (DateTime.TryParse(record.Started, out var date) ? date.ToString("g") : record.Started) + " · " + record.Status)).ToArray();
+                    int index = Array.FindIndex(records, record => record.Started == previous);
+                    logs.SelectedIndex = latest || index < 0 ? 0 : index + 1;
+                    logSignature = signature;
+                }
+                finally { updatingLogs = false; }
             }
-            SectStepRun selected = run?.Steps.Find(step => step.Id == selectedStep);
-            if (selected != null && detail.Text != selected.Output) detail.Text = selected.Output;
-            string transfers = run == null ? "" : string.Join("\n\n", run.Transfers.Select(transfer => $"{transfer.From} → {transfer.To}\n{transfer.Text}"));
+            selectedRun = logs.SelectedIndex <= 0 ? records.FirstOrDefault() : records.ElementAtOrDefault(logs.SelectedIndex - 1);
+            hall.SetScene(sect, selectedRun);
+            InspectMember();
+            string transfers = selectedRun == null ? "" : string.Join("\n\n", selectedRun.Transfers.Select(transfer => $"{transfer.From} → {transfer.To}\n{transfer.Text}"));
             if (output.Text != transfers) output.Text = transfers;
         }
-
+        logs.SelectionChanged += (_, _) => RefreshHall();
         void RefreshSects(CompanionSect select)
         {
             sects.ItemsSource = service.Workshop.Sects.ToArray();
@@ -134,19 +127,28 @@ internal static class WorkshopWindow
             service.SaveWorkshop();
             RefreshEvents();
         });
+        var hallPage = new Grid { RowDefinitions = new RowDefinitions("Auto,Auto,*,5,110,Auto,70,Auto"), RowSpacing = 6 };
+        Control[] sections = {
+            DesktopUi.Row(sects, logs), goal, scene,
+            new GridSplitter { ResizeDirection = GridResizeDirection.Rows, ResizeBehavior = GridResizeBehavior.PreviousAndNext, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch, Height = 5, Background = new SolidColorBrush(Color.Parse("#829993")) },
+            detail, DesktopUi.Label("交接记录"), output,
+            DesktopUi.Row(create, runButton, DesktopUi.Action("取消运行", service.CancelSect))
+        };
+        for (int i = 0; i < sections.Length; i++) { Grid.SetRow(sections[i], i); hallPage.Children.Add(sections[i]); }
         var tabs = new TabControl
         {
             ItemsSource = new[]
             {
-                new TabItem { Header = "门派大堂", Content = new ScrollViewer { Content = DesktopUi.Stack(sects, goal, scene, detail, DesktopUi.Label("交接记录"), output, DesktopUi.Row(create, runButton, DesktopUi.Action("取消运行", service.CancelSect))) } },
+                new TabItem { Header = "门派大堂", Content = hallPage },
                 new TabItem { Header = "成员与任务配置", Content = DesktopUi.Stack(DesktopUi.Label("配置门派名称、共同目标、成员职责、目录和任务依赖。"), editor, save) },
                 new TabItem { Header = "事件规划", Content = DesktopUi.Stack(eventTitle, DesktopUi.Row(eventDate, eventTime, repeat), addEvent, events,
                     DesktopUi.Action("删除事件", () => { if (events.SelectedIndex >= 0) { service.Workshop.Events.RemoveAt(events.SelectedIndex); service.SaveWorkshop(); RefreshEvents(); } })) }
             }
         };
         window = DesktopUi.Dialog("仙伴 · 事件规划与门派大堂", tabs, 800, 690);
+        window.Name = "WorkshopWindow";
         var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(150), DispatcherPriority.Background, (_, _) => RefreshHall());
-        window.Closed += (_, _) => { timer.Stop(); foreach (Bitmap image in cache.Values) image.Dispose(); };
+        window.Closed += (_, _) => { timer.Stop(); hall.Dispose(); };
         SelectSect();
         RefreshEvents();
         window.Show(pet);

@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: Apache-2.0
 using System;
 using System.Drawing;
+#if !XIANPAL_LINUX
 using System.Windows.Forms;
+#endif
 
 namespace XianPal
 {
@@ -47,6 +49,7 @@ namespace XianPal
         }
     }
 
+#if !XIANPAL_LINUX
     internal sealed class SectHallViewport : Panel
     {
         private readonly SectHallControl hall;
@@ -83,4 +86,5 @@ namespace XianPal
             finally{arranging=false;}
         }
     }
+#endif
 }

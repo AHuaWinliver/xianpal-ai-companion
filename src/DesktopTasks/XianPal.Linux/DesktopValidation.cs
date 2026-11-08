@@ -5,6 +5,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 
 namespace XianPal.Linux;
 
@@ -96,18 +97,31 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 if (performance.WindowState != WindowState.FullScreen) throw new Exception("Reminder performance did not enter full screen.");
                 Capture(performance, "reminder-performance.png");
                 performance.Close();
-                var sect = CompanionRolePresets.Create("仙伴验证门派", Program.StateDirectory, true);
-                sect.Goal = "读取隔离样例并记录结果，供本次桌面测试验证。";
+                UiLanguage.Set("en");
+                var sect = CompanionRolePresets.Create("Cloudline Workshop", Program.StateDirectory, true);
+                sect.Goal = "Inspect the isolated example and record the result. Demonstration data; no live model calls.";
+                foreach (var member in sect.Members) member.Name = UiLanguage.Text(PetCharacter.Find(member.CharacterId).Name);
                 pet.Services.Workshop.Sects.Add(sect);
                 pet.Services.SaveWorkshop();
                 WorkshopWindow.Show(pet, pet.Services);
                 await Task.Delay(500);
                 foreach (Window window in desktop.Windows.Where(window => window != pet && window != pet.Conversation).ToArray())
-                    Capture(window, window.Title.Contains("门派") ? "workshop.png" : window.Title.Contains("倒计时") ? "reminders.png" : "tasks.png");
+                    Capture(window, window.Name == "WorkshopWindow" ? "workshop.png" : window.Title == UiLanguage.Text("提醒与倒计时") ? "reminders.png" : "tasks.png");
+                Window workshop = desktop.Windows.Single(window => window.Name == "WorkshopWindow");
+                NativeHallView hall = workshop.GetVisualDescendants().OfType<NativeHallView>().Single();
+                foreach (var size in new[] { new Size(620, 560), new Size(1100, 820), new Size(800, 690) })
+                {
+                    workshop.Width = size.Width; workshop.Height = size.Height;
+                    await Task.Delay(100);
+                    if (!hall.HasBackground || hall.SeatCount != 4 || hall.Bounds.Width > workshop.ClientSize.Width || hall.Bounds.Height < 200)
+                        throw new Exception("Native hall lost its background or proportional workstations after resize.");
+                }
                 pet.Services.StartSect(sect);
                 await WaitUntil(() => !pet.Services.Execution.IsRunning);
                 if (pet.Services.Execution.Record.Status != "success" || pet.Services.Execution.Record.Transfers.Count == 0)
                     throw new Exception("Native four-agent execution or handoffs failed.");
+                await Task.Delay(200);
+                Capture(workshop, "workshop-completed.png");
                 File.WriteAllText(Path.Combine(evidence, "result.txt"),
                     "PASS native Linux desktop: four characters, Unicode conversation, isolated task history, reminders UI and four-agent handoffs.\n" +
                     "Runtime: .NET " + Environment.Version + "\nArchitecture: " + System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture +
