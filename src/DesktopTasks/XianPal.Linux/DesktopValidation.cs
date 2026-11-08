@@ -46,8 +46,11 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
         var desktop = (IClassicDesktopStyleApplicationLifetime)ApplicationLifetime;
         var pet = new PetWindow();
         desktop.MainWindow = pet;
+        bool verificationStarted = false;
         pet.Opened += async (_, _) =>
         {
+            if (verificationStarted) return;
+            verificationStarted = true;
             try
             {
                 VerifyGlyphs(DesktopFonts.TextFamily, new uint[] { '道', '友', '中', '文', '回', '复' });

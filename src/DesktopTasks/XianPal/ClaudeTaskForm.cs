@@ -641,7 +641,7 @@ namespace XianPal
             Font = UiText.Font(9f);
 
             string status = record == null ? "未知" : record.StatusText;
-            Label title = new Label { Text = "定时任务运行详情 · " + status, Font = UiText.Font(11.5f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 15), ForeColor = Color.FromArgb(34, 34, 32) };
+            Label title = new Label { Text = UiLanguage.Text("定时任务运行详情") + " · " + UiLanguage.Text(status), Font = UiText.Font(11.5f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 15), ForeColor = Color.FromArgb(34, 34, 32) };
             Label meta = new Label
             {
                 Text = BuildMeta(task, record),
@@ -707,13 +707,19 @@ namespace XianPal
             string conversation = record == null ? "" : record.Transcript;
             if (String.IsNullOrWhiteSpace(conversation) && record != null) conversation = record.Summary;
             if (String.IsNullOrWhiteSpace(conversation)) conversation = "此记录没有保存到可显示的回复内容。";
-            return "任务：\r\n" + (task == null ? "" : task.Prompt) + "\r\n\r\nClaude 回复：\r\n" + conversation;
+            return UiLanguage.Text("任务：") + "\r\n" + (task == null ? "" : task.Prompt) + "\r\n\r\n" + UiLanguage.Text("Claude 回复：") + "\r\n" + conversation;
         }
 
         private static string BuildMeta(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
         {
             DateTime started;
             string time = record != null && DateTime.TryParse(record.StartedAt, out started) ? started.ToLocalTime().ToString("yyyy-MM-dd HH:mm:ss") : "未知时间";
+            if (UiLanguage.IsEnglish)
+            {
+                string state = record == null ? "Unknown" : UiLanguage.Text(record.StatusText);
+                string details = record == null || record.Status == "running" || record.RunMode == "claude-background" ? state : state + " · Exit code " + record.ExitCode;
+                return time + " · " + TaskPresentation.Mode(record == null ? null : record.RunMode) + " · " + details + "\r\nRun as: " + TaskPresentation.Owner(record == null ? task == null ? null : task.CharacterId : record.CharacterId) + " · Folder: " + (task == null ? "" : task.WorkingDirectory);
+            }
             string mode = ClaudeTaskService.RunModeLabel(record == null ? null : record.RunMode);
             if (record != null && record.RunMode != "background") mode += " / " + (record.DesktopNumber == 0 ? "当前桌面" : "桌面 " + record.DesktopNumber);
             string result = record != null && record.RunMode == "claude-background" ? record.StatusText + "（依据后台状态；非创建命令退出码）" : record != null && record.Status == "running" ? "运行中（实时更新）" : "退出码 " + (record == null ? "—" : record.ExitCode.ToString());

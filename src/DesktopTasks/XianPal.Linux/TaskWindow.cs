@@ -43,6 +43,7 @@ internal static class TaskWindow
         var list = new ListBox { Height = 185 };
         list.ItemTemplate = new FuncDataTemplate<ScheduledClaudeTask>((task, _) =>
         {
+            if (task == null) return new Border(); // Containers clear their data while recycling.
             var image = new Image { Source = Avatar(task.CharacterId), Width = 44, Height = 48, Stretch = Stretch.Uniform };
             var body = DesktopUi.Stack(DesktopUi.DataLabel(TaskPresentation.Owner(task.CharacterId) + (task.Enabled ? " · ●" : " · ○")),
                 DesktopUi.DataLabel(task.Prompt.Split('\n')[0]), DesktopUi.DataLabel(TaskPresentation.Schedule(task) + " · " + task.WorkingDirectory));

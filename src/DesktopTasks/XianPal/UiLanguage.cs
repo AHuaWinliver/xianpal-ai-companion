@@ -160,8 +160,8 @@ namespace XianPal
             { "四位原创道友，拥有丰富的动画和表情。", "Four original companions with expressive animations." },
             { "平滑的步伐、转向及专属角色动作。", "Smooth steps, turns, and character-specific motion." },
             { "拖入文件后，在对话中确认处理需求。", "Drop files, then confirm your request in chat." },
-            { "提醒和互动采用角色特色动画。", "Distinct animations for reminders and interactions." }
-            ,{ "动态", "Activity" }, { "提醒", "Reminders" }, { "●  本机 CLI", "●  Local CLI" },
+            { "提醒和互动采用角色特色动画。", "Distinct animations for reminders and interactions." },
+            { "动态", "Activity" }, { "提醒", "Reminders" }, { "●  本机 CLI", "●  Local CLI" },
             { "询问 Claude Code", "Ask Claude Code" }, { "询问 Claude Code…", "Ask Claude Code…" },
             { "Enter 发送 · Shift+Enter 换行", "Enter to send · Shift+Enter for a new line" },
             { "选择一条动态查看 Claude 回复", "Select a conversation to view Claude's reply" },
@@ -185,7 +185,18 @@ namespace XianPal
             { "删除定时任务", "Delete scheduled task" }, { "删除选中的任务和运行记录？", "Delete the selected task and its run history?" },
             { "定时任务未保存", "Task was not saved" }, { "任务工作目录", "Task working directory" },
             { "Claude 默认目录", "Default Claude folder" }, { "继承全局 / CLI 自身配置", "Inherit global settings or Claude's defaults" },
-            { "并行", "Parallel" }, { "跳过重叠运行", "Skip overlap" }, { "受阻", "Blocked" }
+            { "并行", "Parallel" }, { "跳过重叠运行", "Skip overlap" }, { "受阻", "Blocked" },
+            { "任务：", "Task:" }, { "Claude 回复：", "Claude reply:" }, { "执行中", "Running" },
+            { "等待依赖 / 工位", "Waiting for dependencies" }, { "待命", "Ready" }, { "超时", "Timed out" }, { "已取消", "Cancelled" },
+            { "上游失败，已阻断", "Blocked by upstream failure" }, { "上次运行中断", "Previous run interrupted" },
+            { "点击成员查看任务、回复和交接数据 · 光点表示已记录的传递关系，不代表实时传输速度", "Select a companion to inspect output and handoffs. Moving markers show recorded connections, not live transfer speed." },
+            { "门派 / 多 Agent", "Teams / agents" }, { "运行记录", "Run records" },
+            { "四道友·研发", "Development team" }, { "四道友·会诊", "Review team" }, { "保存门派", "Save team" },
+            { "为选中成员选目录", "Choose member folder" }, { "套用到选中成员", "Apply role to member" },
+            { "成员编号", "Member ID" }, { "姓名", "Name" }, { "职责 / 系统提示", "Role / instructions" },
+            { "任务编号", "Task ID" }, { "依赖任务编号", "Dependency IDs" }, { "任务内容", "Task instructions" },
+            { "事件", "Event" }, { "本地时间，如2026-11-05 09:00", "Local time, e.g. 2026-11-05 09:00" },
+            { "重复：once/daily/weekly", "Repeat: once/daily/weekly" }, { "关联门派名称（可空）", "Linked team (optional)" }
         };
         private static readonly Dictionary<string, string> Reverse = BuildReverse();
     }

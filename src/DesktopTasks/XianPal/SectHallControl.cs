@@ -138,9 +138,9 @@ namespace XianPal
                 using(var badge=new SolidBrush(Color.FromArgb(205,16,38,40))){g.FillRectangle(badge,nameBox);g.FillRectangle(badge,statusBox);}
                 const TextFormatFlags flags=TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|TextFormatFlags.SingleLine|TextFormatFlags.NoPrefix;
                 TextRenderer.DrawText(g,pair.Key,Font,nameBox,Color.FromArgb(251,224,166),flags);
-                TextRenderer.DrawText(g,StatusText(status),Font,statusBox,color,flags);
+                TextRenderer.DrawText(g,UiLanguage.Text(StatusText(status)),Font,statusBox,color,flags);
             }
-            TextRenderer.DrawText(g,"点击成员查看任务、回复和交接数据 · 光点表示已记录的传递关系，不代表实时传输速度",Font,new Rectangle(8,Height-24,Width-16,22),Color.Gainsboro,TextFormatFlags.EndEllipsis);
+            TextRenderer.DrawText(g,UiLanguage.Text("点击成员查看任务、回复和交接数据 · 光点表示已记录的传递关系，不代表实时传输速度"),Font,new Rectangle(8,Height-24,Width-16,22),Color.Gainsboro,TextFormatFlags.EndEllipsis);
         }
         private static List<string> Labels(CompanionSect sect,SectRun run)
         {
