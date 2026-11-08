@@ -17,13 +17,28 @@ Compatibility tests are application tests, not a change to upstream OS or runtim
 support policies. Prefer the modern build when the system permits it. The legacy
 build requires a separate runtime maintenance plan before release.
 
-The expanded CI matrix adds Debian 11/12/13, Ubuntu 20.04, Rocky Linux 8/9,
-AlmaLinux 8/9 and openSUSE Leap 16 on x64, and Debian 12/13 on native ARM64 hosts.
-These additional cases are awaiting result review. Containers validate userspace
-libraries and share the host kernel. They do not validate a distribution's original
-kernel, every desktop environment or the target TurboVNC session.
+All 16 system/architecture checks across 12 distribution versions have passed:
 
-[Validation including bundled Chinese and emoji fonts](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42436968032)
+| Systems | Architecture | Test environment |
+| --- | --- | --- |
+| Ubuntu 22.04 / 24.04 | x64, ARM64 | Native runners |
+| CentOS 7.9, glibc 2.17 | x64 | Pinned userspace image, compatibility build |
+| Debian 11 / 12 / 13; Ubuntu 20.04 | x64 | Pinned userspace images, modern build |
+| Rocky Linux 8 / 9; AlmaLinux 8 / 9 | x64 | Pinned userspace images, modern build |
+| openSUSE Leap 16 | x64 | Pinned userspace image, modern build |
+| Debian 12 / 13 | ARM64 | Pinned images on native ARM64 hosts, modern build |
+
+The tests cover four character profiles, Unicode streaming chat, independent task
+records, reminder and fullscreen windows, four-agent dependency handoffs and Chinese
+and color emoji glyphs. CentOS and the expanded distribution matrix explicitly use
+CPU rendering; native Ubuntu jobs test the default rendering configuration. Debian
+11 test dependencies come from the official archive with package signature checks.
+
+Containers validate userspace libraries and share the host kernel. They do not
+validate a distribution's original kernel, every desktop environment or the target
+TurboVNC session.
+
+[Complete compatibility matrix results](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42438749416)
 
 ![Native Linux workshop using isolated demonstration data](images/linux-workshop.png)
 

@@ -102,7 +102,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Linux 桌面端在 `linux` 分支开发，覆盖 x86_64 与 ARM64，并提供面向旧系统库的兼容构建。Ubuntu 原生环境与 CentOS 7 用户空间中的中文对话、后台任务和四道友依赖交接已通过自动化验证，中文与表情字体随包提供。完整功能与更多发行版仍在验证。[查看界面、验证结果与验收清单](docs/LINUX.md)
 
-![Linux ARM64 原生门派大堂，图中为隔离演示数据](docs/images/linux-workshop.png)
+![CentOS 7 原生门派大堂，图中为隔离演示数据](docs/images/linux-workshop.png)
 
 ## 贡献
 
