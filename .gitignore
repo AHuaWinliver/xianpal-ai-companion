@@ -30,6 +30,7 @@
 *.zip
 *.log
 *.pyc
+*.pyo
 __pycache__/
 .vs/
 bin/

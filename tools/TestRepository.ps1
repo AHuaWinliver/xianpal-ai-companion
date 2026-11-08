@@ -8,7 +8,7 @@ foreach($file in $files) {
     $relative=$file.FullName.Substring($projectRoot.Length+1).Replace('\','/')
     if($file.Length -gt 5MB){$violations.Add('oversized public file: '+$relative)}
     if($file.Attributes -band [IO.FileAttributes]::ReparsePoint){$violations.Add('linked public file: '+$relative)}
-    if($file.Extension -in @('.exe','.zip','.dll','.log','.pem','.key','.pfx') -or $relative -match '^assets/|^outputs/|^work/|^build/|backup'){$violations.Add('private/generated path: '+$relative)}
+    if($file.Extension -in @('.exe','.zip','.dll','.log','.pem','.key','.pfx','.pyc','.pyo') -or $relative -match '^assets/|^outputs/|^work/|^build/|backup|(?:^|/)__pycache__/'){$violations.Add('private/generated path: '+$relative)}
     if($file.Extension -in @('.cs','.ps1','.md','.yml','.json') -or $file.Name -in @('NOTICE','LICENSE')) {
         $content=[IO.File]::ReadAllText($file.FullName)
         if($content -match 'sk-ant-[A-Za-z0-9_-]{20,}|sk-proj-[A-Za-z0-9_-]{20,}|ghp_[A-Za-z0-9]{30,}|-----BEGIN (RSA |EC |OPENSSH )?PRIVATE KEY-----'){$violations.Add('possible secret: '+$relative)}

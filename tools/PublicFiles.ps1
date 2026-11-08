@@ -25,6 +25,6 @@ function Get-PublicProjectFiles([string]$ProjectRoot) {
     }
     foreach ($folder in @('src/DesktopTasks','docs','.github','art')) {
         Get-ChildItem -LiteralPath (Join-Path $ProjectRoot $folder) -Recurse -File -Force |
-            Where-Object { $_.FullName.Substring($ProjectRoot.Length + 1) -notmatch '(?:^|[\\/])(?:bin|obj)(?:[\\/]|$)' }
+            Where-Object { $_.FullName.Substring($ProjectRoot.Length + 1) -notmatch '(?:^|[\\/])(?:bin|obj|__pycache__)(?:[\\/]|$)' -and $_.Extension -notin @('.pyc','.pyo') }
     }
 }
