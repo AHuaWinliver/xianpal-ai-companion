@@ -24,6 +24,15 @@
 <a id="features"></a>
 在独立的 **默认设置** 窗口切换中英文，并为各道友选择 Claude 程序地址和配置文件。创建定时任务时可选择执行道友，任务窗口汇总全部道友并显示头像；切换当前宠物不改变任务归属。[道友配置与任务说明](docs/COMPANION-PROFILES.zh-CN.md)
 
+<details>
+<summary>查看安装界面</summary>
+
+安装时可选择中英文、安装目录，并预览原版人物动作。
+
+![语言、目录和人物动作预览](docs/images/installer.png)
+
+</details>
+
 ## 功能
 
 ### 桌面对话与文件处理

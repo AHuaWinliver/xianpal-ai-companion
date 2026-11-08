@@ -279,6 +279,7 @@ internal static class BuildReadmeMedia
                 using (Bitmap image = new Bitmap(1600, 1030, PixelFormat.Format24bppRgb))
                 using (Graphics g = Graphics.FromImage(image))
                 {
+                    left.Save(Path.Combine(output, "chat-bubbles.png"), ImageFormat.Png);
                     Quality(g); g.Clear(Paper);
                     Text(g, "A companion for conversations and work.", 44, Ink, 60, 40, true);
                     Text(g, "Continue a conversation. Schedule a task. Review what happened.", 24, Muted, 63, 104, false);

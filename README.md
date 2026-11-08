@@ -20,6 +20,15 @@ Chat beside one of four animated companions, drop a file into a Claude Code conv
 
 [Setup guide](docs/GETTING-STARTED.md) · [Changelog](CHANGELOG.md)
 
+<details>
+<summary>Installer preview</summary>
+
+Choose English or Simplified Chinese and an installation folder while previewing the original companion animations.
+
+![XianPal setup with language choice, destination and animated character preview](docs/images/installer.png)
+
+</details>
+
 <a id="features"></a>
 ## Features
 
