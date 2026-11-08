@@ -2412,7 +2412,7 @@ namespace XianPal
             try
             {
                 Directory.CreateDirectory(logDirectory);
-                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, ClaudeCliRunner.FindClaudeCommand(task.CharacterId) ?? "claude", task.CharacterId);
+                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, ClaudeCliRunner.RequireClaudeCommand(task.CharacterId), task.CharacterId);
                 monitor = new VisibleTaskMonitor(logPath, delegate(string output)
                 {
                     claudeTaskService.UpdateRunProgress(task, run.Id, output);

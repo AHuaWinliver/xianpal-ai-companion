@@ -32,6 +32,12 @@ jobs:
       - name: Offline smoke tests (no Claude calls)
         shell: pwsh
         run: ./tests/smoke-test.ps1
+      - name: Native Claude Background lifecycle (isolated mock CLI)
+        shell: pwsh
+        run: ./tests/claude-background-test.ps1
+      - name: Native terminal interaction, Unicode and task isolation (mock CLI)
+        shell: pwsh
+        run: ./tests/integration-task-test.ps1
       - name: Planner and multi-agent scheduler (fake agents only)
         shell: pwsh
         run: ./tests/workshop-test.ps1

@@ -315,6 +315,13 @@ namespace XianPal
             return FindClaudeCommand(null);
         }
 
+        internal static string RequireClaudeCommand(string characterId)
+        {
+            string command = FindClaudeCommand(characterId);
+            if (String.IsNullOrWhiteSpace(command)) throw new FileNotFoundException("Claude Code CLI was not found. Choose an executable in Default settings.");
+            return command;
+        }
+
         internal static string FindClaudeCommand(string characterId)
         {
             string configured = IntegrationPreferences.Load().ExecutablePathFor(characterId);

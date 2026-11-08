@@ -46,6 +46,7 @@ internal static class ClaudeBackgroundTests
             string settingsPath = Path.Combine(root, "角色配置.json");
             File.WriteAllText(settingsPath, "{\"model\":\"haiku\",\"env\":{\"TEST_SETTING\":\"preserved\"}}", new UTF8Encoding(false));
             var preferences = new IntegrationPreferences { ClaudeSettingsPath = Path.Combine(root, "unused-global.json") };
+            preferences.SetExecutablePath("orbit", Assembly.GetExecutingAssembly().Location);
             preferences.SetSettingsPath("orbit", settingsPath);
             preferences.Save();
             using (PetForm pet = new PetForm())
@@ -137,6 +138,13 @@ internal static class ClaudeBackgroundTests
     {
         if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") != "1" || String.IsNullOrEmpty(root)) return 99;
         Console.OutputEncoding = new UTF8Encoding(false);
+        // Global CLI options may precede agents/logs. Keep fixture dispatch
+        // independent of the application's argument ordering.
+        int settingsIndex = Array.IndexOf(args, "--settings");
+        if (settingsIndex == 0 && args.Length >= 3)
+        {
+            args = new List<string>(args).GetRange(2, args.Length - 2).ToArray();
+        }
         if (args[0] == "--help") { Console.WriteLine(Environment.GetEnvironmentVariable("FUFU_BG_UNSUPPORTED") == "1" ? "legacy CLI" : "--bg --background"); return 0; }
         if (args[0] == "agents" && Array.IndexOf(args, "--help") >= 0) { Console.WriteLine("--json --all"); return 0; }
         if (args[0] == "agents")

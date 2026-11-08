@@ -32,7 +32,7 @@ namespace XianPal
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                ProcessStartInfo info = BuildClaudeBackgroundStartInfo(task, run, path, ClaudeCliRunner.FindClaudeCommand(task.CharacterId) ?? "claude", task.CharacterId);
+                ProcessStartInfo info = BuildClaudeBackgroundStartInfo(task, run, path, ClaudeCliRunner.RequireClaudeCommand(task.CharacterId), task.CharacterId);
                 claudeTaskService.UpdateRunProgress(task, run.Id, "正在创建 Claude 原生后台会话；创建成功后本次启动窗口自动关闭。");
                 using (Process launcher = Process.Start(info)) { }
                 launched = true;
@@ -158,7 +158,7 @@ namespace XianPal
             if (task == null || run == null || !BackgroundTaskSupervisor.ValidJobId(run.BackgroundJobId)) throw new InvalidOperationException("后台会话 ID 尚未取得；请稍后重试，或在 CLI 运行 claude agents。");
             string directory = ClaudeTaskService.RunDirectory(task, run);
             if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("任务目录不存在。");
-            string command = ClaudeCliRunner.FindClaudeCommand(run.CharacterId) ?? "claude";
+            string command = ClaudeCliRunner.RequireClaudeCommand(run.CharacterId);
             string settings = ClaudeSettingsFile.CurrentPath(run.CharacterId);
             string script = "$ErrorActionPreference='Stop'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + directory.Replace("'", "''") + "'; " +
                 ClaudeSettingsFile.PowerShellSetup(settings, command) + "try { & '" + command.Replace("'", "''") + "' " + (settings.Length == 0 ? "" : "--settings $xianpalSettings ") + "attach '" + run.BackgroundJobId + "' } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }";
