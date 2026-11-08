@@ -43,7 +43,7 @@ namespace XianPal
         internal void Start(string prompt, string workingDirectory, string resumeSessionId, string internalTaskId, string characterId = null)
         {
             if (IsRunning) throw new InvalidOperationException("Claude 正在处理上一个请求。");
-            string claude = FindClaudeCommand();
+            string claude = FindClaudeCommand(characterId);
             if (claude == null) throw new FileNotFoundException("未找到本机 Claude Code CLI。请先确认终端中可以运行 claude。 ");
 
             ProcessStartInfo info = BuildStartInfo(claude, workingDirectory, resumeSessionId, internalTaskId, characterId);
@@ -312,6 +312,13 @@ namespace XianPal
 
         internal static string FindClaudeCommand()
         {
+            return FindClaudeCommand(null);
+        }
+
+        internal static string FindClaudeCommand(string characterId)
+        {
+            string configured = IntegrationPreferences.Load().ExecutablePathFor(characterId);
+            if (!String.IsNullOrWhiteSpace(configured)) return IntegrationPreferences.ValidateExecutable(configured);
             if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
             {
                 string fixture = Environment.GetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND");

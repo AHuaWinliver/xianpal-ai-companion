@@ -17,6 +17,9 @@ namespace XianPal
         private readonly NumericUpDown intervalValue = new NumericUpDown();
         private readonly ComboBox intervalUnit = new ComboBox();
         private readonly ComboBox runMode = new ComboBox();
+        private readonly ComboBox owner = new ComboBox();
+        private PetCharacter[] ownerProfiles = PetCharacter.All;
+        private readonly System.Collections.Generic.Dictionary<string, Image> avatars = new System.Collections.Generic.Dictionary<string, Image>();
         private readonly ComboBox overlapMode = new ComboBox();
         private readonly ComboBox desktop = new ComboBox();
         private readonly Button defaultDesktop = new Button();
@@ -30,13 +33,58 @@ namespace XianPal
         private readonly Button cancelEdit = new Button();
         private string workingDirectory;
         private ScheduledClaudeTask editingTask;
+        private string missingOwner;
+
+        private string SelectedOwner
+        {
+            get { return owner.SelectedIndex >= 0 && owner.SelectedIndex < ownerProfiles.Length ? ownerProfiles[owner.SelectedIndex].Id : missingOwner ?? "orbit"; }
+        }
+
+        internal void SelectDefaultOwner(string characterId)
+        { if (editingTask == null) RefreshOwners(characterId); }
+
+        private void RefreshOwners(string selected)
+        {
+            ownerProfiles = PetCharacter.Available;
+            owner.Items.Clear();
+            int index = -1;
+            for (int i = 0; i < ownerProfiles.Length; i++)
+            {
+                owner.Items.Add(ownerProfiles[i].Name);
+                if (String.Equals(ownerProfiles[i].Id, selected, StringComparison.OrdinalIgnoreCase)) index = i;
+            }
+            missingOwner = null;
+            if (index < 0 && !String.IsNullOrWhiteSpace(selected))
+            { missingOwner = selected; index = owner.Items.Count; owner.Items.Add(PetCharacter.OwnerName(selected)); }
+            owner.SelectedIndex = index >= 0 ? index : 0;
+        }
+
+        private Image Avatar(string characterId)
+        {
+            PetCharacter profile = null;
+            foreach (PetCharacter candidate in PetCharacter.Available)
+                if (String.Equals(candidate.Id, characterId, StringComparison.OrdinalIgnoreCase)) { profile = candidate; break; }
+            if (profile == null) return null;
+            string key = profile.AvatarPath + "|" + profile.ResourceRevision;
+            Image image;
+            if (avatars.TryGetValue(key, out image)) return image;
+            try
+            {
+                using (var file = File.OpenRead(profile.AvatarPath))
+                using (var source = Image.FromStream(file)) image = new Bitmap(source);
+                avatars[key] = image;
+                return image;
+            }
+            catch (IOException) { return null; }
+            catch (ArgumentException) { return null; }
+        }
 
         internal ClaudeTaskForm(ClaudeTaskService taskService)
         {
             service = taskService;
             Text = "Claude Code 定时任务";
             Icon = AppIcon.WindowIcon;
-            ClientSize = new Size(610, 634);
+            ClientSize = new Size(610, 674);
             FormBorderStyle = FormBorderStyle.None;
             StartPosition = FormStartPosition.Manual;
             AutoScaleMode = AutoScaleMode.None;
@@ -52,7 +100,7 @@ namespace XianPal
             close.Font = new Font("Segoe UI", 13f);
             close.Click += delegate { Hide(); };
 
-            RoundedPanel editor = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(16, 52), Size = new Size(578, 272) };
+            RoundedPanel editor = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(16, 52), Size = new Size(578, 312) };
             Label promptLabel = NewLabel("执行任务", new Point(16, 14), editor.BackColor);
             prompt.Multiline = true;
             prompt.ScrollBars = ScrollBars.Vertical;
@@ -145,7 +193,13 @@ namespace XianPal
             save.Size = new Size(96, 34);
             StyleButton(save, true);
             save.Click += delegate { SaveTask(); };
-            Label note = new Label { Text = "任务由本机 claude CLI 执行；电脑休眠期间不会唤醒，恢复后补执行到期任务。", ForeColor = Color.FromArgb(120, 120, 115), AutoSize = true, Location = new Point(17, 242), BackColor = editor.BackColor, Font = UiText.Font(7.5f) };
+            owner.DropDownStyle = ComboBoxStyle.DropDownList;
+            owner.Location = new Point(88, 242);
+            owner.Size = new Size(200, 30);
+            RefreshOwners("orbit");
+            editor.Controls.Add(NewLabel("执行道友", new Point(16, 246), editor.BackColor));
+            editor.Controls.Add(owner);
+            Label note = new Label { Text = "任务由本机 claude CLI 执行；电脑休眠期间不会唤醒，恢复后补执行到期任务。", ForeColor = Color.FromArgb(120, 120, 115), AutoSize = true, Location = new Point(17, 282), BackColor = editor.BackColor, Font = UiText.Font(7.5f) };
             runMode.SelectedIndexChanged += delegate
             {
                 note.Text = runMode.SelectedIndex == 5 ? "Claude 原生 Background：创建成功后关窗；阻塞等待后台完成，需已支持 --bg 的 CLI。" : runMode.SelectedIndex >= 3 ? "原生 CLI 可继续追问及确认权限；阻塞模式等待此 CLI 会话退出，不自动关窗。" : "任务由本机 claude CLI 执行；电脑休眠期间不会唤醒，恢复后补执行到期任务。";
@@ -165,12 +219,12 @@ namespace XianPal
             editor.Controls.Add(save);
             editor.Controls.Add(note);
 
-            Label taskTitle = new Label { Text = "已保存任务", Font = UiText.Font(9.5f, FontStyle.Bold), ForeColor = Color.FromArgb(52, 52, 49), AutoSize = true, Location = new Point(20, 290) };
+            Label taskTitle = new Label { Text = "全部道友任务", Font = UiText.Font(9.5f, FontStyle.Bold), ForeColor = Color.FromArgb(52, 52, 49), AutoSize = true, Location = new Point(20, 290) };
             RoundedPanel listCard = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(16, 316), Size = new Size(578, 205) };
             list.BorderStyle = BorderStyle.None;
             list.BackColor = listCard.BackColor;
             list.DrawMode = DrawMode.OwnerDrawFixed;
-            list.ItemHeight = 62;
+            list.ItemHeight = 78;
             list.IntegralHeight = false;
             list.Location = new Point(8, 8);
             list.Size = new Size(562, 189);
@@ -217,9 +271,10 @@ namespace XianPal
             Controls.Add(edit);
             Controls.Add(history);
             Controls.Add(runNow);
-            taskTitle.Top += 48;
-            listCard.Top += 48;
-            foreach (Button button in new Button[] { toggle, delete, edit, history, runNow }) button.Top += 48;
+            taskTitle.Top += 88;
+            listCard.Top += 88;
+            foreach (Button button in new Button[] { toggle, delete, edit, history, runNow }) button.Top += 88;
+            FormClosed += delegate { foreach (Image image in avatars.Values) image.Dispose(); avatars.Clear(); };
             FormClosing += delegate(object sender, FormClosingEventArgs e) { if (e.CloseReason == CloseReason.UserClosing) { e.Cancel = true; Hide(); } };
             Resize += delegate { ApplyRoundedRegion(); };
             service.Changed += delegate { if (!IsDisposed) RefreshList(list.SelectedItem as ScheduledClaudeTask); };
@@ -276,9 +331,9 @@ namespace XianPal
             {
                 ScheduledClaudeTask added = editingTask;
                 if (editingTask == null)
-                    added = service.Add(taskText, workingDirectory, mode, time.Value.TimeOfDay, (DayOfWeek)Math.Max(0, weekday.SelectedIndex), (int)intervalValue.Value * multiplier, DateTime.Now, SelectedRunMode(), overlapMode.SelectedIndex == 1 ? "parallel" : "block");
+                    added = service.Add(taskText, workingDirectory, mode, time.Value.TimeOfDay, (DayOfWeek)Math.Max(0, weekday.SelectedIndex), (int)intervalValue.Value * multiplier, DateTime.Now, SelectedRunMode(), overlapMode.SelectedIndex == 1 ? "parallel" : "block", SelectedOwner);
                 else
-                    service.Update(editingTask, taskText, workingDirectory, mode, time.Value.TimeOfDay, (DayOfWeek)Math.Max(0, weekday.SelectedIndex), (int)intervalValue.Value * multiplier, DateTime.Now, SelectedRunMode(), overlapMode.SelectedIndex == 1 ? "parallel" : "block");
+                    service.Update(editingTask, taskText, workingDirectory, mode, time.Value.TimeOfDay, (DayOfWeek)Math.Max(0, weekday.SelectedIndex), (int)intervalValue.Value * multiplier, DateTime.Now, SelectedRunMode(), overlapMode.SelectedIndex == 1 ? "parallel" : "block", SelectedOwner);
                 service.SetDesktop(added, desktop.SelectedIndex);
                 prompt.Clear();
                 editingTask = null;
@@ -298,6 +353,7 @@ namespace XianPal
             ScheduledClaudeTask task = list.SelectedItem as ScheduledClaudeTask;
             if (task == null) return;
             editingTask = task;
+            RefreshOwners(task.CharacterId);
             prompt.Text = task.Prompt;
             workingDirectory = task.WorkingDirectory;
             UpdateDirectoryText();
@@ -376,10 +432,18 @@ namespace XianPal
             bool selected = (e.State & DrawItemState.Selected) != 0;
             Color background = selected ? Color.FromArgb(231, 241, 234) : list.BackColor;
             using (SolidBrush brush = new SolidBrush(background)) e.Graphics.FillRectangle(brush, e.Bounds);
-            using (SolidBrush dot = new SolidBrush(task.Enabled ? Color.FromArgb(40, 132, 84) : Color.FromArgb(170, 170, 165))) e.Graphics.FillEllipse(dot, e.Bounds.Left + 10, e.Bounds.Top + 16, 8, 8);
-            Rectangle scheduleBounds = new Rectangle(e.Bounds.Left + 28, e.Bounds.Top + 8, 126, 24);
-            Rectangle promptBounds = new Rectangle(e.Bounds.Left + 158, e.Bounds.Top + 8, e.Bounds.Width - 168, 24);
-            Rectangle pathBounds = new Rectangle(e.Bounds.Left + 28, e.Bounds.Top + 34, e.Bounds.Width - 38, 21);
+            Image avatar = Avatar(task.CharacterId);
+            if (avatar != null)
+            {
+                e.Graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
+                e.Graphics.DrawImage(avatar, new Rectangle(e.Bounds.Left + 8, e.Bounds.Top + 10, 42, 46));
+            }
+            using (SolidBrush dot = new SolidBrush(task.Enabled ? Color.FromArgb(40, 132, 84) : Color.FromArgb(170, 170, 165))) e.Graphics.FillEllipse(dot, e.Bounds.Left + 55, e.Bounds.Top + 14, 6, 6);
+            Rectangle ownerBounds = new Rectangle(e.Bounds.Left + 67, e.Bounds.Top + 7, 100, 23);
+            Rectangle scheduleBounds = new Rectangle(e.Bounds.Left + 173, e.Bounds.Top + 7, e.Bounds.Width - 181, 23);
+            Rectangle promptBounds = new Rectangle(e.Bounds.Left + 67, e.Bounds.Top + 28, e.Bounds.Width - 75, 23);
+            Rectangle pathBounds = new Rectangle(e.Bounds.Left + 67, e.Bounds.Top + 51, e.Bounds.Width - 75, 20);
+            TextRenderer.DrawText(e.Graphics, PetCharacter.OwnerName(task.CharacterId), list.Font, ownerBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             string scheduleText = (ClaudeTaskService.RunModeLabel(task.RunMode) + "/") + (task.OverlapMode == "parallel" ? "并行 · " : "阻塞 · ") + task.ScheduleText;
             using (Font bold = new Font(list.Font, FontStyle.Bold)) TextRenderer.DrawText(e.Graphics, scheduleText, bold, scheduleBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(e.Graphics, task.Prompt, list.Font, promptBounds, task.Enabled ? Color.FromArgb(38, 38, 36) : Color.FromArgb(130, 130, 126), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);

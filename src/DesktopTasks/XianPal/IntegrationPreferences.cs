@@ -15,6 +15,45 @@ namespace XianPal
         public bool MonitorExternalSessions { get; set; }
         public string ClaudeSettingsPath { get; set; }
         public Dictionary<string, string> CharacterClaudeSettings { get; set; }
+        public string ClaudeExecutablePath { get; set; }
+        public Dictionary<string, string> CharacterClaudeExecutables { get; set; }
+
+        internal string ExecutablePathFor(string characterId)
+        {
+            string value;
+            if (!String.IsNullOrEmpty(characterId) && CharacterClaudeExecutables != null &&
+                CharacterClaudeExecutables.TryGetValue(characterId.ToLowerInvariant(), out value) && !String.IsNullOrWhiteSpace(value)) return value;
+            return ClaudeExecutablePath ?? "";
+        }
+
+        internal void SetExecutablePath(string characterId, string path)
+        {
+            string normalized = ValidateExecutable(path);
+            if (String.IsNullOrEmpty(characterId)) { ClaudeExecutablePath = normalized; return; }
+            if (CharacterClaudeExecutables == null) CharacterClaudeExecutables = new Dictionary<string, string>();
+            string key = characterId.ToLowerInvariant();
+            if (normalized.Length == 0) CharacterClaudeExecutables.Remove(key);
+            else CharacterClaudeExecutables[key] = normalized;
+        }
+
+        internal static string ValidateExecutable(string path)
+        {
+            if (String.IsNullOrWhiteSpace(path)) return "";
+            string absolute = Path.GetFullPath(path.Trim());
+            if (!File.Exists(absolute)) throw new FileNotFoundException("Claude executable does not exist.", absolute);
+#if XIANPAL_LINUX
+            if (OperatingSystem.IsLinux() && (File.GetUnixFileMode(absolute) &
+                (UnixFileMode.UserExecute | UnixFileMode.GroupExecute | UnixFileMode.OtherExecute)) == 0)
+                throw new ArgumentException("The selected Claude program is not executable.");
+#else
+            string extension = Path.GetExtension(absolute);
+            if (!String.Equals(extension, ".exe", StringComparison.OrdinalIgnoreCase) &&
+                !String.Equals(extension, ".cmd", StringComparison.OrdinalIgnoreCase) &&
+                !String.Equals(extension, ".bat", StringComparison.OrdinalIgnoreCase))
+                throw new ArgumentException("Choose a Claude .exe, .cmd or .bat program.");
+#endif
+            return absolute;
+        }
 
         internal string SettingsPathFor(string characterId)
         {

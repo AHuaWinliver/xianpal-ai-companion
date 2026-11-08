@@ -32,7 +32,7 @@ namespace XianPal
             try
             {
                 Directory.CreateDirectory(Path.GetDirectoryName(path));
-                ProcessStartInfo info = BuildClaudeBackgroundStartInfo(task, run, path, backgroundTaskSupervisor.ClaudeCommand, currentCharacterId);
+                ProcessStartInfo info = BuildClaudeBackgroundStartInfo(task, run, path, ClaudeCliRunner.FindClaudeCommand(task.CharacterId) ?? "claude", task.CharacterId);
                 claudeTaskService.UpdateRunProgress(task, run.Id, "正在创建 Claude 原生后台会话；创建成功后本次启动窗口自动关闭。");
                 using (Process launcher = Process.Start(info)) { }
                 launched = true;
@@ -58,6 +58,7 @@ namespace XianPal
             backgroundTaskSupervisor.Track(new BackgroundTaskWatch
             {
                 JobName = run.BackgroundJobName, JobId = run.BackgroundJobId, Directory = task.WorkingDirectory, LogPath = BackgroundLogPath(run),
+                Command = ClaudeCliRunner.FindClaudeCommand(run.CharacterId), SettingsPath = ClaudeSettingsFile.CurrentPath(run.CharacterId),
                 Update = delegate(BackgroundSessionSnapshot snapshot)
                 {
                     if (!String.IsNullOrEmpty(snapshot.JobId)) run.BackgroundJobId = snapshot.JobId;

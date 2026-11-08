@@ -31,6 +31,12 @@ internal static class Program
             Console.WriteLine(typeof(Program).Assembly.GetName().Version?.ToString(3));
             return 0;
         }
+        if (args.Length == 2 && args[0] == "--terminal-job") return LinuxTerminalJob.Execute(args[1]);
+        if (args.Length == 2 && args[0] == "--native-task-hook")
+        {
+            if (NativeTaskHooks.IsNativeRun) NativeTaskHooks.Publish(args[1], Console.In.ReadToEnd());
+            return 0;
+        }
         Directory.CreateDirectory(StateDirectory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         using var lease = File.Open(Path.Combine(StateDirectory, "desktop.lock"), FileMode.OpenOrCreate, FileAccess.Write, FileShare.ReadWrite);
         try { lease.Lock(0, 1); }

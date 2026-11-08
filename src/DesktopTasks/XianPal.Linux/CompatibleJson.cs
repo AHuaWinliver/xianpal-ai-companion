@@ -7,6 +7,7 @@ namespace XianPal.Linux;
 // Preserve the storage shape and untyped dictionary values used by shared services.
 internal sealed class CompatibleJson
 {
+    public object DeserializeObject(string value) => Deserialize<object>(value);
     public int MaxJsonLength { get; set; } = 2 * 1024 * 1024;
     public int RecursionLimit { get; set; } = 64;
 

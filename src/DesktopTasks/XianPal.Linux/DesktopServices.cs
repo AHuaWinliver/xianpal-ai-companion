@@ -9,6 +9,8 @@ internal sealed class DesktopServices : IDisposable
     private readonly Func<PetCharacter> activeCharacter;
     private readonly UiTimer workshopTimer = new() { Interval = 250 };
     private readonly Dictionary<string, ClaudeCliRunner> scheduledRuns = new();
+    private readonly Dictionary<string, VisibleTaskMonitor> terminalRuns = new();
+    private readonly BackgroundTaskSupervisor backgroundSupervisor = new();
     private DateTime workshopSavedAt;
     private bool disposed;
 
@@ -43,7 +45,14 @@ internal sealed class DesktopServices : IDisposable
 
     internal void Start()
     {
+        Tasks.AssignLegacyTasks(activeCharacter().Id);
         Tasks.Start();
+        foreach (ScheduledClaudeTask task in Tasks.Tasks)
+            foreach (ClaudeTaskRunRecord record in task.History.Where(record => record.Status == "running").ToArray())
+            {
+                if (record.RunMode == "claude-background" && record.BackgroundJobName.Length > 0) MonitorBackground(task, record);
+                else if (record.RunMode != "background" && LinuxTerminalJob.CanRecover(record)) MonitorTerminal(task, record, null);
+            }
         Reminders.Start();
         workshopTimer.Start();
     }
@@ -51,12 +60,36 @@ internal sealed class DesktopServices : IDisposable
     private void LaunchTask(ScheduledClaudeTask task)
     {
         DateTime now = DateTime.Now;
-        if (task.OverlapMode == "block" && task.History.Any(run => scheduledRuns.ContainsKey(run.Id)))
+        if (task.OverlapMode == "block" && task.History.Any(run => run.Status == "running"))
         {
             Tasks.RecordSkipped(task, now, "上一次运行仍在执行。");
             return;
         }
         ClaudeTaskRunRecord record = Tasks.BeginRun(task, now);
+        if (task.RunMode != "background")
+        {
+            try
+            {
+                if (task.RunMode == "claude-background")
+                {
+                    record.BackgroundJobName = "XianPalBg-" + record.Id;
+                    record.BackgroundState = "dispatching";
+                }
+                var info = LinuxTerminalJob.Prepare(task, record, task.CharacterId);
+                Tasks.PersistBackgroundRun(task, record);
+                if (task.RunMode == "claude-background")
+                {
+                    using var process = System.Diagnostics.Process.Start(info);
+                    MonitorBackground(task, record);
+                }
+                else MonitorTerminal(task, record, info);
+            }
+            catch (Exception error)
+            {
+                Tasks.CompleteRun(task, record.Id, false, -1, error.Message, DateTime.Now);
+            }
+            return;
+        }
         var runner = new ClaudeCliRunner();
         var output = new StringBuilder();
         runner.OutputReceived += text => Dispatcher.UIThread.Post(() =>
@@ -75,9 +108,7 @@ internal sealed class DesktopServices : IDisposable
         scheduledRuns.Add(record.Id, runner);
         try
         {
-            if (task.RunMode != "background")
-                throw new InvalidOperationException("此运行方式尚未移植到 Linux。");
-            runner.Start(task.Prompt, task.WorkingDirectory, null, task.Id, activeCharacter().Id);
+            runner.Start(task.Prompt, task.WorkingDirectory, null, task.Id, task.CharacterId);
         }
         catch (Exception error) when (error is IOException or InvalidOperationException or ArgumentException or System.ComponentModel.Win32Exception)
         {
@@ -85,6 +116,46 @@ internal sealed class DesktopServices : IDisposable
             runner.Dispose();
             Tasks.CompleteRun(task, record.Id, false, -1, error.Message, DateTime.Now);
         }
+    }
+
+    private void MonitorTerminal(ScheduledClaudeTask task, ClaudeTaskRunRecord record, System.Diagnostics.ProcessStartInfo launch)
+    {
+        var monitor = new VisibleTaskMonitor(LinuxTerminalJob.LogPath(record),
+            output => Tasks.UpdateRunProgress(task, record.Id, output),
+            (code, output) =>
+            {
+                terminalRuns.Remove(record.Id);
+                Tasks.CompleteRun(task, record.Id, code == 0, code, output, DateTime.Now);
+            },
+            (status, session, reaction) => { record.BackgroundSessionId = session; record.BackgroundState = status; });
+        terminalRuns.Add(record.Id, monitor);
+        if (launch != null) monitor.Start(launch);
+        else monitor.Resume();
+    }
+
+    private void MonitorBackground(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
+    {
+        backgroundSupervisor.ClaudeCommand = ClaudeCliRunner.FindClaudeCommand(task.CharacterId) ?? "claude";
+        backgroundSupervisor.Track(new BackgroundTaskWatch
+        {
+            JobName = record.BackgroundJobName, JobId = record.BackgroundJobId, Directory = task.WorkingDirectory,
+            Command = ClaudeCliRunner.FindClaudeCommand(record.CharacterId), SettingsPath = ClaudeSettingsFile.CurrentPath(record.CharacterId),
+            LogPath = LinuxTerminalJob.LogPath(record), Update = snapshot =>
+            {
+                if (disposed) return;
+                if (snapshot.JobId.Length > 0) record.BackgroundJobId = snapshot.JobId;
+                if (snapshot.SessionId.Length > 0) record.BackgroundSessionId = snapshot.SessionId;
+                record.BackgroundState = snapshot.State;
+                if (snapshot.Output.Length > 0) record.BackgroundOutput = snapshot.Output;
+                string output = snapshot.Status + "\n" + record.BackgroundOutput;
+                Tasks.UpdateRunProgress(task, record.Id, output);
+                if (snapshot.Finished)
+                {
+                    File.Delete(LinuxTerminalJob.LogPath(record) + ".settings.json");
+                    Tasks.CompleteRun(task, record.Id, snapshot.Success, snapshot.Success ? 0 : -1, output, DateTime.Now);
+                }
+            }
+        });
     }
 
     internal void SaveWorkshop()
@@ -152,6 +223,9 @@ internal sealed class DesktopServices : IDisposable
             catch (IOException) { }
         }
         foreach (ClaudeCliRunner runner in scheduledRuns.Values) runner.Dispose();
+        foreach (VisibleTaskMonitor monitor in terminalRuns.Values) monitor.Dispose();
+        terminalRuns.Clear();
+        backgroundSupervisor.Dispose();
         scheduledRuns.Clear();
         Reminders.Dispose();
         Tasks.Dispose();

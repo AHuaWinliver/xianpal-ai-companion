@@ -3,7 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using System.Threading;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+#else
 using System.Web.Script.Serialization;
+#endif
 
 namespace XianPal
 {
@@ -20,7 +24,13 @@ namespace XianPal
                 if (Environment.GetEnvironmentVariable("FUFU_PET_MANAGED_SESSION") != "1") return;
                 string log = Path.GetFullPath(Environment.GetEnvironmentVariable("FUFU_PET_NATIVE_RUN_LOG"));
                 string directory = Path.GetFullPath(Path.Combine(Program.StateDirectory, "scheduled-task-runs"));
-                if (!String.Equals(Path.GetDirectoryName(log), directory, StringComparison.OrdinalIgnoreCase)) return;
+                if (!String.Equals(Path.GetDirectoryName(log), directory,
+#if XIANPAL_LINUX
+                    StringComparison.Ordinal
+#else
+                    StringComparison.OrdinalIgnoreCase
+#endif
+                    )) return;
                 string token = Environment.GetEnvironmentVariable("FUFU_PET_NATIVE_RUN_TOKEN");
                 Guid id; if (!Guid.TryParseExact(token, "N", out id)) return;
                 JavaScriptSerializer json = new JavaScriptSerializer { MaxJsonLength = 8000000 };

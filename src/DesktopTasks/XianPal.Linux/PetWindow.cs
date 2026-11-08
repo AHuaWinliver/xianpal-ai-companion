@@ -397,6 +397,7 @@ internal sealed class PetWindow : Window
         characters.Items.Add(Item("刷新外置角色", () => Rescan()));
         var menu = new ContextMenu();
         menu.Items.Add(Item("对话", OpenConversation));
+        menu.Items.Add(Item("打开 Claude Code CLI", () => LinuxTerminal.OpenClaude(DirectoryPath, Character.Id)));
         menu.Items.Add(characters);
         menu.Items.Add(Item("Claude Code 定时任务", () => TaskWindow.Show(this, services.Tasks)));
         menu.Items.Add(Item("提醒与倒计时", () => ReminderWindows.ShowSettings(this, services.Reminders)));

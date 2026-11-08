@@ -2,7 +2,11 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+#if XIANPAL_LINUX
+using Timer = XianPal.Linux.UiTimer;
+#else
 using System.Windows.Forms;
+#endif
 
 namespace XianPal
 {
@@ -40,14 +44,27 @@ namespace XianPal
             timer.Start();
         }
 
+#if XIANPAL_LINUX
+        internal void Resume() { started = DateTime.UtcNow; timer.Start(); Poll(); }
+#endif
+
         private string ReadOutput()
         {
             try
             {
                 if (!File.Exists(logPath)) return previousOutput;
                 using (FileStream file = new FileStream(logPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
-                using (StreamReader reader = new StreamReader(file, Encoding.UTF8, true))
-                    return UiText.Normalize(reader.ReadToEnd());
+                {
+                    if (file.Length > 131072)
+                    {
+                        file.Position = file.Length - 131072;
+                        int next = file.ReadByte();
+                        while (next >= 0 && (next & 0xc0) == 0x80) next = file.ReadByte();
+                        if (next >= 0) file.Position--;
+                    }
+                    using (StreamReader reader = new StreamReader(file, Encoding.UTF8, true))
+                        return UiText.Normalize(reader.ReadToEnd());
+                }
             }
             catch (IOException) { return previousOutput; }
         }
@@ -107,7 +124,7 @@ namespace XianPal
                     }
                 }
                 else if ((DateTime.UtcNow - started).TotalSeconds > 45)
-                    Finish(-1, output + "\r\n[启动失败] 45 秒内未收到任务脚本启动信号。请检查终端安装和 PowerShell 执行权限。");
+                    Finish(-1, output + "\r\n[启动失败] 45 秒内未收到任务脚本启动信号。请检查终端安装和任务启动权限。");
             }
             catch (IOException) { }
             catch (UnauthorizedAccessException) { }

@@ -75,6 +75,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 if (scheduled.History[0].Status != "success" || !scheduled.History[0].Transcript.Contains("中文🌱"))
                     throw new Exception("Native scheduled task output failed.");
                 if (pet.Conversation.LastReply != before) throw new Exception("A scheduled task leaked into regular chat.");
+                await LinuxNativeValidation.Run(pet, evidence);
                 TaskWindow.Show(pet, tasks);
                 ReminderWindows.ShowSettings(pet, pet.Services.Reminders);
                 pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "仙伴提醒测试", Effect = "popup" });

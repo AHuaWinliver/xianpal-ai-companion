@@ -311,6 +311,7 @@ namespace XianPal
             fileWipeTimer.Interval = 1650;
             fileWipeTimer.Tick += delegate { fileWipeTimer.Stop(); OpenDroppedFilesPromptAfterWipe(); };
             reminderService.Start();
+            claudeTaskService.AssignLegacyTasks(currentCharacterId);
             claudeTaskService.Start();
             InitializeWorkshop();
             SystemEvents.SessionSwitch += SystemSessionSwitch;
@@ -1608,9 +1609,11 @@ namespace XianPal
                 : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string literalDirectory = directory.Replace("'", "''");
             string settingsPath = ClaudeSettingsFile.CurrentPath(characterId);
+            string command = ClaudeCliRunner.FindClaudeCommand(characterId) ?? "claude";
+            string invoke = "& '" + command.Replace("'", "''") + "'";
             string script = "$env:FUFU_PET_MANAGED_SESSION='1'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + literalDirectory + "'; " +
-                ClaudeSettingsFile.PowerShellSetup(settingsPath, "claude") +
-                (settingsPath.Length == 0 ? "claude" : "try { claude --settings $xianpalSettings } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }");
+                ClaudeSettingsFile.PowerShellSetup(settingsPath, command) +
+                (settingsPath.Length == 0 ? invoke : "try { " + invoke + " --settings $xianpalSettings } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }");
             return new ProcessStartInfo("powershell.exe", "-NoLogo -NoExit -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)))
             {
                 WorkingDirectory = directory,
@@ -2287,6 +2290,7 @@ namespace XianPal
             replyBubble.Hide();
             activityTray.HideUnlessPinned();
             reminderForm.Hide();
+            claudeTaskForm.SelectDefaultOwner(currentCharacterId);
             claudeTaskForm.ShowNear(Bounds, promptForm.WorkingDirectory);
         }
 
@@ -2434,7 +2438,7 @@ namespace XianPal
             };
             try
             {
-                runner.Start(BuildScheduledTaskPrompt(task), task.WorkingDirectory, null, task.Id, currentCharacterId);
+                runner.Start(BuildScheduledTaskPrompt(task), task.WorkingDirectory, null, task.Id, task.CharacterId);
             }
             catch (Exception ex)
             {
@@ -2469,7 +2473,7 @@ namespace XianPal
             try
             {
                 Directory.CreateDirectory(logDirectory);
-                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, "claude", currentCharacterId);
+                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, ClaudeCliRunner.FindClaudeCommand(task.CharacterId) ?? "claude", task.CharacterId);
                 monitor = new VisibleTaskMonitor(logPath, delegate(string output)
                 {
                     claudeTaskService.UpdateRunProgress(task, run.Id, output);
