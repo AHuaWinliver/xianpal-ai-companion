@@ -25,7 +25,18 @@ sh src/DesktopTasks/XianPal.Linux/diagnose-linux.sh
 
 两种构建内嵌 Noto 简体中文与彩色表情字体，使用 SIL Open Font License 1.1；字体许可及来源清单保留在资源包 `fonts/` 目录。字体仅在制作机下载并校验固定 SHA256，运行时无需联网，也无需修改系统字体。
 
-## 已完成的原生验证
+## 兼容性验证范围
+
+| 系统 | 架构 | 进展 |
+| --- | --- | --- |
+| Ubuntu 22.04、24.04 | x86_64、ARM64 | 原生 runner 上的构建、共享逻辑、X11 窗口与字形校验通过 |
+| CentOS 7.9，glibc 2.17 | x86_64 | 固定镜像内的共享逻辑、X11 窗口、中文与彩色表情校验通过 |
+| Debian 11、12、13；Ubuntu 20.04 | x86_64 | 已加入固定镜像矩阵，待结果确认 |
+| Rocky Linux 8、9；AlmaLinux 8、9 | x86_64 | 已加入固定镜像矩阵，待结果确认 |
+| openSUSE Leap 16 | x86_64 | 已加入固定镜像矩阵，待结果确认 |
+| Debian 12、13 | ARM64 | 已加入原生 ARM64 主机上的固定镜像矩阵，待结果确认 |
+
+以上矩阵验证构建、系统库加载与模拟 CLI 下的桌面行为，不能替代真实模型服务、目标内核、窗口管理器、显卡驱动或 TurboVNC 验收。[中文字体修复后的验证记录](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42436968032)
 
 Ubuntu ARM64 上已通过程序构建、共享业务逻辑和原生窗口自动化检查。界面测试在 Xvfb 与 Openbox 中使用模拟 Claude，验证四个人物加载、中文与表情流式回复、后台任务独立记录和四道友依赖交接。[首轮 ARM64 验证](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42342609755)
 
