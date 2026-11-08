@@ -77,6 +77,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                     throw new Exception("Native scheduled task output failed.");
                 if (pet.Conversation.LastReply != before) throw new Exception("A scheduled task leaked into regular chat.");
                 await LinuxNativeValidation.Run(pet, evidence);
+                await LinuxUiValidation.Run(pet, desktop, evidence);
                 TaskWindow.Show(pet, tasks);
                 ReminderWindows.ShowSettings(pet, pet.Services.Reminders);
                 pet.Services.Reminders.TriggerForPreview(new DailyReminder { Text = "仙伴提醒测试", Effect = "popup" });
@@ -143,7 +144,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
         }
     }
 
-    private static void Capture(Window window, string filename)
+    internal static void Capture(Window window, string filename)
     {
         var size = new PixelSize(Math.Max(1, (int)window.ClientSize.Width), Math.Max(1, (int)window.ClientSize.Height));
         using var bitmap = new RenderTargetBitmap(size);

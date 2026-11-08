@@ -164,7 +164,7 @@ internal static class TaskWindow
         {
             refreshing = true;
             displayed = task.History.ToArray();
-            string[] rows = displayed.Select(run => $"{PetCharacter.OwnerName(run.CharacterId)} · {run.StatusText} · {ClaudeTaskService.RunModeLabel(run.RunMode)} · {run.StartedAt}").ToArray();
+            string[] rows = displayed.Select(run => $"{TaskPresentation.Owner(run.CharacterId)} · {UiLanguage.Text(run.StatusText)} · {TaskPresentation.Mode(run.RunMode)} · {run.StartedAt}").ToArray();
             if (records.ItemsSource is not string[] previous || !previous.SequenceEqual(rows)) records.ItemsSource = rows;
             selected ??= displayed.FirstOrDefault();
             records.SelectedIndex = Array.IndexOf(displayed, selected);

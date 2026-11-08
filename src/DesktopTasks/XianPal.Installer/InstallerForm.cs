@@ -37,7 +37,7 @@ namespace XianPal.Installer
             var title = new Label { Text = "XianPal", AutoSize = true, Font = new Font("Segoe UI", 25, FontStyle.Bold), ForeColor = Color.FromArgb(32, 75, 66), Margin = new Padding(0, 16, 0, 12) };
             var description = new Label { AutoSize = true, MaximumSize = new Size(420, 0), Margin = new Padding(0, 0, 0, 16) };
             var location = new Label { AutoSize = true, Margin = new Padding(0, 12, 0, 6) };
-            var folder = new TableLayoutPanel { ColumnCount = 2, AutoSize = true, Width = 420 };
+            var folder = new TableLayoutPanel { ColumnCount = 2, AutoSize = false, Width = 420, Height = 36 };
             folder.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100)); folder.ColumnStyles.Add(new ColumnStyle(SizeType.AutoSize));
             var browse = new Button { AutoSize = true, Name = "BrowseInstallDirectory" };
             destination.Text = Program.InstallDirectory;

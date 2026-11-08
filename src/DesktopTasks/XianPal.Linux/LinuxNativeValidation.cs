@@ -15,7 +15,9 @@ internal static class LinuxNativeValidation
         string fixtureSource = """
 #!/usr/bin/env python3
 import json, os, subprocess, sys, time
-args = sys.argv[1:]
+# Python 3.6 on a minimal CentOS 7 image can use an ASCII filesystem codec.
+# Recover the actual UTF-8 argument/path bytes instead of emitting surrogate escapes.
+args = [os.fsencode(arg).decode('utf-8') for arg in sys.argv[1:]]
 settings = {}
 if '--settings' in args:
     index = args.index('--settings')
@@ -26,7 +28,7 @@ if '--settings' in args:
 profile = os.environ.get('XIANPAL_FIXTURE_PROFILE', 'default')
 root = os.path.join(os.environ['FUFU_STATE_DIR'], 'fixture-jobs', profile)
 os.makedirs(root, exist_ok=True)
-marker = os.path.basename(sys.argv[0]) + '|' + profile + '|' + os.getcwd()
+marker = os.path.basename(os.fsencode(sys.argv[0]).decode('utf-8')) + '|' + profile + '|' + os.getcwdb().decode('utf-8')
 if '--help' in args:
     print('--bg --json --all')
     sys.exit(0)
@@ -96,7 +98,7 @@ print(json.dumps({'type':'result','result':'角色输出|' + marker, 'is_error':
                 pet.Services.Tasks.RunNow(task);
                 await Wait(() => task.History.Count > 0 && task.History[0].Status != "running");
                 if (task.History[0].Status != "success" || !task.History[0].Transcript.Contains(character.Id + "-claude.py|" + character.Id + "|" + directory))
-                    throw new Exception("Companion executable, settings or working directory were not respected: " + character.Id);
+                    throw new Exception("Companion executable, settings or working directory were not respected: " + character.Id + "\n" + task.History[0].Transcript);
             }
             string literal = "Literal request $(touch SHOULD_NOT_EXIST) ; 中文 \" ' --bg";
             var interactive = pet.Services.Tasks.Add(literal, directory, "interval", TimeSpan.Zero, DayOfWeek.Monday, 300,

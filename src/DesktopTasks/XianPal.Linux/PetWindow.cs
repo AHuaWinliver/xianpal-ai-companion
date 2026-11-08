@@ -410,7 +410,7 @@ internal sealed class PetWindow : Window
         return menu;
     }
 
-    private void ShowSettings()
+    internal void ShowSettings()
     {
         var directory = new TextBox { Text = preferences.Directory, Watermark = "Claude 默认工作目录" };
         var top = new CheckBox { Content = "保持置顶", IsChecked = Topmost };
@@ -419,9 +419,9 @@ internal sealed class PetWindow : Window
         var opacity = new Slider { Minimum = 20, Maximum = 100, Value = preferences.DockedOpacity * 100 };
         var integration = IntegrationPreferences.Load();
         var language = new ComboBox { ItemsSource = new[] { "English", "简体中文" }, SelectedIndex = UiLanguage.IsEnglish ? 0 : 1 };
-        var scope = new ComboBox { ItemsSource = new[] { "全局默认" }.Concat(PetCharacter.Available.Select(p => p.Name)).ToArray(), SelectedIndex = 0 };
+        var scope = new ComboBox { Name = "CompanionScope", ItemsSource = new[] { "全局默认" }.Concat(PetCharacter.Available.Select(p => p.Name)).ToArray(), SelectedIndex = 0 };
         var configuration = new TextBox { Watermark = "继承全局 / CLI 自身配置", Text = integration.ClaudeSettingsPath };
-        var executable = new TextBox { Watermark = UiLanguage.Text("Leave empty to use the global executable or PATH"), Text = integration.ExecutableOverrideFor(null) };
+        var executable = new TextBox { Name = "ClaudeExecutable", Watermark = UiLanguage.Text("Leave empty to use the global executable or PATH"), Text = integration.ExecutableOverrideFor(null) };
         var profiles = PetCharacter.Available;
         Window dialog = null;
         string editingScope = null;
@@ -479,6 +479,7 @@ internal sealed class PetWindow : Window
             DesktopUi.Row(top, motion), DesktopUi.Label("角色大小"), size, DesktopUi.Label("贴边不透明度"), opacity,
             DesktopUi.Label("Companions"), scope, DesktopUi.Label("Claude executable"), executable, browseExecutable,
             DesktopUi.Label("Claude 配置文件"), configuration, DesktopUi.Row(browseJson, apply)) }, 590, 650);
+        dialog.Name = "DefaultSettingsWindow";
         dialog.Show(this);
     }
 }
