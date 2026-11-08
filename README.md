@@ -98,9 +98,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 安装包在 `dist/`，动作和演出预览在 `build/previews/`。只需要程序和预览时，可给构建脚本加上 `-SkipInstaller`。[开发与验证指南](docs/DEVELOPMENT.md)
 
-## Linux ARM64 移植
+## Linux 移植与兼容性
 
-Linux 桌面端在 `linux` 分支开发。原生 ARM64 构建、中文对话、后台任务和四道友依赖交接已通过首轮自动化验证，完整功能仍在移植。[查看界面、验证结果与验收清单](docs/LINUX.md)
+Linux 桌面端在 `linux` 分支开发，覆盖 x86_64 与 ARM64，并提供面向旧系统库的兼容构建。原生 ARM64 上的中文对话、后台任务和四道友依赖交接已通过首轮自动化验证，完整功能与更多发行版仍在验证。[查看界面、验证结果与验收清单](docs/LINUX.md)
 
 ![Linux ARM64 原生门派大堂，图中为隔离演示数据](docs/images/linux-workshop.png)
 

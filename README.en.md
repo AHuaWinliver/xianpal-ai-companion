@@ -96,9 +96,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 
 Find the installer in `dist/` and offline animation and performance previews in `build/previews/`. Pass `-SkipInstaller` to build the app and previews only. [Development and testing guide](docs/DEVELOPMENT.md)
 
-## Linux ARM64 port
+## Linux port and compatibility
 
-The Linux desktop application is under development on the `linux` branch. The first native ARM64 checks cover the build, Unicode chat, isolated background tasks and four-companion dependency handoffs. Full feature migration is ongoing. [Screenshots, test results and release checklist](docs/LINUX.md)
+The Linux desktop application is under development on the `linux` branch for x86_64 and ARM64, with a separate compatibility build for older system libraries. The first native ARM64 checks cover Unicode chat, isolated background tasks and four-companion dependency handoffs. Full feature migration and distribution validation are ongoing. [Screenshots, test results and release checklist](docs/LINUX.md)
 
 ![Native Linux ARM64 workshop hall with isolated demonstration data](docs/images/linux-workshop.png)
 
