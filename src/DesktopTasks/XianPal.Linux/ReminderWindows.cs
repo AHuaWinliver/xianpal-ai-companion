@@ -77,19 +77,27 @@ internal static class ReminderWindows
             else window.Show(pet);
             return;
         }
-        window = CreatePerformance(pet, content);
+        try { window = CreatePerformance(pet, content); }
+        catch (Exception error) when (error is IOException or InvalidDataException or ArgumentException)
+        {
+            Console.Error.WriteLine("Reminder performance unavailable: " + error.Message);
+            content.IsVisible = true;
+            window = DesktopUi.Dialog(title.Text, content, 465, 200);
+            window.Topmost = true;
+        }
         window.Show(pet);
     }
 
     private static Window CreatePerformance(PetWindow pet, Border card)
     {
         var stage = new Image { Stretch = Stretch.Uniform };
+        NativePackPerformance pack = pet.Character.IsExternal ? new NativePackPerformance(pet.Character) : null;
         card.IsVisible = false;
         card.HorizontalAlignment = HorizontalAlignment.Center;
         card.VerticalAlignment = VerticalAlignment.Bottom;
         card.Margin = new Thickness(18, 18, 18, 70);
         var grid = new Grid();
-        grid.Children.Add(stage);
+        grid.Children.Add(pack ?? (Control)stage);
         grid.Children.Add(card);
         var screen = pet.Screens.ScreenFromWindow(pet) ?? pet.Screens.Primary;
         var overlay = new Window
@@ -107,7 +115,8 @@ internal static class ReminderWindows
         var timer = new DispatcherTimer(TimeSpan.FromMilliseconds(32), DispatcherPriority.Render, (_, _) =>
         {
             int next = Math.Min(156, (int)(clock.ElapsedMilliseconds / 40));
-            if (next != frame)
+            if (pack != null) { pack.Seconds = clock.Elapsed.TotalSeconds; pack.InvalidateVisual(); }
+            else if (next != frame)
             {
                 string path = Path.Combine(root, next.ToString("000") + ".png");
                 if (File.Exists(path))
@@ -128,7 +137,7 @@ internal static class ReminderWindows
             timer.Start();
         };
         overlay.KeyDown += (_, e) => { if (e.Key == Key.Escape) overlay.Close(); };
-        overlay.Closed += (_, _) => { timer.Stop(); stage.Source = null; current?.Dispose(); };
+        overlay.Closed += (_, _) => { timer.Stop(); stage.Source = null; current?.Dispose(); pack?.Dispose(); };
         return overlay;
     }
 }
