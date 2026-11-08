@@ -95,7 +95,7 @@ namespace XianPal
             { "执行道友", "Run as" }, { "全部道友任务", "All companions' tasks" }, { "已保存任务", "Saved tasks" },
             { "Claude Code 定时任务", "Claude Code scheduled tasks" }, { "Claude Code 定时任务…", "Claude Code scheduled tasks…" },
             { "执行任务", "Prompt" }, { "运行情况", "Run history" }, { "任务运行情况", "Task run history" },
-            { "目录", "Folder" }, { "运行桌面", "Desktop" }, { "当前桌面", "Current desktop" }, { "桌面 {0}", "Desktop {0}" },
+            { "目录", "Folder" }, { "目录：", "Folder: " }, { "运行桌面", "Desktop" }, { "当前桌面", "Current desktop" }, { "桌面 {0}", "Desktop {0}" },
             { "设为新任务默认", "Use as default" }, { "虚拟桌面（Win+Tab），需提前创建", "Create virtual desktops first (Win+Tab)." },
             { "PowerShell 窗口", "PowerShell" }, { "终端窗口", "Terminal" }, { "CLI 交互·PS", "CLI · PowerShell" },
             { "CLI 交互·终端", "CLI · Terminal" }, { "Claude BG·关窗", "Claude BG · close window" },
@@ -198,6 +198,7 @@ namespace XianPal
             { "事件", "Event" }, { "本地时间，如2026-11-05 09:00", "Local time, e.g. 2026-11-05 09:00" },
             { "重复：once/daily/weekly", "Repeat: once/daily/weekly" }, { "关联门派名称（可空）", "Linked team (optional)" },
             { "启动仙伴", "Launch XianPal" }, { "安装完成。", "Installation complete." }, { "原安装已备份到：", "Previous installation saved at:" }
+            ,{ "全屏漫游", "Full-screen roaming" }, { "AI 路线和主动发言会使用你配置的 Claude 服务，并可能产生用量。", "AI routes and proactive messages use your configured Claude service and may incur usage." }
         };
         private static readonly Dictionary<string, string> Reverse = BuildReverse();
     }

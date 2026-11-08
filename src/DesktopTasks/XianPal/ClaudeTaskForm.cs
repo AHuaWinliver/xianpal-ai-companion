@@ -505,7 +505,7 @@ namespace XianPal
             Label title = new Label { Text = "运行情况  ·  双击记录查看输出", Font = UiText.Font(12f, FontStyle.Bold), AutoSize = true, Location = new Point(18, 16), ForeColor = Color.FromArgb(34, 34, 32) };
             Label taskText = new Label { Text = task == null ? "" : task.Prompt, AutoEllipsis = true, Location = new Point(18, 48), Size = new Size(644, 25), ForeColor = Color.FromArgb(70, 70, 66) };
             UiLanguageBindings.PreserveContent(taskText);
-            Label path = new Label { Text = task == null ? "" : "目录：" + task.WorkingDirectory, AutoEllipsis = true, Location = new Point(18, 74), Size = new Size(644, 23), ForeColor = Color.FromArgb(112, 112, 106), Font = UiText.Font(8f) };
+            Label path = new Label { Text = task == null ? "" : UiLanguage.Text("目录：") + task.WorkingDirectory, AutoEllipsis = true, Location = new Point(18, 74), Size = new Size(644, 23), ForeColor = Color.FromArgb(112, 112, 106), Font = UiText.Font(8f) };
 
             runs.View = View.Details;
             runs.FullRowSelect = true;
@@ -514,11 +514,11 @@ namespace XianPal
             runs.Location = new Point(18, 108);
             runs.Size = new Size(644, 205);
             runs.Columns.Add("状态", 82);
-            runs.Columns.Add("方式", 82);
+            runs.Columns.Add("方式", 108);
             runs.Columns.Add("开始时间", 150);
             runs.Columns.Add("完成时间", 140);
             runs.Columns.Add("耗时", 74);
-            runs.Columns.Add("退出码", 62);
+            runs.Columns.Add("退出码", 80);
             runs.SelectedIndexChanged += delegate { ShowSelectedDetails(); };
             runs.DoubleClick += delegate { OpenSelectedTranscript(); };
 
@@ -542,6 +542,7 @@ namespace XianPal
             LoadHistory();
             liveRefresh.Tick += delegate
             {
+                path.Text = task == null ? "" : UiLanguage.Text("目录：") + task.WorkingDirectory;
                 if (task != null && task.History != null && task.History.Count != runs.Items.Count) LoadHistory();
                 foreach (ListViewItem item in runs.Items)
                 {

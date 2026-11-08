@@ -73,7 +73,8 @@ internal static class ReminderWindows
             window = DesktopUi.Dialog(title.Text, content, 465, 200);
             window.Topmost = true;
             window.KeyDown += (_, e) => { if (e.Key == Key.Escape) window.Close(); };
-            window.Show(pet);
+            if (reminder.IsCountdown && !reduceMotion) pet.RunToCenter(() => { if (!pet.IsClosing) window.Show(pet); });
+            else window.Show(pet);
             return;
         }
         window = CreatePerformance(pet, content);

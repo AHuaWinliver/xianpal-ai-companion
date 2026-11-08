@@ -81,6 +81,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 if (pet.Conversation.LastReply != before) throw new Exception("A scheduled task leaked into regular chat.");
                 await LinuxNativeValidation.Run(pet, evidence);
                 await LinuxUiValidation.Run(pet, desktop, evidence);
+                await pet.ValidateMotion(evidence);
                 await LinuxInstallerValidation.Run(pet, evidence);
                 TaskWindow.Show(pet, tasks);
                 ReminderWindows.ShowSettings(pet, pet.Services.Reminders);

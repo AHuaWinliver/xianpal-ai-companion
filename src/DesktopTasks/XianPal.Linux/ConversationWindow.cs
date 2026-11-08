@@ -157,6 +157,6 @@ internal sealed class ConversationWindow : Window
         send.IsEnabled = true; stop.IsEnabled = false;
         status.Text = code == 0 ? "已完成" : "已停止或失败";
         pet.ChatWorking = false;
-        pet.ShowLatestReply(response.Text);
+        if (pet.Character.Id == sessionCharacter) pet.ShowLatestReply(response.Text);
     }
 }

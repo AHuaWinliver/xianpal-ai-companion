@@ -20,9 +20,14 @@ internal sealed class DesktopPreferences
     public int Size { get; set; } = 144;
     public int? X { get; set; }
     public int? Y { get; set; }
+    public string PathMode { get; set; } = "builtin";
+    public bool ProactiveCare { get; set; }
+    public int BreakMinutes { get; set; } = 60;
+    public double TrailOpacity { get; set; } = .45;
+    public string DockedEdge { get; set; } = "";
 }
 
-internal sealed class PetWindow : Window
+internal sealed partial class PetWindow : Window
 {
     internal static string Assets => Environment.GetEnvironmentVariable("XIANPAL_ASSETS") ?? Path.Combine(AppContext.BaseDirectory, "assets");
     private static string PreferencesPath => Path.Combine(Program.StateDirectory, "desktop.json");
@@ -32,6 +37,7 @@ internal sealed class PetWindow : Window
     private LinuxDesktopShell shell;
     private bool started;
     private readonly Image sprite = new() { Stretch = Stretch.Uniform };
+    private readonly NativeExpressionView expressions = new();
     private readonly DragGaitClock gait = new();
     private readonly Stopwatch clock = Stopwatch.StartNew();
     private readonly DispatcherTimer timer;
@@ -43,7 +49,7 @@ internal sealed class PetWindow : Window
     private string currentReply;
     private IPointer dragPointer;
     private PixelPoint dragOrigin, pointerOrigin, lastPointer;
-    private long lastMotion, lastTick, gestureEnd, nextRoam, roamStart;
+    private long lastMotion, lastTick, gestureEnd, gestureStarted, nextRoam, roamStart;
     private bool left, dragging, hovering, positioning;
     private string gesture = "waving";
     private PixelPoint? roamTarget;
@@ -59,6 +65,8 @@ internal sealed class PetWindow : Window
     internal PetWindow()
     {
         preferences = WorkshopFiles.Load<DesktopPreferences>(PreferencesPath);
+        preferences.BreakMinutes = Math.Clamp(preferences.BreakMinutes, 5, 240);
+        preferences.TrailOpacity = Math.Clamp(preferences.TrailOpacity, 0, 1);
         if (!Directory.Exists(preferences.Directory)) preferences.Directory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         catalog = new CharacterPackCatalog(Path.Combine(NativePaths.UserDirectory("XDG_DATA_HOME", ".local", "share"), "Characters"));
         Rescan();
@@ -72,7 +80,8 @@ internal sealed class PetWindow : Window
         TransparencyBackgroundFallback = new SolidColorBrush(Color.Parse("#F6F1E7"));
         Background = Brushes.Transparent;
         Topmost = preferences.Topmost;
-        Content = new Border { Background = Brushes.Transparent, Child = sprite };
+        var layers = new Grid { Background = Brushes.Transparent };
+        layers.Children.Add(sprite); layers.Children.Add(artifact); layers.Children.Add(expressions); Content = layers;
         PointerEntered += (_, _) => { if (!hovering && !ChatWorking) Gesture("waving", 700); hovering = true; };
         PointerExited += (_, _) => hovering = false;
         PointerPressed += Pressed;
@@ -100,6 +109,7 @@ internal sealed class PetWindow : Window
             started = true;
             PixelRect area = Screens.Primary?.WorkingArea ?? new PixelRect(0, 0, 1024, 768);
             Position = Fit(new PixelPoint(preferences.X ?? area.Right - (int)Width - 30, preferences.Y ?? area.Bottom - (int)Height - 45));
+            if (preferences.DockedEdge is "left" or "right" or "bottom") ApplyDock(preferences.DockedEdge);
             nextRoam = clock.ElapsedMilliseconds + Random.Shared.Next(12000, 22000);
             timer.Start();
             services.Start();
@@ -111,6 +121,9 @@ internal sealed class PetWindow : Window
             timer.Stop();
             shell?.Dispose();
             services.Dispose();
+            ClaudeCliRunner request = brain; brain = null; request?.Stop(); request?.Dispose();
+            trail?.Close();
+            expressions.Dispose();
             externalFrames?.Dispose();
             DisposeFrames();
         };
@@ -137,12 +150,14 @@ internal sealed class PetWindow : Window
         externalFrames?.Dispose();
         externalFrames = replacement;
         Character = next;
+        ResetCharacterBehavior();
         preferences.Character = next.Id;
         RenderFrame("idle", 0);
     }
 
     private void RenderFrame(string state, int index)
     {
+        expressions.Update(Character, state, index);
         if (externalFrames != null) { sprite.Source = externalFrames.Frames[state][index]; return; }
         string key = state + "/" + index.ToString("00") + ".png";
         if (!frames.TryGetValue(key, out Bitmap frame))
@@ -173,6 +188,7 @@ internal sealed class PetWindow : Window
     {
         if (preferences.ReduceMotion) return;
         gesture = name;
+        gestureStarted = clock.ElapsedMilliseconds;
         gestureEnd = clock.ElapsedMilliseconds + milliseconds;
     }
 
@@ -183,38 +199,23 @@ internal sealed class PetWindow : Window
         double elapsed = Math.Min(50, now - lastTick);
         lastTick = now;
         if (now / 8000 != (now - (long)elapsed) / 8000) Rescan();
-        if (preferences.ReduceMotion) { RenderFrame(ChatWorking ? "waiting" : "idle", 0); return; }
+        TickCare(now);
+        if (preferences.ReduceMotion) { CancelMotion(); RenderFrame(ChatWorking ? "waiting" : "idle", 0); return; }
         if (dragging && now - lastMotion < DragGaitClock.StopAfterMs)
         {
             RenderFrame(left ? "running-left" : "running-right", gait.Advance(elapsed, now - lastMotion, 24));
             return;
         }
-        if (!dragging && !hovering && !ChatWorking && conversation?.IsVisible != true && Opacity == 1)
+        if (!dragging && ((string.IsNullOrEmpty(preferences.DockedEdge) && (!hovering || now < allowHoverUntil) && !ChatWorking && conversation?.IsVisible != true) || urgentRoute) && Opacity == 1)
         {
             if (roamTarget == null && now >= nextRoam) StartRoam();
-            if (roamTarget is PixelPoint target)
-            {
-                double dx = target.X - Position.X, dy = target.Y - Position.Y;
-                double distance = Math.Sqrt(dx * dx + dy * dy);
-                double advance = Math.Max(1, elapsed * .13);
-                if (distance <= advance)
-                {
-                    Position = target;
-                    roamTarget = null;
-                }
-                else
-                {
-                    left = dx < 0;
-                    Position = Fit(new PixelPoint(Position.X + (int)Math.Round(dx * advance / distance), Position.Y + (int)Math.Round(dy * advance / distance)));
-                    RenderFrame(left ? "running-left" : "running-right", (int)((now - roamStart) / 25 % 24));
-                    return;
-                }
-            }
+            if (TickRoam(now, elapsed)) return;
         }
-        else roamTarget = null;
+        else if (!dragging) CancelMotion();
         string state = ChatWorking ? "waiting" : now < gestureEnd ? gesture : "idle";
         int count = CharacterPackCatalog.FrameCount(state);
-        RenderFrame(state, (int)(now / (count == 8 ? 145 : 37) % count));
+        int index = !ChatWorking && now < gestureEnd ? Math.Clamp((int)((now - gestureStarted) * count / Math.Max(1, gestureEnd - gestureStarted)), 0, count - 1) : (int)(now / (count == 8 ? 480 : 37) % count);
+        RenderFrame(state, index);
     }
 
     private void StartRoam()
@@ -222,7 +223,8 @@ internal sealed class PetWindow : Window
         long now = clock.ElapsedMilliseconds;
         nextRoam = now + Random.Shared.Next(16000, 35000);
         roamStart = now;
-        roamTarget = Fit(new PixelPoint(Position.X + Random.Shared.Next(-150, 151), Position.Y + Random.Shared.Next(-50, 51)));
+        if (preferences.PathMode == "ai") { StartTour(); return; }
+        BeginRoute(new[] { Fit(new PixelPoint(Position.X + Random.Shared.Next(-150, 151), Position.Y + Random.Shared.Next(-50, 51))) });
     }
 
     private PixelPoint Fit(PixelPoint point)
@@ -243,7 +245,7 @@ internal sealed class PetWindow : Window
             return;
         }
         if (!e.GetCurrentPoint(this).Properties.IsLeftButtonPressed) return;
-        if (e.ClickCount == 2) { OpenConversation(); return; }
+        if (e.ClickCount == 2) { Wake(); return; }
         dragPointer = e.Pointer;
         pointerOrigin = lastPointer = this.PointToScreen(e.GetPosition(this));
         dragOrigin = Position;
@@ -260,6 +262,7 @@ internal sealed class PetWindow : Window
         if (!dragging && Math.Abs(delta.X) + Math.Abs(delta.Y) < 6) return;
         var change = pointer - lastPointer;
         if (change.X == 0 && change.Y == 0) return;
+        if (!dragging) { CancelMotion(); preferences.DockedEdge = ""; }
         dragging = true;
         Opacity = 1;
         long now = clock.ElapsedMilliseconds;
@@ -268,6 +271,7 @@ internal sealed class PetWindow : Window
         lastPointer = pointer;
         lastMotion = now;
         Position = Fit(dragOrigin + delta);
+        RecordTrail();
         AnchorConversation();
     }
 
@@ -290,13 +294,10 @@ internal sealed class PetWindow : Window
         if (screen != null)
         {
             PixelRect work = screen.WorkingArea;
-            int right = work.Right - (int)Math.Ceiling(Width * RenderScaling);
-            int edge = Position.X - work.X < 15 ? work.X : right - Position.X < 15 ? right : Position.X;
-            if (edge == work.X || edge == right)
-            {
-                Position = Fit(new PixelPoint(edge, Position.Y));
-                Opacity = Math.Clamp(preferences.DockedOpacity, .2, 1);
-            }
+            int width = (int)Math.Ceiling(Width * RenderScaling), height = (int)Math.Ceiling(Height * RenderScaling);
+            int xLeft = Math.Abs(Position.X - work.X), xRight = Math.Abs(work.Right - Position.X - width), bottom = Math.Abs(work.Bottom - Position.Y - height);
+            int nearest = Math.Min(bottom, Math.Min(xLeft, xRight));
+            if (nearest < 20) ApplyDock(nearest == bottom ? "bottom" : nearest == xLeft ? "left" : "right");
         }
         Save();
     }
@@ -311,7 +312,7 @@ internal sealed class PetWindow : Window
 
     internal void HideCompanion()
     {
-        reply?.Hide(); conversation?.Hide(); roamTarget = null;
+        reply?.Hide(); conversation?.Hide(); CancelMotion();
         ContextMenu?.Close(); Hide();
     }
 
@@ -320,6 +321,7 @@ internal sealed class PetWindow : Window
         if (IsClosing) return;
         Position = Fit(Position);
         if (!IsVisible) Show();
+        if (preferences.DockedEdge is "left" or "right" or "bottom") ApplyDock(preferences.DockedEdge);
         Activate();
     }
 
@@ -354,6 +356,7 @@ internal sealed class PetWindow : Window
     internal void ShowLatestReply(string text)
     {
         currentReply = text?.Trim();
+        if (!IsVisible || IsClosing || ContextMenu?.IsOpen == true) return;
         if (conversation?.IsVisible == true || string.IsNullOrWhiteSpace(currentReply)) return;
         if (reply == null)
         {
@@ -427,6 +430,8 @@ internal sealed class PetWindow : Window
         menu.Items.Add(Item("事件规划 / 门派协作", () => WorkshopWindow.Show(this, services)));
         menu.Items.Add(Item("默认设置", ShowSettings));
         menu.Items.Add(Item("跑一会儿", StartRoam));
+        menu.Items.Add(Item("全屏漫游", StartTour));
+        menu.Items.Add(Item("历史上的今天", () => RequestBrain("history")));
         menu.Items.Add(Item("隐藏宠物", HideCompanion));
         menu.Items.Add(Item("退出仙伴", Close));
         return menu;
@@ -440,6 +445,10 @@ internal sealed class PetWindow : Window
         var startup = new CheckBox { Content = "开机自动启动", IsChecked = LinuxStartup.Enabled };
         var size = new Slider { Minimum = 80, Maximum = 260, Value = Width };
         var opacity = new Slider { Minimum = 20, Maximum = 100, Value = preferences.DockedOpacity * 100 };
+        var trailOpacity = new Slider { Minimum = 0, Maximum = 100, Value = preferences.TrailOpacity * 100 };
+        var paths = new ComboBox { ItemsSource = new[] { "Built-in random curves", "AI route pool (24 routes per request)" }, SelectedIndex = preferences.PathMode == "ai" ? 1 : 0 };
+        var care = new CheckBox { Content = "Allow proactive messages and break reminders", IsChecked = preferences.ProactiveCare };
+        var breakMinutes = new NumericUpDown { Minimum = 5, Maximum = 240, Value = preferences.BreakMinutes, Width = 120 };
         var integration = IntegrationPreferences.Load();
         var language = new ComboBox { ItemsSource = new[] { "English", "简体中文" }, SelectedIndex = UiLanguage.IsEnglish ? 0 : 1 };
         var scope = new ComboBox { Name = "CompanionScope", ItemsSource = new[] { "全局默认" }.Concat(PetCharacter.Available.Select(p => p.Name)).ToArray(), SelectedIndex = 0 };
@@ -490,9 +499,17 @@ internal sealed class PetWindow : Window
                 preferences.Topmost = Topmost = top.IsChecked == true;
                 preferences.ReduceMotion = motion.IsChecked == true;
                 preferences.DockedOpacity = opacity.Value / 100;
+                preferences.TrailOpacity = trailOpacity.Value / 100;
+                preferences.PathMode = paths.SelectedIndex == 1 ? "ai" : "builtin";
+                bool resetCare = preferences.ProactiveCare != (care.IsChecked == true) || preferences.BreakMinutes != (int)(breakMinutes.Value ?? 60);
+                preferences.ProactiveCare = care.IsChecked == true;
+                preferences.BreakMinutes = (int)(breakMinutes.Value ?? 60);
+                if (resetCare) { screenSession.Restart(); nextBreak = clock.ElapsedMilliseconds + preferences.BreakMinutes * 60000L; }
+                if (preferences.ReduceMotion) CancelMotion();
                 preferences.Size = (int)size.Value;
                 Width = preferences.Size; Height = Width * 416 / 384;
                 Position = Fit(Position);
+                if (preferences.DockedEdge is "left" or "right" or "bottom") ApplyDock(preferences.DockedEdge);
                 Save();
                 UiLanguage.Set(language.SelectedIndex == 1 ? "zh-CN" : "en");
                 dialog.Close();
@@ -502,7 +519,10 @@ internal sealed class PetWindow : Window
         dialog = DesktopUi.Dialog("默认设置", new ScrollViewer { Content = DesktopUi.Stack(DesktopUi.Label("Language"), language, DesktopUi.Label("Claude 默认工作目录"), directory, browse,
             DesktopUi.Row(top, motion, startup), DesktopUi.Label("角色大小"), size, DesktopUi.Label("贴边不透明度"), opacity,
             DesktopUi.Label("Companions"), scope, DesktopUi.Label("Claude executable"), executable, browseExecutable,
-            DesktopUi.Label("Claude 配置文件"), configuration, DesktopUi.Row(browseJson, apply)) }, 590, 650);
+            DesktopUi.Label("Claude 配置文件"), configuration, browseJson,
+            DesktopUi.Label("Roaming routes"), paths, care, DesktopUi.Label("Break reminder interval (minutes)"), breakMinutes,
+            DesktopUi.Label("Trail opacity"), trailOpacity,
+            DesktopUi.Label("AI routes and proactive messages use your configured Claude service and may incur usage."), apply) }, 590, 650);
         dialog.Name = "DefaultSettingsWindow";
         dialog.Show(this);
     }

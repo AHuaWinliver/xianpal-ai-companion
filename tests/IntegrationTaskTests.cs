@@ -53,6 +53,16 @@ internal static class IntegrationTaskTests
                 Emit(new { type = "stream_event", @event = new { type = "content_block_start", index = 1, content_block = new { type = "tool_use", id = "tool1", name = "Bash", input = new { } } } });
                 Emit(new { type = "stream_event", @event = new { type = "content_block_delta", index = 1, delta = new { type = "input_json_delta", partial_json = "{\"command\":\"echo 测试工具\"}" } } });
                 Emit(new { type = "stream_event", @event = new { type = "content_block_stop", index = 1 } });
+                // Keep the fixture in its tool phase until the UI monitor has
+                // observed it. A loaded CI desktop must not turn this into a
+                // race between a fixed sleep and a Windows Forms timer tick.
+                string acknowledgment = Environment.GetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK");
+                if (!String.IsNullOrEmpty(acknowledgment) && Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
+                {
+                    Stopwatch waiting = Stopwatch.StartNew();
+                    while (!File.Exists(acknowledgment) && waiting.ElapsedMilliseconds < 15000) Thread.Sleep(40);
+                    if (!File.Exists(acknowledgment)) { Console.Error.WriteLine("Live stream monitor did not acknowledge the tool phase."); return 86; }
+                }
                 Thread.Sleep(1600);
                 Emit(new { type = "user", message = new { content = new[] { new { type = "tool_result", tool_use_id = "tool1", content = "工具执行成功 ✅", is_error = false } } } });
                 Thread.Sleep(500);
@@ -547,10 +557,13 @@ internal static class IntegrationTaskTests
                 ProcessStartInfo info = (ProcessStartInfo)build.Invoke(null, new object[] { task, path, Assembly.GetExecutingAssembly().Location });
                 string token = Regex.Match(info.Arguments, @"OrbitTask-[a-f0-9]{32}").Value;
                 bool done = false; int code = -99; string output = ""; int completions = 0; bool progress = false, liveBeforeCompleted = false, toolState = false;
-                using (VisibleTaskMonitor monitor = new VisibleTaskMonitor(path, delegate(string value) { progress = value.Contains("中文回复"); if (progress && !File.Exists(path + ".completed")) liveBeforeCompleted = true; }, delegate(int result, string value) { code = result; output = value; completions++; done = true; }, delegate(string status, string session, string reaction) { if (reaction == "PreToolUse" && session.Length > 0) toolState = true; }))
+                string acknowledgment = path + ".observed";
+                string previousAcknowledgment = Environment.GetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK");
+                using (VisibleTaskMonitor monitor = new VisibleTaskMonitor(path, delegate(string value) { progress = value.Contains("中文回复"); if (progress && !File.Exists(path + ".completed")) liveBeforeCompleted = true; }, delegate(int result, string value) { code = result; output = value; completions++; done = true; }, delegate(string status, string session, string reaction) { if (reaction == "PreToolUse" && session.Length > 0) { toolState = true; File.WriteAllText(acknowledgment, "observed"); } }))
                 {
                     try
                     {
+                        Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", variant == 0 ? acknowledgment : null);
                         monitor.Start(info);
                         Require(PumpUntil(delegate { return done; }, 25000), mode + " completion handshake");
                         Require(code == (variant == 1 ? 7 : 0) && completions == 1, mode + " actual exit code, exactly one completion");
@@ -569,6 +582,7 @@ internal static class IntegrationTaskTests
                     }
                     finally
                     {
+                        Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", previousAcknowledgment);
                         if (done && mode == "terminal")
                         {
                             IntPtr ownWindow = VirtualDesktopService.FindTaskTerminalWindow(token);
