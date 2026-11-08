@@ -104,10 +104,11 @@ internal sealed partial class PetWindow
                 if (Math.Abs(dx) > .05) left = dx < 0;
                 double moved = Math.Min(step, distance);
                 motionX += dx * moved / distance; motionY += dy * moved / distance;
-                var before = Position;
                 Position = new PixelPoint((int)Math.Round(motionX), (int)Math.Round(motionY));
-                var difference = Position - before;
-                gait.RecordMotion(Math.Sqrt((double)difference.X * difference.X + (double)difference.Y * difference.Y), Math.Max(1, elapsed));
+                // X11 acknowledges moves asynchronously. Reading Position right
+                // after assigning it can return the previous native position and
+                // incorrectly report zero motion while the window keeps moving.
+                gait.RecordMotion(moved, Math.Max(1, elapsed));
                 RecordTrail();
             }
             if (distance <= step + .001)
