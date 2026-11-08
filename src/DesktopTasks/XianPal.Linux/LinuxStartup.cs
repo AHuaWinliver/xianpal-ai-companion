@@ -43,4 +43,23 @@ internal static class LinuxStartup
         try { File.WriteAllText(temporary, content, new UTF8Encoding(false)); File.Move(temporary, path, true); }
         finally { if (File.Exists(temporary)) File.Delete(temporary); }
     }
+
+    internal static void RegisterInstallation(string directory)
+    {
+        string dataRoot = Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1" ? Path.Combine(Program.StateDirectory, "desktop-integration") :
+            Path.GetDirectoryName(NativePaths.UserDirectory("XDG_DATA_HOME", ".local", "share"));
+        string entry = Entry("/bin/sh", new[] { Path.Combine(directory, "launch.sh") }, Path.Combine(directory, "xianpal.png"));
+        WriteManaged(Path.Combine(dataRoot, "applications", "xianpal.desktop"), entry);
+        if (Enabled) WriteManaged(EntryPath, entry);
+    }
+
+    private static void WriteManaged(string path, string content)
+    {
+        if (File.Exists(path) && (new FileInfo(path).LinkTarget != null || !File.ReadAllText(path).Contains(Marker)))
+            throw new IOException("An existing desktop entry is not managed by XianPal.");
+        Directory.CreateDirectory(Path.GetDirectoryName(path));
+        string temporary = path + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try { File.WriteAllText(temporary, content, new UTF8Encoding(false)); File.Move(temporary, path, true); }
+        finally { if (File.Exists(temporary)) File.Delete(temporary); }
+    }
 }

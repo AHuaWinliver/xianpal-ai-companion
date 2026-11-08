@@ -68,6 +68,8 @@ namespace XianPal
         public string Transcript = "";
         public string CharacterId = "";
         public string RunMode = "background";
+        public string WorkingDirectory = "";
+        public string Prompt = "";
         public int DesktopNumber;
         public string BackgroundJobName = "";
         public string BackgroundJobId = "";
@@ -219,6 +221,8 @@ namespace XianPal
                 StartedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 CharacterId = NormalizeCharacterId(task.CharacterId),
                 Status = "running",
+                WorkingDirectory = task.WorkingDirectory,
+                Prompt = task.Prompt,
                 RunMode = NormalizeRunMode(task.RunMode),
                 DesktopNumber = NormalizeDesktopNumber(task.DesktopNumber)
             };
@@ -269,6 +273,8 @@ namespace XianPal
             ClaudeTaskRunRecord record = new ClaudeTaskRunRecord
             {
                 CharacterId = NormalizeCharacterId(task.CharacterId),
+                WorkingDirectory = task.WorkingDirectory,
+                Prompt = task.Prompt,
                 StartedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 CompletedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 Status = "skipped",
@@ -369,6 +375,12 @@ namespace XianPal
             string clean = (value ?? "").Trim().ToLowerInvariant();
             return clean.Length == 0 ? "orbit" : clean;
         }
+
+        internal static string RunDirectory(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
+        { return record != null && !String.IsNullOrEmpty(record.WorkingDirectory) ? record.WorkingDirectory : task == null ? "" : task.WorkingDirectory; }
+
+        internal static string RunPrompt(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
+        { return record != null && !String.IsNullOrEmpty(record.Prompt) ? record.Prompt : task == null ? "" : task.Prompt; }
 
         internal void AssignLegacyTasks(string characterId)
         {

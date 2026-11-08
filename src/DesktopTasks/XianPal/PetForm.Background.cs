@@ -55,10 +55,12 @@ namespace XianPal
         private void MonitorClaudeBackgroundTask(ScheduledClaudeTask task, ClaudeTaskRunRecord run)
         {
             MarkScheduledTaskStarted(task);
+            IntegrationPreferences profile = IntegrationPreferences.Load();
+            string command = profile.ExecutablePathFor(run.CharacterId);
             backgroundTaskSupervisor.Track(new BackgroundTaskWatch
             {
-                JobName = run.BackgroundJobName, JobId = run.BackgroundJobId, Directory = task.WorkingDirectory, LogPath = BackgroundLogPath(run),
-                Command = ClaudeCliRunner.FindClaudeCommand(run.CharacterId), SettingsPath = ClaudeSettingsFile.CurrentPath(run.CharacterId),
+                JobName = run.BackgroundJobName, JobId = run.BackgroundJobId, Directory = ClaudeTaskService.RunDirectory(task, run), LogPath = BackgroundLogPath(run),
+                Command = String.IsNullOrEmpty(command) ? ClaudeCliRunner.FindClaudeCommand(run.CharacterId) : command, SettingsPath = profile.EffectiveSettingsPathFor(run.CharacterId),
                 Update = delegate(BackgroundSessionSnapshot snapshot)
                 {
                     if (!String.IsNullOrEmpty(snapshot.JobId)) run.BackgroundJobId = snapshot.JobId;
@@ -148,10 +150,20 @@ namespace XianPal
 
         internal static void OpenBackgroundSession(ScheduledClaudeTask task, ClaudeTaskRunRecord run)
         {
+            Process.Start(BuildBackgroundAttachStartInfo(task, run));
+        }
+
+        internal static ProcessStartInfo BuildBackgroundAttachStartInfo(ScheduledClaudeTask task, ClaudeTaskRunRecord run)
+        {
             if (task == null || run == null || !BackgroundTaskSupervisor.ValidJobId(run.BackgroundJobId)) throw new InvalidOperationException("后台会话 ID 尚未取得；请稍后重试，或在 CLI 运行 claude agents。");
-            string script = "$ErrorActionPreference='Stop'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + task.WorkingDirectory.Replace("'", "''") + "'; claude attach '" + run.BackgroundJobId + "'";
-            Process.Start(new ProcessStartInfo("powershell.exe", "-NoLogo -NoProfile -NoExit -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)))
-            { WorkingDirectory = Directory.Exists(task.WorkingDirectory) ? task.WorkingDirectory : Program.StateDirectory, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Normal });
+            string directory = ClaudeTaskService.RunDirectory(task, run);
+            if (!Directory.Exists(directory)) throw new DirectoryNotFoundException("任务目录不存在。");
+            string command = ClaudeCliRunner.FindClaudeCommand(run.CharacterId) ?? "claude";
+            string settings = ClaudeSettingsFile.CurrentPath(run.CharacterId);
+            string script = "$ErrorActionPreference='Stop'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + directory.Replace("'", "''") + "'; " +
+                ClaudeSettingsFile.PowerShellSetup(settings, command) + "try { & '" + command.Replace("'", "''") + "' " + (settings.Length == 0 ? "" : "--settings $xianpalSettings ") + "attach '" + run.BackgroundJobId + "' } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }";
+            return new ProcessStartInfo("powershell.exe", "-NoLogo -NoProfile -NoExit -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)))
+            { WorkingDirectory = directory, UseShellExecute = true, WindowStyle = ProcessWindowStyle.Normal };
         }
     }
 }

@@ -31,6 +31,23 @@ internal static class Program
             Console.WriteLine(typeof(Program).Assembly.GetName().Version?.ToString(3));
             return 0;
         }
+        if (args.Length > 0 && args[0] == "--install")
+        {
+            try
+            {
+                if (args.Contains("--silent"))
+                {
+                    int index = Array.IndexOf(args, "--install-dir");
+                    if (index < 0 || index + 1 >= args.Length) throw new ArgumentException("Silent installation requires --install-dir followed by a directory.");
+                    var result = LinuxPackage.Install(AppContext.BaseDirectory, args[index + 1]);
+                    Console.WriteLine("XianPal installed: " + Path.GetFullPath(args[index + 1]));
+                    if (result.Warning.Length > 0) Console.Error.WriteLine(result.Warning);
+                    return 0;
+                }
+                return AppBuilder.Configure<LinuxInstallerApp>().UsePlatformDetect().WithDesktopFonts().WithLinuxRendering().StartWithClassicDesktopLifetime(Array.Empty<string>());
+            }
+            catch (Exception error) { Console.Error.WriteLine(error.Message); return 1; }
+        }
         if (args.Length == 2 && args[0] == "--terminal-job") return LinuxTerminalJob.Execute(args[1]);
         if (args.Length == 2 && args[0] == "--native-task-hook")
         {

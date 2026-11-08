@@ -707,7 +707,7 @@ namespace XianPal
             string conversation = record == null ? "" : record.Transcript;
             if (String.IsNullOrWhiteSpace(conversation) && record != null) conversation = record.Summary;
             if (String.IsNullOrWhiteSpace(conversation)) conversation = "此记录没有保存到可显示的回复内容。";
-            return UiLanguage.Text("任务：") + "\r\n" + (task == null ? "" : task.Prompt) + "\r\n\r\n" + UiLanguage.Text("Claude 回复：") + "\r\n" + conversation;
+            return UiLanguage.Text("任务：") + "\r\n" + ClaudeTaskService.RunPrompt(task, record) + "\r\n\r\n" + UiLanguage.Text("Claude 回复：") + "\r\n" + conversation;
         }
 
         private static string BuildMeta(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
@@ -718,12 +718,12 @@ namespace XianPal
             {
                 string state = record == null ? "Unknown" : UiLanguage.Text(record.StatusText);
                 string details = record == null || record.Status == "running" || record.RunMode == "claude-background" ? state : state + " · Exit code " + record.ExitCode;
-                return time + " · " + TaskPresentation.Mode(record == null ? null : record.RunMode) + " · " + details + "\r\nRun as: " + TaskPresentation.Owner(record == null ? task == null ? null : task.CharacterId : record.CharacterId) + " · Folder: " + (task == null ? "" : task.WorkingDirectory);
+                return time + " · " + TaskPresentation.Mode(record == null ? null : record.RunMode) + " · " + details + "\r\nRun as: " + TaskPresentation.Owner(record == null ? task == null ? null : task.CharacterId : record.CharacterId) + " · Folder: " + ClaudeTaskService.RunDirectory(task, record);
             }
             string mode = ClaudeTaskService.RunModeLabel(record == null ? null : record.RunMode);
             if (record != null && record.RunMode != "background") mode += " / " + (record.DesktopNumber == 0 ? "当前桌面" : "桌面 " + record.DesktopNumber);
             string result = record != null && record.RunMode == "claude-background" ? record.StatusText + "（依据后台状态；非创建命令退出码）" : record != null && record.Status == "running" ? "运行中（实时更新）" : "退出码 " + (record == null ? "—" : record.ExitCode.ToString());
-            return time + "  ·  " + mode + "  ·  " + result + "\r\n目录：" + (task == null ? "" : task.WorkingDirectory);
+            return time + "  ·  " + mode + "  ·  " + result + "\r\n目录：" + ClaudeTaskService.RunDirectory(task, record);
         }
     }
 }

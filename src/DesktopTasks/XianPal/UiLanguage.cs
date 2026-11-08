@@ -196,7 +196,8 @@ namespace XianPal
             { "成员编号", "Member ID" }, { "姓名", "Name" }, { "职责 / 系统提示", "Role / instructions" },
             { "任务编号", "Task ID" }, { "依赖任务编号", "Dependency IDs" }, { "任务内容", "Task instructions" },
             { "事件", "Event" }, { "本地时间，如2026-11-05 09:00", "Local time, e.g. 2026-11-05 09:00" },
-            { "重复：once/daily/weekly", "Repeat: once/daily/weekly" }, { "关联门派名称（可空）", "Linked team (optional)" }
+            { "重复：once/daily/weekly", "Repeat: once/daily/weekly" }, { "关联门派名称（可空）", "Linked team (optional)" },
+            { "启动仙伴", "Launch XianPal" }, { "安装完成。", "Installation complete." }, { "原安装已备份到：", "Previous installation saved at:" }
         };
         private static readonly Dictionary<string, string> Reverse = BuildReverse();
     }

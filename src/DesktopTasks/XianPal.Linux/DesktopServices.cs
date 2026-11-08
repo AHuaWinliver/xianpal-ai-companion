@@ -135,11 +135,12 @@ internal sealed class DesktopServices : IDisposable
 
     private void MonitorBackground(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
     {
-        backgroundSupervisor.ClaudeCommand = ClaudeCliRunner.FindClaudeCommand(task.CharacterId) ?? "claude";
+        var profile = IntegrationPreferences.Load();
+        string command = profile.ExecutablePathFor(record.CharacterId);
         backgroundSupervisor.Track(new BackgroundTaskWatch
         {
-            JobName = record.BackgroundJobName, JobId = record.BackgroundJobId, Directory = task.WorkingDirectory,
-            Command = ClaudeCliRunner.FindClaudeCommand(record.CharacterId), SettingsPath = ClaudeSettingsFile.CurrentPath(record.CharacterId),
+            JobName = record.BackgroundJobName, JobId = record.BackgroundJobId, Directory = ClaudeTaskService.RunDirectory(task, record),
+            Command = string.IsNullOrEmpty(command) ? ClaudeCliRunner.FindClaudeCommand(record.CharacterId) : command, SettingsPath = profile.EffectiveSettingsPathFor(record.CharacterId),
             LogPath = LinuxTerminalJob.LogPath(record), Update = snapshot =>
             {
                 if (disposed) return;

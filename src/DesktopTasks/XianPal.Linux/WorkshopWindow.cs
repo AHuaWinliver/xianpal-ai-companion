@@ -14,7 +14,7 @@ internal static class WorkshopWindow
     {
         var sects = new ComboBox { ItemsSource = service.Workshop.Sects, SelectedIndex = 0, MinWidth = 220 };
         if (selectedName != null) sects.SelectedItem = service.Workshop.Sects.Find(sect => sect.Name == selectedName);
-        var goal = DesktopUi.Label("");
+        var goal = DesktopUi.DataLabel("");
         var hall = new UniformGrid { Columns = 2, Margin = new Thickness(20), MinHeight = 220 };
         var detail = new TextBox { IsReadOnly = true, AcceptsReturn = true, TextWrapping = TextWrapping.Wrap, MinHeight = 100, MaxHeight = 240 };
         var logs = new ComboBox { MinWidth = 220 };

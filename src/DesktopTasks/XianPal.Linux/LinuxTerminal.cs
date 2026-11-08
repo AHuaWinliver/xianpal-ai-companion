@@ -54,6 +54,8 @@ internal static class LinuxTerminal
     {
         string command = ClaudeCliRunner.FindClaudeCommand(characterId) ?? throw new FileNotFoundException("未找到 Claude Code CLI。");
         var arguments = new List<string>();
+        string settings = ClaudeSettingsFile.CurrentPath(characterId);
+        if (!string.IsNullOrEmpty(settings)) { arguments.Add("--settings"); arguments.Add(settings); }
         if (!string.IsNullOrEmpty(session))
         {
             if (attach)
@@ -67,8 +69,6 @@ internal static class LinuxTerminal
                 arguments.Add("--resume"); arguments.Add(session);
             }
         }
-        string settings = ClaudeSettingsFile.CurrentPath(characterId);
-        if (!string.IsNullOrEmpty(settings)) { arguments.Add("--settings"); arguments.Add(settings); }
         using var process = Process.Start(BuildStartInfo(command, arguments, directory));
     }
 

@@ -65,7 +65,7 @@ internal static class ReminderWindows
         {
             Padding = new Thickness(18), CornerRadius = new CornerRadius(16),
             Background = new SolidColorBrush(Color.Parse("#FAF6EA")),
-            Child = DesktopUi.Stack(title, DesktopUi.Label(reminder.Text), buttons),
+            Child = DesktopUi.Stack(title, DesktopUi.DataLabel(reminder.Text), buttons),
             MaxWidth = 520
         };
         if (reduceMotion || reminder.IsCountdown || reminder.Effect == "popup")

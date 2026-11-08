@@ -72,6 +72,11 @@ internal static class ProfileSettingsTests
             string script = PetForm.BuildTerminalStartInfo(root, role.Id).Arguments;
             script = Encoding.Unicode.GetString(Convert.FromBase64String(script.Substring(script.LastIndexOf(' ') + 1)));
             Check(script.Contains(executable.Replace("'", "''")) && script.Contains(preferences.SettingsPathFor(role.Id)), role.Id + " manual terminal uses the same profile with quoted paths");
+            var task = new ScheduledClaudeTask { CharacterId = "orbit", WorkingDirectory = root };
+            var record = new ClaudeTaskRunRecord { CharacterId = role.Id, BackgroundJobId = "job-profile-test", WorkingDirectory = root };
+            script = PetForm.BuildBackgroundAttachStartInfo(task, record).Arguments;
+            script = Encoding.Unicode.GetString(Convert.FromBase64String(script.Substring(script.LastIndexOf(' ') + 1)));
+            Check(script.Contains(executable.Replace("'", "''")) && script.Contains("attach 'job-profile-test'") && script.Contains(preferences.SettingsPathFor(role.Id)), role.Id + " background attach uses the recorded owner, not the edited task owner");
         }
         string removed = preferences.ExecutablePathFor("moss"); File.Delete(removed);
         bool rejected = false; try { ClaudeCliRunner.FindClaudeCommand("moss"); } catch (FileNotFoundException) { rejected = true; }
@@ -93,8 +98,10 @@ internal static class ProfileSettingsTests
                 service.CompleteRun(task, run.Id, true, 0, "原文 🌱", DateTime.Now);
                 service.RecordSkipped(task, DateTime.Now, "Still active");
                 string replacement = role.Id == "orbit" ? "spark" : "orbit";
-                service.Update(task, task.Prompt, task.WorkingDirectory, "weekly", TimeSpan.FromHours(10), DayOfWeek.Friday, 60, DateTime.Now, "background", "block", replacement);
+                string editedDirectory = Path.Combine(XianPal.Program.StateDirectory, "edited-folder"); Directory.CreateDirectory(editedDirectory);
+                service.Update(task, "Updated task 中文🌱", editedDirectory, "weekly", TimeSpan.FromHours(10), DayOfWeek.Friday, 60, DateTime.Now, "background", "block", replacement);
                 Check(run.CharacterId == role.Id && task.History[0].CharacterId == role.Id && task.CharacterId == replacement, "editing owner preserves historical and skipped run identities for " + role.Id);
+                Check(run.WorkingDirectory == XianPal.Program.StateDirectory && run.Prompt.Contains("Keep original") && ClaudeTaskRunTranscriptForm.BuildTranscript(task, run).Contains("Keep original"), "historical directory and original prompt survive task edits for " + role.Id);
             }
             using (var window = new ClaudeTaskForm(service))
             {

@@ -156,7 +156,7 @@ internal static class TaskWindow
                 bool background = selected?.RunMode == "claude-background";
                 string session = background ? selected?.BackgroundJobId : selected?.BackgroundSessionId;
                 if (string.IsNullOrWhiteSpace(session)) return;
-                LinuxTerminal.OpenClaude(task.WorkingDirectory, selected?.CharacterId ?? task.CharacterId, session, background);
+                LinuxTerminal.OpenClaude(ClaudeTaskService.RunDirectory(task, selected), selected?.CharacterId ?? task.CharacterId, session, background);
             }
             catch (Exception error) { DesktopUi.Notice(owner, "无法打开会话", error.Message); }
         });

@@ -88,7 +88,7 @@ internal sealed class PetWindow : Window
         services.Reminders.ReminderDue += reminder => ReminderWindows.ShowAlert(this, services.Reminders, reminder, preferences.ReduceMotion);
         services.EventDue += plan =>
         {
-            var dialog = DesktopUi.Dialog("事件到点", DesktopUi.Stack(DesktopUi.Label(plan.Title),
+            var dialog = DesktopUi.Dialog("事件到点", DesktopUi.Stack(DesktopUi.DataLabel(plan.Title),
                 DesktopUi.Action("查看事件和门派", () => WorkshopWindow.Show(this, services, plan.Sect))), 410, 180);
             dialog.Show(this);
         };

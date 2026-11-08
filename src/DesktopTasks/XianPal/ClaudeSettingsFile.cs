@@ -18,8 +18,7 @@ namespace XianPal
         internal static string CurrentPath(string characterId = null)
         {
             IntegrationPreferences preferences = IntegrationPreferences.Load();
-            string path = preferences.SettingsPathFor(characterId);
-            return Validate(path.Length > 0 ? path : preferences.ClaudeSettingsPath);
+            return Validate(preferences.EffectiveSettingsPathFor(characterId));
         }
 
         internal static string Validate(string path)

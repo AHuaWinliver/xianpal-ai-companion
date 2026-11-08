@@ -70,6 +70,12 @@ namespace XianPal
                 ? path ?? "" : "";
         }
 
+        internal string EffectiveSettingsPathFor(string characterId)
+        {
+            string path = SettingsPathFor(characterId);
+            return String.IsNullOrWhiteSpace(path) ? ClaudeSettingsPath ?? "" : path;
+        }
+
         internal void SetSettingsPath(string characterId, string path)
         {
             if (String.IsNullOrEmpty(characterId))

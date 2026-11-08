@@ -6,7 +6,12 @@ namespace XianPal
 {
     internal static class TaskPresentation
     {
-        internal static string Owner(string id) { return UiLanguage.Text(PetCharacter.OwnerName(id)); }
+        internal static string Owner(string id)
+        {
+            foreach (PetCharacter profile in PetCharacter.All)
+                if (String.Equals(profile.Id, id, StringComparison.OrdinalIgnoreCase)) return UiLanguage.Text(profile.Name);
+            return PetCharacter.OwnerName(id);
+        }
         internal static string Desktop(int number) { return number == 0 ? UiLanguage.Text("当前桌面") : UiLanguage.Format("桌面 {0}", number); }
         internal static string Mode(string mode)
         {
