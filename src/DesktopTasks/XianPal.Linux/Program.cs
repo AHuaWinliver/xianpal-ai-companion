@@ -39,7 +39,7 @@ internal static class Program
             Console.Error.WriteLine("仙伴已在当前用户的桌面运行。");
             return 1;
         }
-        return AppBuilder.Configure<DesktopApp>().UsePlatformDetect().WithDesktopFonts().StartWithClassicDesktopLifetime(args);
+        return AppBuilder.Configure<DesktopApp>().UsePlatformDetect().WithDesktopFonts().WithLinuxRendering().StartWithClassicDesktopLifetime(args);
     }
 }
 

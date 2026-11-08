@@ -109,7 +109,7 @@ jobs:
             getconf GNU_LIBC_VERSION
             /app/launch.sh --self-test
             Xvfb :99 -screen 0 1440x900x24 >/evidence/xvfb.log 2>&1 &
-            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1
+            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XIANPAL_RENDERER=software
             sleep 1
             dbus-run-session -- sh -ec "metacity --replace >/evidence/wm.log 2>&1 & exec /app/launch.sh --desktop-test /evidence"
           ' || status=$?
@@ -177,7 +177,7 @@ jobs:
           persist-credentials: false
       - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333
         with:
-          name: ${{ matrix.artifact || 'linux-compat-x64-build-for-testing' }}
+          name: ${{ matrix.artifact || 'linux-ubuntu-24.04-build-for-testing' }}
           path: build/distro-app
       - name: Restore executable permissions
         run: |
@@ -197,7 +197,7 @@ jobs:
             if [ -x /app/launch.sh ]; then launcher=/app/launch.sh; fi
             "$launcher" --self-test
             Xvfb :99 -screen 0 1440x900x24 >/evidence/xvfb.log 2>&1 &
-            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1
+            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XIANPAL_RENDERER=software
             sleep 1
             dbus-run-session -- sh -ec "openbox >/evidence/wm.log 2>&1 & exec $launcher --desktop-test /evidence"
           ' || status=$?

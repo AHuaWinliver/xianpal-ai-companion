@@ -1,5 +1,7 @@
 # Linux 移植与兼容性
 
+[English](LINUX.en.md)
+
 Linux 桌面端在 `linux` 分支开发，复用 Windows 端的角色配置、任务调度、提醒与门派依赖执行代码。发布条件是功能移植和目标平台的原生验证全部通过。
 
 ## 目标环境与兼容构建
@@ -24,6 +26,20 @@ sh src/DesktopTasks/XianPal.Linux/diagnose-linux.sh
 兼容包将 C++ 运行库放在应用的 `runtime/` 下，由 `launch.sh` 为该进程加载。制作机在打包时下载固定版本并核对 SHA256，同时附带 GCC 运行库许可、例外条款及构建配方。部署机使用已准备好的文件，不需要在内网执行下载脚本。
 
 两种构建内嵌 Noto 简体中文与彩色表情字体，使用 SIL Open Font License 1.1；字体许可及来源清单保留在资源包 `fonts/` 目录。字体仅在制作机下载并校验固定 SHA256，运行时无需联网，也无需修改系统字体。
+
+应用兼容性测试不会改变上游系统和运行时的支持周期。可运行现代构建的机器优先使用现代构建；CentOS 7 兼容候选的旧运行时需要在发布前单独确认后续维护方案。
+
+## 内网与 VNC 启动
+
+自包含应用运行时不需要另装 .NET SDK、Node.js 或 Python；独立安装的 Claude CLI 仍可能需要其自身运行环境。系统的 ICU、OpenSSL、Fontconfig、X11 等原生库仍需具备，离线依赖包应按目标发行版及架构准备。不要在部署机运行字体或 C++ 运行库的制作脚本。
+
+当前使用 X11，Wayland 会话需要 XWayland。TurboVNC 等会话若有不可用的 GLX 上下文，可显式选择 CPU 绘制。
+
+```sh
+XIANPAL_RENDERER=software ./launch.sh
+```
+
+未设置时默认尝试 GLX，并保留软件绘制回退。环境检查脚本会列出图形会话、显示器、原生库、终端及 Claude 路径，不安装包、不调用模型。
 
 ## 兼容性验证范围
 

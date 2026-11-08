@@ -35,7 +35,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
 """);
         File.SetUnixFileMode(fixture, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", fixture);
-        return AppBuilder.Configure<DesktopValidation>().UsePlatformDetect().WithDesktopFonts().StartWithClassicDesktopLifetime(Array.Empty<string>());
+        return AppBuilder.Configure<DesktopValidation>().UsePlatformDetect().WithDesktopFonts().WithLinuxRendering().StartWithClassicDesktopLifetime(Array.Empty<string>());
     }
 
     public override void Initialize() => Styles.Add(new Avalonia.Themes.Fluent.FluentTheme());
@@ -101,7 +101,9 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 if (pet.Services.Execution.Record.Status != "success" || pet.Services.Execution.Record.Transfers.Count == 0)
                     throw new Exception("Native four-agent execution or handoffs failed.");
                 File.WriteAllText(Path.Combine(evidence, "result.txt"),
-                    "PASS native Linux desktop: four characters, Unicode conversation, isolated task history, reminders UI and four-agent handoffs.");
+                    "PASS native Linux desktop: four characters, Unicode conversation, isolated task history, reminders UI and four-agent handoffs.\n" +
+                    "Runtime: .NET " + Environment.Version + "\nArchitecture: " + System.Runtime.InteropServices.RuntimeInformation.ProcessArchitecture +
+                    "\nRenderer preference: " + (Environment.GetEnvironmentVariable("XIANPAL_RENDERER") ?? "auto") + "\n");
                 desktop.Shutdown(0);
             }
             catch (Exception error)

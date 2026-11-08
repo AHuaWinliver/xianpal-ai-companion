@@ -98,7 +98,7 @@ Find the installer in `dist/` and offline animation and performance previews in 
 
 ## Linux port and compatibility
 
-The Linux desktop application is under development on the `linux` branch for x86_64 and ARM64, with a separate compatibility build for older system libraries. The first native ARM64 checks cover Unicode chat, isolated background tasks and four-companion dependency handoffs. Full feature migration and distribution validation are ongoing. [Screenshots, test results and release checklist](docs/LINUX.md)
+The Linux desktop application is under development on the `linux` branch for x86_64 and ARM64, with a separate compatibility build for older system libraries. Native Ubuntu and CentOS 7 userspace checks cover Unicode chat, isolated background tasks and four-companion dependency handoffs. Chinese and emoji fonts are bundled for consistent display. Full feature migration and expanded distribution validation are ongoing. [Screenshots, test results and release checklist](docs/LINUX.en.md)
 
 ![Native Linux ARM64 workshop hall with isolated demonstration data](docs/images/linux-workshop.png)
 
