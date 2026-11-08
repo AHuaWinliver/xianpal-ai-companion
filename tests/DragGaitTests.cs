@@ -87,9 +87,12 @@ internal static class DragGaitTests
             pet.Show();Application.DoEvents();((Timer)Field(pet,"timer")).Stop();((Timer)Field(pet,"visibilityTimer")).Stop();
             Set(pet,"aiCareEnabled",false);Set(pet,"reduceMotion",false);
             Rectangle area=Screen.FromRectangle(pet.Bounds).WorkingArea;
-            var defaults = (ToolStripMenuItem)pet.ContextMenuStrip.Items.Cast<ToolStripItem>().Single(item => item.Text == "默认设置");
-            var opacity = (ToolStripMenuItem)defaults.DropDownItems.Cast<ToolStripItem>().Single(item => item.Text == "贴边不透明度");
-            opacity.DropDownItems.Cast<ToolStripMenuItem>().Single(item => (int)item.Tag == 60).PerformClick();
+            var defaults = (ToolStripMenuItem)pet.ContextMenuStrip.Items.Cast<ToolStripItem>().Single(item => item.Text == UiLanguage.Text("Default settings"));
+            Check(!defaults.HasDropDownItems, "infrequent settings open a separate window");
+            defaults.PerformClick(); Application.DoEvents();
+            Form settings = Application.OpenForms.Cast<Form>().Single(form => form.Name == "DefaultSettingsWindow");
+            ((NumericUpDown)settings.Controls.Find("DockedOpacity", true).Single()).Value = 60;
+            ((Button)settings.Controls.Find("ApplySettings", true).Single()).PerformClick(); Application.DoEvents();
             var alpha = typeof(PetForm).GetProperty("PetWindowAlpha", BindingFlags.NonPublic | BindingFlags.Instance);
             Check((byte)alpha.GetValue(pet, null) == 255, "opacity setting keeps an undocked pet fully visible");
             pet.Location = new Point(area.Left, area.Top + 100);

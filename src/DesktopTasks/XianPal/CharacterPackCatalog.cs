@@ -1,13 +1,18 @@
 // SPDX-License-Identifier: Apache-2.0
 using System;
 using System.Collections.Generic;
+#if XIANPAL_LINUX
+using Image = Avalonia.Media.Imaging.Bitmap;
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+#else
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Web.Script.Serialization;
+#endif
 using System.IO;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Web.Script.Serialization;
 
 namespace XianPal
 {
@@ -153,12 +158,29 @@ namespace XianPal
                             if (data.Length < 33 || BigEndian(data, 0) != 0x89504e47 || BigEndian(data, 4) != 0x0d0a1a0a || BigEndian(data, 8) != 13 || BigEndian(data, 12) != 0x49484452 || BigEndian(data, 16) != 384 || BigEndian(data, 20) != 416)
                                 throw new InvalidDataException(state + "/" + f.ToString("00") + ".png 必须为384×416的真实PNG。");
                             hash.TransformBlock(data, 0, data.Length, data, 0);
+#if XIANPAL_LINUX
+                            using (var png = SkiaSharp.SKData.CreateCopy(data))
+                            using (var codec = SkiaSharp.SKCodec.Create(png))
+                            {
+                                if (codec == null || codec.EncodedFormat != SkiaSharp.SKEncodedImageFormat.Png ||
+                                    codec.Info.AlphaType == SkiaSharp.SKAlphaType.Opaque)
+                                    throw new InvalidDataException("动作PNG必须带透明通道。");
+                                using (var decoded = new SkiaSharp.SKBitmap(codec.Info))
+                                {
+                                    if (codec.GetPixels(decoded.Info, decoded.GetPixels()) != SkiaSharp.SKCodecResult.Success)
+                                        throw new InvalidDataException("动作PNG无法完整解码。");
+                                }
+                                if (loadImages)
+                                    using (var stream = new MemoryStream(data, false)) frames.Add(new Image(stream));
+                            }
+#else
                             using (MemoryStream stream = new MemoryStream(data, false))
                             using (Image image = Image.FromStream(stream, false, true))
                             {
                                 if (image.RawFormat.Guid != ImageFormat.Png.Guid || image.Width != 384 || image.Height != 416 || !Image.IsAlphaPixelFormat(image.PixelFormat)) throw new InvalidDataException("动作PNG必须带透明通道。");
                                 if (loadImages) frames.Add(new Bitmap(image));
                             }
+#endif
                         }
                     }
                     hash.TransformFinalBlock(new byte[0], 0, 0);

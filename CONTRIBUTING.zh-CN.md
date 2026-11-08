@@ -24,8 +24,8 @@ AI 辅助素材应保留实际提示词、参考图授权与切分区域，不�
 
 ## 人物与动作贡献
 
-先阅读 [人物定制与动画规范](docs/CHARACTER-CUSTOMIZATION.md)，复制
-[人物定制规格单](docs/templates/CHARACTER-SPEC.md) 记录造型、来源、分层裁区、
+先阅读 [人物定制与动画规范](docs/CHARACTER-CUSTOMIZATION.zh-CN.md)，复制
+[人物定制规格单](docs/templates/CHARACTER-SPEC.zh-CN.md) 记录造型、来源、分层裁区、
 连接锚点、步态、表情和全屏演出。修复动作时不更改已确认人物造型；双足保持对侧协调，
 四足保持对角交替；两条手臂/前肢遵守当前始终最外层的规则。
 

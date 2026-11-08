@@ -18,7 +18,16 @@ Chat beside one of four animated companions, drop a file into a Claude Code conv
 2. Before using AI features, make sure `claude` starts in your terminal and connects to the service you configured. Desktop interactions and local reminders work independently.
 3. Right-click the companion and open **Default settings (默认设置)** to choose a working directory and Claude configuration. Double-click a reply bubble to continue the conversation. Use the tray menu to hide or restore the companion.
 
-[Setup guide in Chinese](docs/GETTING-STARTED.md) · [Changelog](CHANGELOG.md)
+[Setup guide](docs/GETTING-STARTED.md) · [Changelog](CHANGELOG.md)
+
+<details>
+<summary>Installer preview</summary>
+
+Choose English or Simplified Chinese and an installation folder while previewing the original companion animations.
+
+![XianPal setup with language choice, destination and animated character preview](docs/images/installer.png)
+
+</details>
 
 <a id="features"></a>
 ## Features
@@ -51,11 +60,11 @@ The hall uses the desktop companions' original animation frames and scales them 
 
 ### Claude settings for each companion
 
-Right-click the companion and open **Default settings → Claude settings file (默认设置 → Claude 配置文件)**. Choose a shared JSON file or set an override under **By companion (按角色设置)**. Team members use their own profiles. Scheduled tasks use the companion active when the run starts. The same menu also gives you control over the working directory, docked opacity and virtual desktop visibility.
+Open **Default settings → Companions** in the separate settings window. Choose a Claude executable and JSON settings file globally or per companion. When creating a task, choose **Run as**; its saved owner determines the profile, independently of the companion currently on your desktop. The task overview shows all companions with their avatars. Settings also include English / 简体中文, working directory and docked opacity. [Profiles and task ownership](docs/COMPANION-PROFILES.md)
 
 <a id="claude-settings"></a>
 
-![The Default settings menu expanded to show Feijian's Claude configuration](docs/images/claude-settings.png)
+![The separate settings window with a companion-specific Claude executable and JSON profile](docs/images/claude-settings.png)
 
 *UI images use demonstration data.*
 
@@ -95,6 +104,12 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\build.ps1
 ```
 
 Find the installer in `dist/` and offline animation and performance previews in `build/previews/`. Pass `-SkipInstaller` to build the app and previews only. [Development and testing guide](docs/DEVELOPMENT.md)
+
+## Linux port and compatibility
+
+The Linux desktop application is under development on the `linux` branch for x86_64 and ARM64, with a separate compatibility build for older system libraries. Native Ubuntu and CentOS 7 userspace checks cover Unicode chat, isolated background tasks and four-companion dependency handoffs. Chinese and emoji fonts are bundled for consistent display. Full feature migration and expanded distribution validation are ongoing. [Screenshots, test results and release checklist](docs/LINUX.en.md)
+
+![Native CentOS 7 workshop hall with isolated demonstration data](docs/images/linux-workshop.png)
 
 ## Contributing
 

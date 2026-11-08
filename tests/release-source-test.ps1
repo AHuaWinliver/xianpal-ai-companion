@@ -51,7 +51,7 @@ foreach ($name in @('docs/CHARACTER-CUSTOMIZATION.md','docs/CHARACTER-PACKS.md',
         if ($target -and -not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $path) $target))) { throw ('Broken contributor documentation link: '+$name+' -> '+$target) }
     }
 }
-foreach ($name in @('hero.png','characters.png','workbench.png','walking.gif','sword-flight.gif','social-preview.png','version.svg','windows.svg','license.svg')) {
+foreach ($name in @('installer.png','chat-bubbles.png','hero.png','characters.png','workbench.png','walking.gif','sword-flight.gif','social-preview.png','version.svg','windows.svg','license.svg')) {
     $file = Get-Item -LiteralPath (Join-Path $projectRoot ('docs/images/'+$name))
     if ($file.Length -le 0 -or $file.Length -gt 5MB) { throw ('README media empty or too large: '+$name) }
 }

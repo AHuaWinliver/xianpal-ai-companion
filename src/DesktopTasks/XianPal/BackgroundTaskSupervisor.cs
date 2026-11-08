@@ -5,7 +5,13 @@ using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+using Timer = XianPal.Linux.UiTimer;
+#else
 using System.Web.Script.Serialization;
+using Timer = System.Windows.Forms.Timer;
+#endif
 
 namespace XianPal
 {
@@ -20,6 +26,7 @@ namespace XianPal
     internal sealed class BackgroundTaskWatch
     {
         internal string JobName, JobId, Directory, LogPath;
+        internal string Command, SettingsPath;
         internal Action<BackgroundSessionSnapshot> Update;
     }
 
@@ -28,7 +35,7 @@ namespace XianPal
     // daemon controls, private Claude state parsing or worker process killing.
     internal sealed class BackgroundTaskSupervisor : IDisposable
     {
-        private readonly System.Windows.Forms.Timer timer = new System.Windows.Forms.Timer { Interval = 500 };
+        private readonly Timer timer = new Timer { Interval = 500 };
         private readonly List<BackgroundTaskWatch> watches = new List<BackgroundTaskWatch>();
         private readonly object gate = new object();
         private List<KeyValuePair<BackgroundTaskWatch, BackgroundSessionSnapshot>> pending;
@@ -63,22 +70,31 @@ namespace XianPal
                 List<KeyValuePair<BackgroundTaskWatch, BackgroundSessionSnapshot>> results = new List<KeyValuePair<BackgroundTaskWatch, BackgroundSessionSnapshot>>();
                 try
                 {
-                    object[] sessions = null;
-                    string queryError = "";
-                    bool needsQuery = Array.Exists(batch, delegate(BackgroundTaskWatch w) { return File.Exists(w.LogPath + ".dispatch-exit") || !String.IsNullOrEmpty(w.JobId); });
-                    if (needsQuery)
-                    {
-                        try
-                        {
-                            string json = Query(command, "agents --json --all", batch[0].Directory);
-                            sessions = new JavaScriptSerializer { MaxJsonLength = 2097152 }.DeserializeObject(json.Trim()) as object[];
-                            if (sessions == null) throw new InvalidOperationException("Claude agents 未返回 JSON 数组。");
-                        }
-                        catch (Exception ex) { queryError = ex.Message; }
-                    }
+                    var batches = new Dictionary<string, object[]>();
+                    var errors = new Dictionary<string, string>();
                     foreach (BackgroundTaskWatch watch in batch)
                     {
                         if (disposed) break;
+                        string watchCommand = String.IsNullOrWhiteSpace(watch.Command) ? command : watch.Command;
+                        string settings = watch.SettingsPath ?? "";
+                        string key = watchCommand + "\0" + settings;
+                        bool needsQuery = File.Exists(watch.LogPath + ".dispatch-exit") || !String.IsNullOrEmpty(watch.JobId);
+                        if (needsQuery && !batches.ContainsKey(key))
+                        {
+                            object[] rows = null;
+                            try
+                            {
+                                string json = Query(watchCommand, "agents --json --all", watch.Directory, settings);
+                                rows = new JavaScriptSerializer { MaxJsonLength = 2097152 }.DeserializeObject(json.Trim()) as object[];
+                                if (rows == null) throw new InvalidOperationException("Claude agents 未返回 JSON 数组。");
+                            }
+                            catch (Exception ex) { errors[key] = ex.Message; }
+                            batches[key] = rows;
+                        }
+                        object[] sessions;
+                        batches.TryGetValue(key, out sessions);
+                        string queryError;
+                        errors.TryGetValue(key, out queryError);
                         BackgroundSessionSnapshot snapshot = new BackgroundSessionSnapshot();
                         int launchCode;
                         if (ReadExit(watch.LogPath, out launchCode) && launchCode != 0)
@@ -95,7 +111,12 @@ namespace XianPal
                                 snapshot = ParseSession(found);
                                 if (ValidJobId(snapshot.JobId))
                                 {
-                                    try { snapshot.Output = ActivityTrayForm.NormalizeOutput(Query(command, "logs '" + snapshot.JobId + "'", watch.Directory)); }
+                                    try { snapshot.Output =
+#if XIANPAL_LINUX
+                                        XianPal.Linux.LinuxTerminal.CleanOutput(Query(watchCommand, "logs '" + snapshot.JobId + "'", watch.Directory, settings)); }
+#else
+                                        ActivityTrayForm.NormalizeOutput(Query(watchCommand, "logs '" + snapshot.JobId + "'", watch.Directory, settings)); }
+#endif
                                     catch { snapshot.Output = ""; } // state remains authoritative; logs are optional
                                 }
                             }
@@ -156,10 +177,32 @@ namespace XianPal
 
         internal static string Query(string command, string arguments, string directory)
         {
-            string script = "$utf8=New-Object Text.UTF8Encoding($false); [Console]::OutputEncoding=$utf8; $OutputEncoding=$utf8; & '" + command.Replace("'", "''") + "' " + arguments + "; if($null -ne $LASTEXITCODE){exit $LASTEXITCODE}";
+            return Query(command, arguments, directory, "");
+        }
+
+        internal static string Query(string command, string arguments, string directory, string settingsPath)
+        {
+#if XIANPAL_LINUX
+            string[] options;
+            if (arguments == "agents --json --all") options = new[] { "agents", "--json", "--all" };
+            else if (arguments.StartsWith("logs '", StringComparison.Ordinal) && arguments.EndsWith("'", StringComparison.Ordinal) && ValidJobId(arguments.Substring(6, arguments.Length - 7)))
+                options = new[] { "logs", arguments.Substring(6, arguments.Length - 7) };
+            else throw new ArgumentException("Unsupported background status query.");
+            return XianPal.Linux.LinuxTerminal.QueryConfigured(command, directory, settingsPath, options);
+#else
+            string script = "$utf8=New-Object Text.UTF8Encoding($false); [Console]::OutputEncoding=$utf8; $OutputEncoding=$utf8; & '" + command.Replace("'", "''") + "' " +
+                (String.IsNullOrEmpty(settingsPath) ? "" : "--settings '" + settingsPath.Replace("'", "''") + "' ") + arguments + "; if($null -ne $LASTEXITCODE){exit $LASTEXITCODE}";
             ProcessStartInfo info = new ProcessStartInfo("powershell.exe", "-NoLogo -NoProfile -NonInteractive -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)))
             { WorkingDirectory = Directory.Exists(directory) ? directory : Program.StateDirectory, UseShellExecute = false, CreateNoWindow = true, RedirectStandardOutput = true, RedirectStandardError = true };
             ClaudeCliRunner.ConfigureUtf8(info);
+            if (!String.IsNullOrEmpty(settingsPath))
+            {
+                Dictionary<string, object> selected = ClaudeSettingsFile.Read(settingsPath);
+                object environment;
+                if (selected.TryGetValue("env", out environment))
+                    foreach (KeyValuePair<string, object> pair in (Dictionary<string, object>)environment)
+                        info.EnvironmentVariables[pair.Key] = Convert.ToString(pair.Value);
+            }
             StringBuilder output = new StringBuilder(), error = new StringBuilder();
             using (Process process = new Process { StartInfo = info })
             {
@@ -171,6 +214,7 @@ namespace XianPal
                 if (process.ExitCode != 0) throw new InvalidOperationException("Claude 状态查询失败：" + error.ToString());
                 return output.ToString();
             }
+#endif
         }
 
         private static bool ReadExit(string path, out int code)

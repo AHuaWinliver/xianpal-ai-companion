@@ -53,6 +53,16 @@ internal static class IntegrationTaskTests
                 Emit(new { type = "stream_event", @event = new { type = "content_block_start", index = 1, content_block = new { type = "tool_use", id = "tool1", name = "Bash", input = new { } } } });
                 Emit(new { type = "stream_event", @event = new { type = "content_block_delta", index = 1, delta = new { type = "input_json_delta", partial_json = "{\"command\":\"echo 测试工具\"}" } } });
                 Emit(new { type = "stream_event", @event = new { type = "content_block_stop", index = 1 } });
+                // Keep the fixture in its tool phase until the UI monitor has
+                // observed it. A loaded CI desktop must not turn this into a
+                // race between a fixed sleep and a Windows Forms timer tick.
+                string acknowledgment = Environment.GetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK");
+                if (!String.IsNullOrEmpty(acknowledgment) && Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
+                {
+                    Stopwatch waiting = Stopwatch.StartNew();
+                    while (!File.Exists(acknowledgment) && waiting.ElapsedMilliseconds < 15000) Thread.Sleep(40);
+                    if (!File.Exists(acknowledgment)) { Console.Error.WriteLine("Live stream monitor did not acknowledge the tool phase."); return 86; }
+                }
                 Thread.Sleep(1600);
                 Emit(new { type = "user", message = new { content = new[] { new { type = "tool_result", tool_use_id = "tool1", content = "工具执行成功 ✅", is_error = false } } } });
                 Thread.Sleep(500);
@@ -278,6 +288,7 @@ internal static class IntegrationTaskTests
         File.WriteAllText(Path.Combine(bin, "claude.cmd"), "@echo off\r\n\"" + Assembly.GetExecutingAssembly().Location + "\" %*\r\n", Encoding.ASCII);
         string oldPath = Environment.GetEnvironmentVariable("PATH");
         string oldState = Environment.GetEnvironmentVariable("FUFU_STATE_DIR");
+        string previousAcknowledgment = Environment.GetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK");
         Environment.SetEnvironmentVariable("PATH", bin + Path.PathSeparator + oldPath);
         Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", Path.Combine(bin, "claude.cmd"));
         string settingsPath = Path.Combine(root, "角色 Claude O'Brien & %FUFU_TEST_PATH_TOKEN%.json");
@@ -290,6 +301,8 @@ internal static class IntegrationTaskTests
             {
                 string mode = scenario == "background-parallel" ? "background" : scenario;
                 Environment.SetEnvironmentVariable("FUFU_STATE_DIR", Path.Combine(root, "live-" + scenario));
+                string acknowledgment = Path.Combine(Program.StateDirectory, "live-stream-observed");
+                Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", ClaudeTaskService.IsInteractiveMode(mode) ? null : acknowledgment);
                 var preferences = new IntegrationPreferences { ClaudeSettingsPath = Path.Combine(root, "unused-default.json") };
                 preferences.SetSettingsPath("orbit", settingsPath);
                 preferences.Save();
@@ -302,7 +315,8 @@ internal static class IntegrationTaskTests
                     form.GetType().GetMethod("QueueScheduledClaudeTask", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { task });
                     ClaudeTaskRunRecord run = task.History[0];
                     Require(!bubble.Visible && run.RunMode == mode, scenario + " keeps the selected execution mode and opens no reply bubble");
-                    Require(PumpUntil(delegate { return run.Transcript.Contains("中文回复") && run.Status == "running"; }, 10000), mode + " task history receives reply before completion");
+                    Require(PumpUntil(delegate { return run.Transcript.Contains("中文回复") && run.Status == "running"; }, 20000), mode + " task history receives reply before completion; status=" + run.Status + ", exit=" + run.ExitCode + (run.Status == "failed" ? ", fixture output=" + run.Transcript : ""));
+                    if (!ClaudeTaskService.IsInteractiveMode(mode)) File.WriteAllText(acknowledgment, "observed");
                     System.Collections.Generic.List<ActivityRecord> activities = (System.Collections.Generic.List<ActivityRecord>)Field(form, "activities");
                     Require(activities.Count == 0 && !bubble.Visible, scenario + " live output stays out of ordinary chat");
                     if (ClaudeTaskService.IsInteractiveMode(mode))
@@ -339,6 +353,7 @@ internal static class IntegrationTaskTests
         {
             Environment.SetEnvironmentVariable("PATH", oldPath);
             Environment.SetEnvironmentVariable("FUFU_STATE_DIR", oldState);
+            Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", previousAcknowledgment);
             Environment.SetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND", null);
             Environment.SetEnvironmentVariable("FUFU_TEST_EXPECTED_SETTINGS", null);
             Environment.SetEnvironmentVariable("FUFU_TEST_PATH_TOKEN", null);
@@ -547,10 +562,13 @@ internal static class IntegrationTaskTests
                 ProcessStartInfo info = (ProcessStartInfo)build.Invoke(null, new object[] { task, path, Assembly.GetExecutingAssembly().Location });
                 string token = Regex.Match(info.Arguments, @"OrbitTask-[a-f0-9]{32}").Value;
                 bool done = false; int code = -99; string output = ""; int completions = 0; bool progress = false, liveBeforeCompleted = false, toolState = false;
-                using (VisibleTaskMonitor monitor = new VisibleTaskMonitor(path, delegate(string value) { progress = value.Contains("中文回复"); if (progress && !File.Exists(path + ".completed")) liveBeforeCompleted = true; }, delegate(int result, string value) { code = result; output = value; completions++; done = true; }, delegate(string status, string session, string reaction) { if (reaction == "PreToolUse" && session.Length > 0) toolState = true; }))
+                string acknowledgment = path + ".observed";
+                string previousAcknowledgment = Environment.GetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK");
+                using (VisibleTaskMonitor monitor = new VisibleTaskMonitor(path, delegate(string value) { progress = value.Contains("中文回复"); if (progress && !File.Exists(path + ".completed")) liveBeforeCompleted = true; }, delegate(int result, string value) { code = result; output = value; completions++; done = true; }, delegate(string status, string session, string reaction) { if (reaction == "PreToolUse" && session.Length > 0) { toolState = true; File.WriteAllText(acknowledgment, "observed"); } }))
                 {
                     try
                     {
+                        Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", variant == 0 ? acknowledgment : null);
                         monitor.Start(info);
                         Require(PumpUntil(delegate { return done; }, 25000), mode + " completion handshake");
                         Require(code == (variant == 1 ? 7 : 0) && completions == 1, mode + " actual exit code, exactly one completion");
@@ -569,6 +587,7 @@ internal static class IntegrationTaskTests
                     }
                     finally
                     {
+                        Environment.SetEnvironmentVariable("XIANPAL_TEST_STREAM_ACK", previousAcknowledgment);
                         if (done && mode == "terminal")
                         {
                             IntPtr ownWindow = VirtualDesktopService.FindTaskTerminalWindow(token);

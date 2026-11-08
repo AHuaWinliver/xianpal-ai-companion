@@ -339,7 +339,7 @@ namespace XianPal
         }
         private void QueueRender(){renderPending=true;if(Visible&&!renderTimer.Enabled)renderTimer.Start();}
         private void RenderSelected()
-        {ActivityRecord item=list.SelectedItem as ActivityRecord;conversation.Present(item);emptyDetails.Visible=item==null;if(heading!=null)heading.Text=item==null?"仙伴 · 对话":String.IsNullOrEmpty(item.CharacterId)?"Claude · 对话":PetCharacter.Find(item.CharacterId).Name+" · 对话";if(statusCaption!=null)statusCaption.Text=item==null?"Claude Code":"Claude Code · "+(item.State=="正在运行"?"正在回复":item.State??"就绪");UpdateReplyState();}
+        {ActivityRecord item=list.SelectedItem as ActivityRecord;conversation.Present(item);emptyDetails.Visible=item==null;if(heading!=null)heading.Text=(item==null?"XianPal":String.IsNullOrEmpty(item.CharacterId)?"Claude":TaskPresentation.Owner(item.CharacterId))+" · "+UiLanguage.Text("对话");if(statusCaption!=null)statusCaption.Text=item==null?"Claude Code":"Claude Code · "+UiLanguage.Text(item.State=="正在运行"?"正在回复":item.State??"就绪");UpdateReplyState();}
         internal ChatConversationView ConversationForTest {get{return conversation;}}
         internal void FlushConversationForTest(){renderPending=false;RenderSelected();}
 
@@ -394,7 +394,7 @@ namespace XianPal
             Rectangle timeBounds = new Rectangle(e.Bounds.Right - 56, e.Bounds.Top + 10, 46, 22);
             Rectangle titleBounds = new Rectangle(stateBounds.Right + 2, e.Bounds.Top + 10, timeBounds.Left - stateBounds.Right - 6, 22);
             using (Font stateFont = new Font(list.Font, FontStyle.Bold))
-                TextRenderer.DrawText(e.Graphics, item.State ?? "", stateFont, stateBounds, stateColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
+                TextRenderer.DrawText(e.Graphics, UiLanguage.Text(item.State ?? ""), stateFont, stateBounds, stateColor, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(e.Graphics, item.Title ?? "Claude Code 会话", list.Font, titleBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
             TextRenderer.DrawText(e.Graphics, item.Updated.ToString("HH:mm"), list.Font, timeBounds, Color.FromArgb(130, 130, 126), TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
         }

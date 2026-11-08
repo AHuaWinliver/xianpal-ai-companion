@@ -4,7 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+#else
 using System.Web.Script.Serialization;
+#endif
 
 namespace XianPal
 {
@@ -39,10 +43,21 @@ namespace XianPal
         internal void Start(string prompt, string workingDirectory, string resumeSessionId, string internalTaskId, string characterId = null)
         {
             if (IsRunning) throw new InvalidOperationException("Claude 正在处理上一个请求。");
-            string claude = FindClaudeCommand();
+            string claude = FindClaudeCommand(characterId);
             if (claude == null) throw new FileNotFoundException("未找到本机 Claude Code CLI。请先确认终端中可以运行 claude。 ");
 
             ProcessStartInfo info = BuildStartInfo(claude, workingDirectory, resumeSessionId, internalTaskId, characterId);
+#if XIANPAL_LINUX
+            sawStreamingText = false;
+            sawAssistantText = false;
+            currentSessionId = null;
+            taskStream = String.IsNullOrWhiteSpace(internalTaskId) ? null : new ClaudeTaskStreamRenderer();
+            previousTaskStatus = previousTaskReaction = "";
+            process = Process.Start(info) ?? throw new InvalidOperationException("Claude Code CLI 启动失败。");
+            RaiseStatus("Claude 正在思考…");
+            Process running = process;
+            _ = System.Threading.Tasks.Task.Run(() => ReadLinuxProcess(running, prompt));
+#else
             process = new Process();
             process.StartInfo = info;
             process.EnableRaisingEvents = true;
@@ -73,7 +88,37 @@ namespace XianPal
             input.Flush();
             input.Close();
             RaiseStatus("Claude 正在思考…");
+#endif
         }
+
+#if XIANPAL_LINUX
+        private async System.Threading.Tasks.Task ReadLinuxProcess(Process running, string prompt)
+        {
+            int code = 1;
+            try
+            {
+                var output = ReadLinuxLines(running.StandardOutput, ParseLine);
+                var diagnostics = ReadLinuxLines(running.StandardError, HandleDiagnostic);
+                using (Stream input = running.StandardInput.BaseStream)
+                {
+                    try { await input.WriteAsync(EncodeInput(prompt)); }
+                    catch (IOException) { } // The CLI may close stdin before reporting a startup error.
+                }
+                await System.Threading.Tasks.Task.WhenAll(output, diagnostics, running.WaitForExitAsync());
+                code = running.ExitCode;
+            }
+            catch (Exception error) when (error is IOException || error is InvalidOperationException)
+            {
+                RaiseOutput(error.Message);
+            }
+            finally { Completed?.Invoke(code); }
+        }
+
+        private static async System.Threading.Tasks.Task ReadLinuxLines(StreamReader reader, Action<string> receive)
+        {
+            while (await reader.ReadLineAsync() is string line) receive(line);
+        }
+#endif
 
         internal static ProcessStartInfo BuildStartInfo(string claude, string workingDirectory, string resumeSessionId)
         {
@@ -86,9 +131,20 @@ namespace XianPal
             string directory = Directory.Exists(workingDirectory)
                 ? Path.GetFullPath(workingDirectory)
                 : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            string arguments = BuildArguments(resumeSessionId);
             string settingsPath = ClaudeSettingsFile.CurrentPath(characterId);
             ProcessStartInfo info = new ProcessStartInfo();
+#if XIANPAL_LINUX
+            if (!Directory.Exists(workingDirectory))
+                throw new DirectoryNotFoundException("Claude 工作目录不存在：" + workingDirectory);
+            info.FileName = claude;
+            foreach (string option in BuildArguments(resumeSessionId).Split(' ')) info.ArgumentList.Add(option);
+            if (settingsPath.Length > 0)
+            {
+                info.ArgumentList.Add("--settings");
+                info.ArgumentList.Add(settingsPath);
+            }
+#else
+            string arguments = BuildArguments(resumeSessionId);
             if (claude.EndsWith(".cmd", StringComparison.OrdinalIgnoreCase) || claude.EndsWith(".bat", StringComparison.OrdinalIgnoreCase))
             {
                 info.FileName = Environment.GetEnvironmentVariable("ComSpec") ?? "cmd.exe";
@@ -105,6 +161,7 @@ namespace XianPal
                 info.FileName = claude;
                 info.Arguments = arguments + (settingsPath.Length == 0 ? "" : " --settings \"" + settingsPath + "\"");
             }
+#endif
             info.WorkingDirectory = directory;
             info.UseShellExecute = false;
             info.CreateNoWindow = true;
@@ -124,7 +181,11 @@ namespace XianPal
 
         internal void Stop()
         {
+#if XIANPAL_LINUX
+            try { if (IsRunning) process.Kill(entireProcessTree: true); } catch (InvalidOperationException) { } catch (System.ComponentModel.Win32Exception) { }
+#else
             try { if (IsRunning) process.Kill(); } catch { }
+#endif
         }
 
         internal void ParseLine(string line)
@@ -249,25 +310,50 @@ namespace XianPal
             return text.ToString();
         }
 
-        private static string FindClaudeCommand()
+        internal static string FindClaudeCommand()
         {
+            return FindClaudeCommand(null);
+        }
+
+        internal static string RequireClaudeCommand(string characterId)
+        {
+            string command = FindClaudeCommand(characterId);
+            if (String.IsNullOrWhiteSpace(command)) throw new FileNotFoundException("Claude Code CLI was not found. Choose an executable in Default settings.");
+            return command;
+        }
+
+        internal static string FindClaudeCommand(string characterId)
+        {
+            string configured = IntegrationPreferences.Load().ExecutablePathFor(characterId);
+            if (!String.IsNullOrWhiteSpace(configured)) return IntegrationPreferences.ValidateExecutable(configured);
             if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
             {
                 string fixture = Environment.GetEnvironmentVariable("FUFU_TEST_CLAUDE_COMMAND");
                 return File.Exists(fixture) ? fixture : null;
             }
             string home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+#if XIANPAL_LINUX
+            string[] commandNames = { "claude" };
+            string[] candidates = {
+                Path.Combine(home, ".local", "bin", "claude"),
+                Path.Combine(home, "APP", "claude"),
+                Path.Combine(home, "APP", "claude", "claude"),
+                Path.Combine(home, "APP", "claude", "bin", "claude")
+            };
+#else
             string appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
             string[] candidates = {
                 Path.Combine(home, ".local", "bin", "claude.exe"),
                 Path.Combine(appData, "npm", "claude.cmd")
             };
+            string[] commandNames = { "claude.exe", "claude.cmd", "claude.bat" };
+#endif
             foreach (string candidate in candidates) if (File.Exists(candidate)) return candidate;
             string path = Environment.GetEnvironmentVariable("PATH") ?? "";
             foreach (string entry in path.Split(Path.PathSeparator))
             {
                 string clean = entry.Trim().Trim('"');
-                foreach (string name in new[] { "claude.exe", "claude.cmd", "claude.bat" })
+                foreach (string name in commandNames)
                 {
                     string candidate = Path.Combine(clean, name);
                     if (File.Exists(candidate)) return candidate;

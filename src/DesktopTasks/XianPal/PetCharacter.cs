@@ -11,6 +11,28 @@ namespace XianPal
         internal string[] Quotes;
         internal string ResourceRoot = null, ResourceRevision = null;
         internal bool IsExternal { get { return !String.IsNullOrEmpty(ResourceRoot); } }
+        internal string AvatarPath
+        {
+            get
+            {
+                string root = System.IO.Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
+                if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
+                    root = Environment.GetEnvironmentVariable("XIANPAL_TEST_ASSETS") ?? root;
+#if XIANPAL_LINUX
+                root = Environment.GetEnvironmentVariable("XIANPAL_ASSETS") ?? root;
+#endif
+                if (IsExternal) root = ResourceRoot;
+                else if (Id != "orbit") root = System.IO.Path.Combine(root, "characters", Id);
+                return System.IO.Path.Combine(root, "idle", "00.png");
+            }
+        }
+
+        internal static string OwnerName(string id)
+        {
+            foreach (PetCharacter character in Available)
+                if (String.Equals(character.Id, id, StringComparison.OrdinalIgnoreCase)) return character.Name;
+            return String.IsNullOrWhiteSpace(id) ? "Unassigned" : "Unavailable companion (" + id + ")";
+        }
         private static PetCharacter[] external = new PetCharacter[0];
         internal static PetCharacter[] Available
         {

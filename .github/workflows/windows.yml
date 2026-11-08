@@ -23,9 +23,21 @@ jobs:
       - name: Startup display name and isolated legacy migration
         shell: pwsh
         run: ./tests/startup-registration-test.ps1
+      - name: Language switching, companion profiles and task ownership (no model calls)
+        shell: pwsh
+        run: ./tests/profile-settings-test.ps1
+      - name: Custom installation folder and embedded animated preview
+        shell: pwsh
+        run: ./tests/installer-configuration-test.ps1
       - name: Offline smoke tests (no Claude calls)
         shell: pwsh
         run: ./tests/smoke-test.ps1
+      - name: Native Claude Background lifecycle (isolated mock CLI)
+        shell: pwsh
+        run: ./tests/claude-background-test.ps1
+      - name: Native terminal interaction, Unicode and task isolation (mock CLI)
+        shell: pwsh
+        run: ./tests/integration-task-test.ps1
       - name: Planner and multi-agent scheduler (fake agents only)
         shell: pwsh
         run: ./tests/workshop-test.ps1
