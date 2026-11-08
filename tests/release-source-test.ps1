@@ -14,6 +14,10 @@ if ([regex]::Match($installer, 'const string Version = "([0-9.]+)"').Groups[1].V
 $changelog = [IO.File]::ReadAllText((Join-Path $projectRoot 'CHANGELOG.md'))
 if ($changelog -notmatch ('(?m)^##[ \t]+' + [regex]::Escape($version) + '(?:[ \t]|$)')) { throw ('Changelog entry missing for '+$version) }
 $ignored = [IO.File]::ReadAllText((Join-Path $projectRoot '.gitignore'))
+$defaultReadme = [IO.File]::ReadAllText((Join-Path $projectRoot 'README.md'))
+$chineseReadme = [IO.File]::ReadAllText((Join-Path $projectRoot 'README.zh-CN.md'))
+if (-not $defaultReadme.Contains('[简体中文](README.zh-CN.md)') -or -not $chineseReadme.Contains('[English](README.md)')) { throw 'README language navigation missing' }
+if ($defaultReadme -ne [IO.File]::ReadAllText((Join-Path $projectRoot 'README.en.md'))) { throw 'English README compatibility entry is stale' }
 foreach ($file in Get-ChildItem -LiteralPath (Join-Path $projectRoot 'src/DesktopTasks') -Recurse -Filter '*.cs' -File) {
     $source = [IO.File]::ReadAllText($file.FullName)
     foreach ($match in [regex]::Matches($source, '(?m)^\s*namespace\s+([A-Za-z_][A-Za-z0-9_.]*)')) {
@@ -24,7 +28,7 @@ foreach ($script in @('BuildOriginalCharacters.cs','BuildAppIcon.cs','PublicFile
     if (-not (Test-Path -LiteralPath (Join-Path $projectRoot ('tools/'+$script)))) { throw ('Required build file absent: '+$script) }
     if ($ignored -match '(?m)^/tools/\*\s*$' -and -not $ignored.Contains('!/tools/'+$script)) { throw ('Required tool ignored by Git: '+$script) }
 }
-foreach ($name in @('README.md','README.en.md')) {
+foreach ($name in @('README.md','README.en.md','README.zh-CN.md')) {
     $path = Join-Path $projectRoot $name
     $text = [IO.File]::ReadAllText($path)
     if ($text -match '尚未重新打包发布|[A-Za-z]:[\\/]AI[\\/]') { throw ('Stale/local-only README content: '+$name) }
@@ -47,7 +51,7 @@ foreach ($name in @('docs/CHARACTER-CUSTOMIZATION.md','docs/CHARACTER-PACKS.md',
         if ($target -and -not (Test-Path -LiteralPath (Join-Path (Split-Path -Parent $path) $target))) { throw ('Broken contributor documentation link: '+$name+' -> '+$target) }
     }
 }
-foreach ($name in @('hero.png','characters.png','workbench.png','walking.gif','sword-flight.gif','social-preview.png','version.svg','windows.svg','license.svg')) {
+foreach ($name in @('installer.png','chat-bubbles.png','hero.png','characters.png','workbench.png','walking.gif','sword-flight.gif','social-preview.png','version.svg','windows.svg','license.svg')) {
     $file = Get-Item -LiteralPath (Join-Path $projectRoot ('docs/images/'+$name))
     if ($file.Length -le 0 -or $file.Length -gt 5MB) { throw ('README media empty or too large: '+$name) }
 }

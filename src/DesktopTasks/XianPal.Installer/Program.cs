@@ -17,15 +17,15 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("仙伴 · AI桌面伴侣 安装程序")]
 [assembly: AssemblyProduct(XianPal.StartupRegistration.DisplayName)]
-[assembly: AssemblyVersion("0.6.11.0")]
-[assembly: AssemblyFileVersion("0.6.11.0")]
+[assembly: AssemblyVersion("0.6.12.0")]
+[assembly: AssemblyFileVersion("0.6.12.0")]
 
 namespace XianPal.Installer
 {
     internal static class Program
     {
         internal const string AppName = XianPal.StartupRegistration.DisplayName;
-        internal const string Version = "0.6.11";
+        internal const string Version = "0.6.12";
         internal static string InstallDirectory = ResolveInstallDirectory();
         internal static string PetExe { get { return Path.Combine(InstallDirectory, "OrbitPet.exe"); } }
 

@@ -1,30 +1,25 @@
-# 左右气泡对话 · 0.6.7
+# Conversation interface
 
-## 默认在人物正下方展开（0.6.7）
+[简体中文](CHAT-UI.zh-CN.md)
 
-双击桌面回复气泡展开聊天时，窗口位于人物正下方8px并水平居中。普通位置不移动人物；下方至少能容纳350px高的窗口时优先缩短窗口以保持人物位置；仍不够时将人物上移，左右贴边时将人物与窗口一起向内调整。定位仅使用人物所在显示器工作区，不使用双屏总体中心。极小显示器放不下人物和可用窗口时优先保持两者可见，可能存在重叠。
+![Conversation and task overview](images/workbench.png)
 
-窗口使用Manual初始定位，计算并设置人物/窗口位置后才显示，避免首帧出现在系统默认位置。自动调整人物时会阻止Move事件重新触发贴靠，原来的标题栏联动拖动保留。双击人物原有AI互动不被替换；这里调整的是双击回复气泡展开对话的位置。
+Double-click the desktop reply bubble to expand a conversation below its companion. The initial position is computed before showing the window, within that companion's monitor. Windows can shorten the window or reposition the pair when space is limited. A very small display can still require overlap.
 
-## 拖动窗口与人物（0.6.7）
+The desktop bubble is not selectable. Expanded conversations support selecting and copying text; they remain open until manually closed. Opening the pet's context menu hides the small reply bubble.
 
-在标题栏空白、角色名称或Claude状态文字上按住鼠标左键拖动。超过4px阈值才开始移动，宠物与对话窗口保持原有相对位置，释放后保存宠物位置。正文、输入框和按钮不会触发拖窗，仍支持选中文字。
+## Messages and updates
 
-拖动期间暂停宠物Move自动重贴对话框的逻辑，避免回弹。目标屏幕取鼠标所在显示器的工作区，而不是两个显示器的虚拟桌面中心。一般情况整组一起限制在边界内；较小显示器放不下原布局时，释放后优先保证人物和对话窗口可见，可能重新排布而不继续保留原偏移。隐藏人物时不会强制重新显示，单独可见的对话窗口仍能拖动。
+User messages appear on the right and companion replies on the left. Explicit speaker metadata separates new turns; the app does not infer user messages from quoted text such as “You:”. Legacy or native CLI output without trustworthy turn metadata remains one intact output block. Native CLI conversations continue in their terminal.
 
-鼠标释放、捕获丢失和关闭/隐藏窗口都会结束联动；不会改变正在运行的Claude任务或强制切换人物动作。新增`ChatWindowDrag.cs`、`PetForm.ChatDrag.cs`与`tests/chat-drag-test.ps1`。
+Windows merges streaming updates about every 120 ms and preserves selections and scroll position. The Linux port uses a 100 ms update interval. This limits token-by-token flicker without discarding text. New output follows the bottom only when the reader was already there.
 
-动态窗口改为聊天布局：用户消息在右侧浅绿气泡，道友回复在左侧白色气泡。显示角色头像、名称和时间，窗口右上角“会话”展开历史会话选择；默认收起给正文留出空间。
+Windows uses `RICHEDIT50W` and font fallback; Chinese text is not assigned an emoji font. Emoji color depends on the OS. Enter sends and Shift+Enter adds a line, with an IME composition guard. The Linux conversation currently uses Ctrl+Enter to send. New sends are disabled while a response is running.
 
-新发起与继续回复的消息以明确的user/assistant角色记录，不使用正则表达式从“你：”判断发言人。模型引用这段文字也不会生成假用户消息。旧的外部/native CLI输出缺少可靠角色元数据，因此仍完整保存在一条左侧输出里，不冒险猜分多轮。原生CLI会话仍在对应终端继续输入，不改成GUI续接。
+## Moving the pair
 
-- 继续使用原有Claude调用、会话ID和任务历史；平面Output仍保留供旧任务记录/气泡联动兼容。
-- 流式更新以120ms为合并刷新间隔，不按每个token重建窗口或全部气泡。正文修改时短暂关闭原生重绘，格式化后一次刷新。
-- 阅读到末尾时跟随新内容；翻阅较早内容时保留外层滚动位置。文本选区在流式追加后保留。
-- 中文和emoji使用原生RICHEDIT50W与字体回退。表情的彩色显示取决于系统字体和RichEdit，不保证各版本Windows完全相同。
-- 展开后可选择文字复制，右键正文可复制整条消息；桌面小气泡原有不可选中文字行为不变。
-- Enter发送、Shift+Enter换行，中文输入法组合输入时不误发送。回复期间禁止重复发送，会话切换保留未发送草稿。
-- 单条长回复超过600px时正文内部可滚动；保留最近80条/约110000字符，单条最长约100000字符，并保护Unicode代理对。
-- 窗口仍只在手动点击关闭后隐藏；不因失去焦点自动关闭。消息记录仍是本次运行的活动数据，不新增永久聊天数据库。
+On Windows, drag the title area, companion name or status after a small movement threshold. The pet follows while text and buttons keep their normal interactions. Positioning uses the monitor under the pointer and ends cleanly on release, lost capture or close. On Linux, moving the native conversation window updates the companion position through window-position events.
 
-新增文件：`ChatConversationView.cs`；修改`ActivityTrayForm.cs`与`PetForm.cs`。验证命令：`./tests/chat-bubble-test.ps1`，无模型调用；另运行原有编码、任务和CLI集成回归。
+Message activity is local to the current run; this interface does not add a permanent chat database. Scheduled-task transcripts remain in their separate persisted run history.
+
+Validation: `tests/chat-bubble-test.ps1`, `tests/chat-drag-test.ps1` and the CLI integration tests. They use isolated fixtures rather than paid model calls.

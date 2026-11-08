@@ -1,18 +1,18 @@
-# 发布检查清单
+# Release acceptance
 
-- [ ] VERSION、应用及安装器程序集、安装器显示版本、README 和附件名称均为 0.6.11。
-- [ ] GitHub 标签为 `v0.6.11`，发布类型为预发布，更新说明包含大堂角色清晰度改动。
-- [ ] 中英 README 的相对图片/文档链接正常；演示数据已标注，社交封面与角色素材可公开使用。
-- [ ] 必需工具未被 .gitignore 排除；release-source-test 通过。
+[简体中文](RELEASE-CHECKLIST.zh-CN.md)
 
-- [ ] 确认源码及历史贡献的版权授权，LICENSE 与 NOTICE 正确。
-- [ ] 审阅原创角色轮廓、名称和台词；Apache-2.0 不替第三方授权，也不提供不侵权担保。
-- [ ] 只从干净导出的源码包创建仓库；git status 不包含旧素材、备份、运行记录或密钥。
-- [ ] TestRepository、构建、smoke、任务专项及安装/卸载测试通过。
-- [ ] drag-gait-test 验证四位角色随鼠标速度加减速，转向保持相位，停住后恢复站姿。
-- [ ] 空目录可重建源码包；离线检查角色所有状态、左右方向、透明边与提醒。
-- [ ] 内网目标机验证 CLI 版本、中文、虚拟桌面和 Background；不从单机测试推断全部环境兼容。
-- [ ] Release 附件包含安装器、SHA256、源码包和已知限制；不要把大安装包提交到 Git。
-- [ ] 发布者检查 GitHub 权限、分支保护、依赖更新与秘密扫描设置。
-
-没有执行 git init、commit、push 或创建远程仓库。上传之前由维护者完成以上确认。
+- [ ] `VERSION`, app/installer metadata, changelog, tag and asset names agree.
+- [ ] The tag identifies the exact tested source commit; published assets are not silently replaced.
+- [ ] English/Chinese README and guide links work; screenshots use sanitized demo data and English-first captions.
+- [ ] Major features include images and setup instructions. Changes and versions are recorded in release notes rather than dominating the README.
+- [ ] Required tools are included by the source exporter; `TestRepository` and `release-source-test` pass.
+- [ ] Code and artwork provenance, licensing, `LICENSE` and `NOTICE` have been reviewed. Apache-2.0 does not license unrelated third-party characters.
+- [ ] A clean short-path source export rebuilds without private settings, logs or cached dependencies.
+- [ ] Relevant motion, transparency, chat/IME/emoji, CLI, schedule/history, workshop, installation and startup checks pass.
+- [ ] Four companions move in both directions, vary cadence with drag speed, stop correctly and retain their approved proportions.
+- [ ] Installation supports the chosen folder, upgrades preserve existing data, and recovery/cleanup behavior is checked.
+- [ ] Real target CLI version, permissions, native Background, display scaling and multiple monitors are tested.
+- [ ] Linux releases pass the system/architecture matrix plus real kernel/desktop acceptance; container evidence is not presented as a TurboVNC test.
+- [ ] Attachments contain the platform package, source archive, checksums and accurate known limitations.
+- [ ] Branch protection, repository permissions and public reports do not expose credentials or private data.

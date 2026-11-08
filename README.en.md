@@ -2,9 +2,9 @@
 
 # XianPal
 
-**A Windows AI desktop companion for your local Claude Code CLI.**
+**An animated desktop companion for Claude Code.**
 
-[简体中文](README.md) · [Get started](#get-started) · [Features](#features) · [Create a companion](#custom-characters) · [Download](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
+[简体中文](README.zh-CN.md) · [Get started](#get-started) · [Features](#features) · [Create a companion](#custom-characters) · [Download](https://github.com/AHuaWinliver/xianpal-ai-companion/releases)
 
 <img src="docs/images/hero.png" alt="XianPal's four original cultivation-inspired desktop companions" width="100%">
 
@@ -18,7 +18,16 @@ Chat beside one of four animated companions, drop a file into a Claude Code conv
 2. Before using AI features, make sure `claude` starts in your terminal and connects to the service you configured. Desktop interactions and local reminders work independently.
 3. Right-click the companion and open **Default settings (默认设置)** to choose a working directory and Claude configuration. Double-click a reply bubble to continue the conversation. Use the tray menu to hide or restore the companion.
 
-[Setup guide in Chinese](docs/GETTING-STARTED.md) · [Changelog](CHANGELOG.md)
+[Setup guide](docs/GETTING-STARTED.md) · [Changelog](CHANGELOG.md)
+
+<details>
+<summary>Installer preview</summary>
+
+Choose English or Simplified Chinese and an installation folder while previewing the original companion animations.
+
+![XianPal setup with language choice, destination and animated character preview](docs/images/installer.png)
+
+</details>
 
 <a id="features"></a>
 ## Features
@@ -51,11 +60,11 @@ The hall uses the desktop companions' original animation frames and scales them 
 
 ### Claude settings for each companion
 
-Right-click the companion and open **Default settings → Claude settings file (默认设置 → Claude 配置文件)**. Choose a shared JSON file or set an override under **By companion (按角色设置)**. Team members use their own profiles. Scheduled tasks use the companion active when the run starts. The same menu also gives you control over the working directory, docked opacity and virtual desktop visibility.
+Open **Default settings → Companions** in the separate settings window. Choose a Claude executable and JSON settings file globally or per companion. When creating a task, choose **Run as**; its saved owner determines the profile, independently of the companion currently on your desktop. The task overview shows all companions with their avatars. Settings also include English / 简体中文, working directory and docked opacity. [Profiles and task ownership](docs/COMPANION-PROFILES.md)
 
 <a id="claude-settings"></a>
 
-![The Default settings menu expanded to show Feijian's Claude configuration](docs/images/claude-settings.png)
+![The separate settings window with a companion-specific Claude executable and JSON profile](docs/images/claude-settings.png)
 
 *UI images use demonstration data.*
 

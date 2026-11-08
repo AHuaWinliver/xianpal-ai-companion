@@ -38,7 +38,7 @@ Containers validate userspace libraries and share the host kernel. They do not
 validate a distribution's original kernel, every desktop environment or the target
 TurboVNC session.
 
-[Complete compatibility matrix results](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42438749416)
+[Complete compatibility matrix results](https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/42484766977)
 
 ![Native Linux workshop using isolated demonstration data](images/linux-workshop.png)
 
@@ -99,13 +99,45 @@ An unset renderer uses GLX with software fallback. Chinese and emoji fonts are
 bundled, so replacing system fonts is unnecessary. State uses the user's XDG state
 directory; external character packs use the XDG data directory's `xianpal/Characters/`.
 
+## Installation and desktop integration
+
+The self-contained Linux directory includes `install.sh`. Run `sh install.sh` in
+your graphical session to select a destination, switch between English and Chinese,
+and preview the original character animations. For unattended installation, use:
+
+```sh
+sh install.sh --silent --install-dir "$HOME/.local/opt/xianpal"
+```
+
+Installation checks the payload and verifies each copied file. Updates retain the
+complete previous directory beside the new installation. An unrelated nonempty
+folder is rejected. Personal state and external character packs remain in the XDG
+directories. Quit the companion before installing; the installer does not stop
+independent Claude jobs. It creates a current-user desktop menu launcher.
+
+**Default settings** includes user autostart, per-companion CLI executable and JSON
+settings, and docked opacity. A tray menu can show or hide the companion. Tray display
+depends on the desktop's StatusNotifierItem / AppIndicator support; launching XianPal
+again also restores a hidden window. [Avalonia tray integration](https://docs.avaloniaui.net/controls/navigation/trayicon/)
+
+Native terminal tasks keep Claude's interactive interface and terminal input. Each
+scheduled task has an explicit companion owner. Claude Background dispatch, status,
+logs and history are isolated from normal conversations. The native test suite uses
+fixture CLIs and real `xterm` windows; it does not submit model requests.
+
 ## Remaining acceptance
 
-The port still needs native terminal and Claude Background modes, tray and startup
-integration, AI movement and light trails, artifact travel, external-character
-performances, and real desktop input, scaling and multi-monitor acceptance. Existing
-automated tests use an isolated fake CLI and never submit model requests. Successful
-smoke tests do not establish complete Windows feature parity.
+The candidate includes shared 24-phase motion, spirit-artifact travel, batched AI
+routes, proactive care, optional light trails and external-character performances.
+Native tests cover directional gait progression, cancellation, opaque edge docking,
+countdown arrival, a single fake-CLI request reused for 24 route plans, and all four
+external performance styles. Trails require both native mouse-through support and
+an active X11 compositor; otherwise the overlay is disabled.
+
+The responsive hall now uses original frames, desks and recorded handoff connections.
+Real desktop input, display scaling, multiple monitors, the target CLI and final
+visual acceptance remain required. Fake-CLI success does not establish complete
+Windows feature parity or target-environment acceptance.
 
 The target's kernel 3.10, actual Claude installation and TurboVNC must be checked on
 the intranet desktop before claiming that environment is fully supported. See the

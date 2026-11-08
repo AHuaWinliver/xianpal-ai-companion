@@ -45,9 +45,12 @@ internal static class InstallerConfigurationTests
                 Check(clips.Count == 4, "installer contains four feature preview clips");
                 foreach (Array clip in clips) Check(clip.Length == 24, "preview uses the complete 24-frame original artwork sequence");
                 window.Location = new Point(SystemInformation.VirtualScreen.Right + 100, 0);
+                // Use a public illustrative path in screenshot evidence.
+                destination.Text = @"C:\Apps\XianPal";
                 window.Show(); Application.DoEvents();
                 using (var capture = new Bitmap(window.Width, window.Height))
                 { window.DrawToBitmap(capture, new Rectangle(Point.Empty, capture.Size)); capture.Save(Path.Combine(root, "installer-en.png")); }
+                destination.Text = custom;
                 window.Close();
             }
             Console.WriteLine("PASS installer configuration and embedded previews; installation was not started.");
