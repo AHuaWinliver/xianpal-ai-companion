@@ -17,7 +17,10 @@ and third-party contributions before public or commercial distribution.
 Current original identities: 青衡、绯笺、苍芷、小墨. Only broad public genre ideas
 such as robes, cloud patterns, cultivation companionship and turtles are used;
 no affiliation with an existing fictional universe is claimed.
-System fonts are referenced at runtime, not redistributed as font files.
+Windows references system fonts at runtime rather than redistributing them.
+The Linux candidate bundles pinned Noto CJK and Color Emoji fonts under their
+separate OFL 1.1 licenses. Font sources, checksums and licenses accompany the
+Linux build resources; those fonts are not relicensed under Apache-2.0.
 
 Historical assets/, work/, outputs/, excluded legacy source and backups are
 not part of this public release and are not granted any license here. Use the

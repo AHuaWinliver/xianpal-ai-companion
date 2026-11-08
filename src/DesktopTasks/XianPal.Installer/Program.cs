@@ -17,24 +17,40 @@ using System.Windows.Forms;
 
 [assembly: AssemblyTitle("仙伴 · AI桌面伴侣 安装程序")]
 [assembly: AssemblyProduct(XianPal.StartupRegistration.DisplayName)]
-[assembly: AssemblyVersion("0.6.11.0")]
-[assembly: AssemblyFileVersion("0.6.11.0")]
+[assembly: AssemblyVersion("0.6.12.0")]
+[assembly: AssemblyFileVersion("0.6.12.0")]
 
 namespace XianPal.Installer
 {
     internal static class Program
     {
         internal const string AppName = XianPal.StartupRegistration.DisplayName;
-        internal const string Version = "0.6.11";
-        internal static readonly string InstallDirectory = ResolveInstallDirectory();
-        internal static readonly string PetExe = Path.Combine(InstallDirectory, "OrbitPet.exe");
+        internal const string Version = "0.6.12";
+        internal static string InstallDirectory = ResolveInstallDirectory();
+        internal static string PetExe { get { return Path.Combine(InstallDirectory, "OrbitPet.exe"); } }
 
         private static string ResolveInstallDirectory()
         {
             string testRoot = Environment.GetEnvironmentVariable("FUFU_INSTALL_ROOT");
-            return String.IsNullOrWhiteSpace(testRoot)
-                ? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbitPet")
-                : Path.GetFullPath(testRoot);
+            if (!String.IsNullOrWhiteSpace(testRoot)) return Path.GetFullPath(testRoot);
+            string own = AppDomain.CurrentDomain.BaseDirectory;
+            if (Array.Exists(Environment.GetCommandLineArgs(), delegate(string value) { return value == "--uninstall"; }) && File.Exists(Path.Combine(own, ".orbitpet-install"))) return own;
+            using (var installed = Registry.CurrentUser.OpenSubKey("Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\OrbitPet"))
+            {
+                string previous = installed == null ? null : installed.GetValue("InstallLocation") as string;
+                if (!String.IsNullOrWhiteSpace(previous) && File.Exists(Path.Combine(previous, ".orbitpet-install"))) return Path.GetFullPath(previous);
+            }
+            string legacy = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "OrbitPet");
+            if (File.Exists(Path.Combine(legacy, ".orbitpet-install"))) return legacy;
+            return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "XianPal");
+        }
+
+        internal static void SelectInstallDirectory(string value)
+        {
+            string previous = InstallDirectory;
+            InstallDirectory = Path.GetFullPath(value);
+            try { ValidateInstallLocation(false); }
+            catch { InstallDirectory = previous; throw; }
         }
 
         private static bool TestMode
@@ -45,13 +61,27 @@ namespace XianPal.Installer
         [STAThread]
         private static void Main(string[] args)
         {
-            if (args.Length > 0 && String.Equals(args[0], "--uninstall", StringComparison.OrdinalIgnoreCase))
+            try
+            {
+                for (int i = 0; i < args.Length; i++) if (args[i] == "--install-dir")
+                {
+                    if (i + 1 == args.Length) throw new ArgumentException("--install-dir requires a path.");
+                    SelectInstallDirectory(args[++i]);
+                }
+            }
+            catch (Exception error)
+            {
+                if (Array.Exists(args, delegate(string value) { return value == "--silent"; })) Console.Error.WriteLine(error.Message);
+                else MessageBox.Show(error.Message, "XianPal Setup", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                Environment.ExitCode = 1; return;
+            }
+            if (Array.Exists(args, delegate(string value) { return value == "--uninstall"; }))
             {
                 Application.EnableVisualStyles();
                 Uninstall();
                 return;
             }
-            if (args.Length > 0 && String.Equals(args[0], "--silent", StringComparison.OrdinalIgnoreCase))
+            if (Array.Exists(args, delegate(string value) { return value == "--silent"; }))
             {
                 try { Install(); Environment.ExitCode = 0; }
                 catch (Exception ex)
@@ -595,65 +625,4 @@ namespace XianPal.Installer
         }
     }
 
-    internal sealed class InstallerForm : Form
-    {
-        private readonly Button install = new Button();
-        private readonly Label status = new Label();
-
-        internal InstallerForm()
-        {
-            Text = Program.AppName + " 安装程序";
-            Icon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
-            ClientSize = new Size(520, 310);
-            FormBorderStyle = FormBorderStyle.FixedDialog;
-            MaximizeBox = false;
-            StartPosition = FormStartPosition.CenterScreen;
-            BackColor = Color.FromArgb(250, 247, 242);
-
-            Label title = new Label { Text = "仙伴 × Claude Code", Font = new Font("Microsoft YaHei UI", 22, FontStyle.Bold), ForeColor = Color.FromArgb(25, 89, 58), AutoSize = true, Location = new Point(34, 28) };
-            Label description = new Label { Text = "让国风伙伴和墨黑灵龟陪在桌面。\n单击即可向本机 Claude CLI 提问，并实时查看回复。", Font = new Font("Microsoft YaHei UI", 10), ForeColor = Color.FromArgb(60, 82, 68), AutoSize = true, Location = new Point(38, 88) };
-            Label privacy = new Label { Text = "✓ 纯本地联动    ✓ 不读取会话内容    ✓ 无需管理员权限    ✓ 支持内网", Font = new Font("Microsoft YaHei UI", 9), ForeColor = Color.FromArgb(70, 120, 82), AutoSize = true, Location = new Point(38, 154) };
-
-            bool claude = Program.HasClaudeCli();
-            status.Text = claude ? "已检测到本机 Claude Code CLI" : "暂未检测到 Claude CLI；可以先安装宠物，稍后安装 Claude Code";
-            status.Font = new Font("Microsoft YaHei UI", 9);
-            status.ForeColor = claude ? Color.FromArgb(70, 120, 82) : Color.FromArgb(176, 112, 42);
-            status.AutoSize = true;
-            status.Location = new Point(38, 188);
-
-            install.Text = "一键安装";
-            install.Font = new Font("Microsoft YaHei UI", 11, FontStyle.Bold);
-            install.BackColor = Color.FromArgb(98, 78, 62);
-            install.ForeColor = Color.White;
-            install.FlatStyle = FlatStyle.Flat;
-            install.FlatAppearance.BorderSize = 0;
-            install.Size = new Size(170, 44);
-            install.Location = new Point(38, 226);
-            install.Click += InstallClicked;
-
-            Button cancel = new Button { Text = "取消", Font = new Font("Microsoft YaHei UI", 10), Size = new Size(92, 44), Location = new Point(220, 226), FlatStyle = FlatStyle.Flat };
-            cancel.Click += delegate { Close(); };
-            Controls.AddRange(new Control[] { title, description, privacy, status, install, cancel });
-        }
-
-        private void InstallClicked(object sender, EventArgs e)
-        {
-            install.Enabled = false;
-            status.Text = "正在安装并连接 Claude Code…";
-            Cursor = Cursors.WaitCursor;
-            try
-            {
-                Program.Install();
-                MessageBox.Show("安装完成！\n\n仙伴已出现在桌面，并连接本机 Claude Code CLI。\n开始菜单已创建“仙伴 AI桌面伴侣”快捷方式。\n单击仙伴即可输入提示词并查看实时回复。", Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Information);
-                Close();
-            }
-            catch (Exception ex)
-            {
-                status.Text = "安装失败";
-                MessageBox.Show("安装失败：\n" + ex.Message, Program.AppName, MessageBoxButtons.OK, MessageBoxIcon.Error);
-                install.Enabled = true;
-            }
-            finally { Cursor = Cursors.Default; }
-        }
-    }
 }

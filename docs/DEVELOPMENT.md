@@ -1,120 +1,48 @@
-# 开发与动画说明
+# Development and rendering
 
-面向角色贡献者的完整制作流程、坐标/分层约束、动作与演出验收见
-[人物定制与动画规范](CHARACTER-CUSTOMIZATION.md)，新角色可复制
-[定制规格单](templates/CHARACTER-SPEC.md) 记录设计、锚点与测试。
+[简体中文](DEVELOPMENT.zh-CN.md)
 
-## 程序入口
+For artwork, joint constraints and the full review checklist, start with [character customization](CHARACTER-CUSTOMIZATION.md). For installable data-only additions, use [character packs](CHARACTER-PACKS.md).
 
-src/DesktopTasks/XianPal 为应用（命名空间 XianPal），src/DesktopTasks/XianPal.Installer 为安装器（命名空间 XianPal.Installer）。
-程序使用 .NET Framework / WinForms；展示名为仙伴 · AI桌面伴侣。
-既有设置、任务运行脚本、Hook、历史记录和安装器升级保持兼容。
+## Application structure
 
-## 原画与渲染
+Windows uses C# and .NET Framework / WinForms in `src/DesktopTasks/XianPal`; the installer is in `XianPal.Installer`. Keep shared/Windows files compatible with the existing C# compiler. Linux has a separate Avalonia application in `XianPal.Linux`, linking compatible shared services with `XIANPAL_LINUX`.
 
-### 长途灵器移动（0.6.7）
+| Module | Responsibility |
+| --- | --- |
+| `PetForm` / `PetWindow` | Render state, position, visibility and input |
+| `PetCharacter`, `PetBrain` | Identity, personality, quotes and AI request protocol |
+| `CompanionMotion`, `DragGaitClock` | Attached joints and velocity-driven gait |
+| `CompanionRoutes`, `ArtifactTravelClock`, `WalkingExpressionClock` | Shared route geometry, travel timing and independent expressions |
+| `ClaudeCliRunner`, `NativeTaskHooks` | CLI invocation, streaming and session ownership |
+| `IntegrationPreferences`, `ClaudeSettingsFile` | Per-companion executable and settings inheritance |
+| `ClaudeTaskService`, task windows | Schedule, owner, overlap policy and run history |
+| `BackgroundTaskSupervisor` | Native Background dispatch, polling and recovery |
+| `ReminderService`, `ReminderPerformanceTimeline` | Reminder recurrence and shared performance timing |
+| `SectWorkshop` | Team dependency graph, handoffs and persistence |
 
-`ArtifactTravelClock` 按队列所有线段的累计长度判断长途，阈值为当前工作区对角线的40%，至少480px；闭合路线不能用起终点距离判断。`PetForm.ArtifactTravel.cs` 复用原有路线队列和移动边界，不创建另一套寻路，也不调用AI。短途仍走原有24相位步态。
+## Artwork pipeline
 
-起飞包络在550ms内用smoothstep从0到1，速度从110平滑增加到360px/s；终点先停止路径位移，在450ms内落地。中断、角色切换、隐藏、拖动和减少动态通过原有取消入口清理飞行状态。调度仍为原来的15ms计时器，单次位移最多使用34ms，避免卡顿后瞬移。
+`art/approved-design.png` is the identity baseline. `art/rigs` contains normal transparent parts, `art/side-rigs` side-view parts, and `art/side-torsos` corrected human torsos. Crops are reviewed source-pixel rectangles, not an assumed sprite grid. The build imports these local inputs without generation services or network calls.
 
-`ArtifactTravelArt` 在同一384×416规范坐标与透明画布中绘制原版站姿和灵器，按实际不透明脚底行确定甲板，再整体左右翻转。起降时逐渐缩放人物并显现灵器，甲板下部空间不足时压缩灵器高度，不裁切画布。小墨的原图朝向与人体相反，翻转规则单独处理。飞行不取走路帧；渲染画布复用，脚底锚点按当前图像缓存。
+`tools/BuildOriginalCharacters.cs` renders 384 × 416 RGBA at 2× supersampling. The four built-ins produce 960 state frames, 48 expression patches and two legacy-name compatibility images. Walking uses genuine side-view parts while interactions retain approved normal art. Mesh deformation preserves shoulder/neck/hip attachment and complete rigid boots; front limbs are drawn last.
 
-`ReminderStyle` 的command/beam/warning/stone分别对应青霄飞剑、流光符卷、碧叶灵舟、墨玉灵盘；外置包也按样式复用，未知样式回退灵盘。新增特殊体型应复核朝向与脚底锚点，不能改变角色原画来适配灵器。构建后运行 `tests/artifact-travel-test.ps1`，可在输出的隔离目录查看左右方向预览；测试不调用模型。
+Head inertia and eye/mouth patches use the same attachment transform as the underlying pose. Expression timing is independent of the 24-phase gait. Never compensate for a disconnected head by moving its patch separately.
 
-### 原画导入与步态
+## Long-distance movement
 
-外置成品人物不走内置原画编译流程；新增或覆盖资源即可使用，见 [角色包热更新](CHARACTER-PACKS.md)。
-`PetCharacter.All` 保留内置构建基线，`Available` 用于运行时菜单和动态角色查找。
+Travel length includes every route segment, including a return leg. `ArtifactTravelClock` mounts when total distance exceeds 40% of the active work area's diagonal, with a 480 px minimum. Short movement retains walking. No additional AI call is needed to choose a vessel.
 
-art/approved-design.png 是本项目确认的四角色设计；art/rigs 是内置 imagegen
-生成的透明分层图，art/side-rigs 是以原角色为唯一参考补绘的侧向行走图。
-站立及交互继续使用原图，行走使用侧向图。每套原图按各自 regions.json 中审阅后的像素区域导入。
-初版侧向图中的人体躯干仍过于正面，因此 art/side-torsos 单独保存重绘的侧向衣领、胸廓、腰身和衣摆。
-仅行走 Rig 的 Parts[1] 从此目录导入；头部、袖子和腿部仍取原已确认侧向图，灵龟保持不变。
-使用实际区域而非盲目九宫格裁切，避免生成图排版不严格造成部件混入。
-图中几乎不可见的 A<16 RGB 底噪在纹理导入时归零，真实边缘仍保留抗锯齿。
+Takeoff uses a 550 ms smoothstep from 110 to 360 px/s; arrival stops translation and lands over 450 ms. Capped movement deltas prevent a delayed UI tick from teleporting the pet. Cancellation, dragging, hiding, switching character and reduced motion clear the same travel state.
 
-tools/BuildOriginalCharacters.cs 将原画部件组合成 384×416 RGBA 帧，2倍超采样。
-四角色各12种状态、240帧，总计960帧；另有48张原版/侧向局部表情贴片和2张旧资源名兼容图片，不是机器人拳头。
-构建不联网，不调用 AI，不需要安装任何图片生成依赖。
+The vessel uses the real opaque sole row, approved standing art, proportional scale and one shared facing transform. Human art and turtle art have different native directions. Available styles are sword, talisman scroll, leaf boat and ink-jade disc. A new shape needs its own sole/facing review; do not distort approved art to fit a prop.
 
-人体行走时鞋靴保持完整，不再把脚踝和鞋底分两次拉伸；从实际不透明轮廓提取靴子，按原长宽比定位完整鞋型。
-裤腿通过隐藏膝部连接到原图靴筒的实际接入点，靴筒处有小范围重叠；支撑60%、摆动40%，
-支撑期鞋底放平，摆动期仅轻微抬起鞋尖，鞋跟、鞋面与鞋底使用同一个刚性变换。
-支撑脚底保持基准线，身体仅有不足1像素的轻微联动，不在整体帧上叠加弹跳。
-左腿前摆时右臂前摆；手臂带0.16弧度（约9°）轻微相位偏移。
-CompanionMotion 用24段等弧长中心线映射原有袖子；肘部14°–34°弯曲，
-相位偏移0.32弧度，弯曲区间用 smoothstep 分散到袖长的22%，手腕仅作轻微滞后。
-近肩16%的中心线不随摆臂改变，随后18%长度平滑进入上臂转动；肩口由 ShoulderAnchor 按原衣服逐角色校准。
-Rig 在袖子原画顶部14%内计算不透明像素重心，将实际肩袖而非透明矩形中心对准肩口。
-相邻带使用共享网格边界；通过四边形裁区采样完整原纹理，避免独立源矩形抗锯齿导致的横向透明接缝。
-宽袖覆盖连接区域，不显示骨架。当前确认规则是两条手臂最后绘制，始终位于身体、衣领、脸和头发之上；
-不能在手臂后补身体/头部蒙版重新遮住手，行走和交互均遵守此规则。
-招呼、查看、吃文件、抹嘴等也复用弯曲路径，不改变原始纹理和角色设计。
-灵龟使用前后四足对角交替、轻微抬足、壳体联动，不能套用双足人体动作。
-四肢按原图不透明上端重心接入身体内的固定插口，不能把整条腿连根平移；步幅和抬脚只作用于下部曲线。
-肢体网格按实际分段长度采样，前后脚的可见落点分别统一，保留原图长宽比；后肢按壳体插口连接，
-两条前肢最后绘制，始终位于壳体、颈部和头部之上，不在其后追加遮挡层。
-运行时仍复用既有速度自适应播放、方向切换、窗口移动、缓存和输入逻辑。
+Windows uses `ArtifactTravelArt`; Linux uses `NativeArtifactView`. Route, envelope and expression clocks are shared. Linux's optional native trail requires an empty X11 input region and working transparency; otherwise it is disabled to preserve desktop interaction.
 
-头部连接由 CompanionMotion.ApplyHeadAttachment 统一控制。NeckAnchor 返回各原画实际颈根，
-行走使用独立的 WalkingNeckAnchor、WalkingHeadBox、WalkingShoulderAnchor，保持新侧向头部的原图长宽比，
-不再压扁或翻转正面头部来模拟侧脸。人体按实际皮肤颈根连接到身体领口，不能用头图内的旧衣领尖端作为连接点。
-行走头图原本自带旧衣领，WalkingOldCollar 仅在渲染时排除该局部衣物区域，不修改原始图片；
-新身体只保留一套衣领，位于头部及头发之后，不再向头发上重画第二套领口。
-灵龟原版颈根(144,349)接入龟壳前缘(151,323)，侧向行走使用头/身体实际交叠内的(151,316)，不再靠前腿补颈部边缘。
-头部位置与原画不变，颈根随壳体微动；壳前缘遮住根部末端。
-使用 2.1·sin(t−0.38)+0.35·sin(2t−0.55) 度的小幅延迟转动，人物系数0.82–1.08，灵龟系数0.70。
-缩放和转头围绕同一颈根，显式矩阵及原生亚像素补偿保持根部固定；交互姿态同样遵守连接关系。
-行走衣服、头部与双臂直接来自方向一致的新原画，不再使用侧身投影或对头部单独镜像。
-ProfileTorsoBox 按新躯干的自然长宽比定位，把不透明颈根与头部颈根对齐，衣摆底部保持 y=368。
-侧向前后肩仅相隔6像素，不再像正面胸廓那样展开；肩口跟随校准后的躯干位置，行走袖长124，
-普通交互袖长基准146；招手/抹嘴的定向手势另用126和掌心路径校准，不能混为同一参数。
-鞋尖/脚跟朝右为人体基准，向左时与全身共同镜像；灵龟原画朝左，向右时共同镜像。
-WalkingLegs 单独导入行走用腿图，根据不透明脚踝带与鞋尖带的水平重心统一原画方向；非行走仍用原腿图。
-灵龟两套原画都按四足实际根部/脚尖像素重心检查方向，仅纠正反向的脚图，不凭图名统一翻转。
-测试读取两套实际导入后的四足和靴子，而非只检查目标矩形。运行时表情及网页预览同步头部方向、颈根与动作变换。
+## Tests and exports
 
-PetForm.Expressions 在现有帧上仅覆盖柔边眼睛/嘴部局部区域；原头型、头发和耳朵不动。
-原版闭眼/张嘴原画先按双眼锚点对齐，侧脸按近侧眼锚点对齐，输出三档过渡。
-两套表情分别存放 expressions / profile-expressions；离线交互动画同样不替换整张头部，保持颈根纹理与外轮廓。
-WalkingExpressionClock 使用独立时间与随机间隔，眨眼约0.19–0.26秒、嘴部变化约1.3–1.95秒，
-不跟随24相位循环重置。静止和减少动画时停用行走表情；左右转向及缩放不重置节奏。
-组合帧缓存最多72个原生位图，缩放、换角色和关闭时回收，避免无限增长。
+Run the commands in the main README and relevant focused tests. Motion tests inspect actual imported layers, neck skin overlap, complete boots, soles, turtle sockets, elbow curves, opposite limbs and loop continuity. Desktop/CLI tests require a real Windows desktop session and isolated state. CI uses fake CLIs rather than paid model requests.
 
-## 核心模块
+Linux builds, font staging, architecture checks and target limitations are documented in [Linux compatibility](LINUX.en.md). Native X11 validation captures real windows, task history, locale switching, tray recovery, installation and motion evidence.
 
-### 拖动速度与动作播放（0.6.9）
-
-`ContinueDragAt` 只保持原有窗口位移、点击/拖动阈值及方向选择，并把真实运动的位移和相邻运动采样时间交给 `DragGaitClock.RecordMotion`。零位移事件不能改写最后运动采样时间；不要重新用上次动画换帧时间算速度。
-
-`TickAnimation` 在拖动分支调用 `TickDragAnimation`，由15ms调度持续推进浮点周期。速度目标与当前速度分别指数平滑；步频按 `3.2 * speed / (speed + 240)` 周期/秒平滑增加，并在步幅极限略作停留。读取实际动作帧数映射相位，不复制动作帧，也不分别给手脚另设计时器，避免破坏已确认的对侧协调。一个动画步最多使用50ms，卡顿后不追赶一大段周期。
-
-最后运动40ms后逐渐减速，达到140ms则站立并清理步态；恢复运动、左右转向和松手通过现有状态入口处理。减少动态不播放拖动步态。`tests/drag-gait-test.ps1` 验证速度响应、鼠标采样频率独立性、24/8帧周期一致性和四角色窗口集成，使用合成位置/时间，不移动用户的真实鼠标。
-
-### 模块索引
-
-- PetForm / PetForm.Desktop：渲染、状态、桌面位置、可见性、输入。
-- PetCharacter / PetBrain：四位仙伴的口吻、台词、AI 提示词。
-- ClaudeCliRunner / NativeTaskHooks：CLI 调用、流式反馈与会话归属。
-- ClaudeTaskService / ClaudeTaskForm：调度、模式、编辑和历史。
-- BackgroundTaskSupervisor：原生后台创建、轮询与重启恢复。
-- ReminderService / ReminderOverlayForm：提醒、倒计时与当前角色演出。
-- ReminderPerformance / ReminderPerformanceSurface：四套角色专属演出、共享时间线及可复用透明画布，详见 [全屏演绎说明](REMINDER-PERFORMANCES.md)。
-
-## 验证
-
-运行 README 中的构建和测试命令。original-assets-test 检查数量、24个不同步态帧、
-尺寸、透明/未裁切边界和粉边；另检查24相位中独立头层与身体层的真实皮肤重叠，不能仅靠衣服像素通过颈根检测。
-鞋靴专项读取实际靴筒/裤腿图层，检查24相位交叠、原比例和脚底接触；灵龟专项检查原版/侧向两套素材的四肢插口，覆盖站立、行走和抬爪。
-companion-motion-test 验证肘部变化、长度、连续性及独立表情节奏；
-desktop-visibility-test 验证四角色双向组合渲染与缓存上限。任务专项使用模拟 CLI，不在 CI 调用付费模型。
-交互/图标/桌面专项须在 Windows 桌面会话运行，并隔离状态和配置。
-离线预览可暂停及逐帧检查；程序内角色切换、左右行走、悬停和拖放仍需视觉验收。
-
-## 导出
-
-PublicFiles.ps1 只允许公开源码、art、文档、测试及 GitHub 配置。
-TestRepository 检查已知密钥签名和个人路径，不能替代完整安全/权利审查。
-ExportOpenSource 输出独立源码 ZIP 和校验值；在短的干净目录重新构建后再发布。
+`tools/PublicFiles.ps1` defines the public source set. `TestRepository.ps1` checks known secret signatures and accidental private paths; it is not a comprehensive security or rights audit. `ExportOpenSource.ps1` creates a standalone archive and checksums. Rebuild the export in a short clean directory before release.

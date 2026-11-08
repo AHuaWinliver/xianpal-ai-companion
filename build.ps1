@@ -62,7 +62,7 @@ if (-not $SkipInstaller) {
     if (Test-Path -LiteralPath $payloadZip) { Remove-Item -LiteralPath $payloadZip }
     Compress-Archive -Path (Join-Path $payload '*') -DestinationPath $payloadZip -CompressionLevel Optimal
     $installer = Join-Path $release ('XianPal-' + $shortVersion + '-Setup.exe')
-    & $csc /nologo /target:winexe /platform:anycpu /optimize+ /win32icon:$icon /out:$installer /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/resource:$payloadZip,XianPalPayload.zip" (Join-Path $root 'src\DesktopTasks\XianPal.Installer\Program.cs') (Join-Path $root 'src\DesktopTasks\XianPal\StartupRegistration.cs')
+    & $csc /nologo /target:winexe /platform:anycpu /optimize+ /win32icon:$icon /out:$installer /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.Web.Extensions.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/resource:$payloadZip,XianPalPayload.zip" (Join-Path $root 'src\DesktopTasks\XianPal.Installer\Program.cs') (Join-Path $root 'src\DesktopTasks\XianPal\StartupRegistration.cs') (Join-Path $root 'src\DesktopTasks\XianPal.Installer\InstallerForm.cs') (Join-Path $root 'src\DesktopTasks\XianPal\UiLanguage.cs')
     if ($LASTEXITCODE -ne 0) { throw 'Installer compilation failed.' }
     $hash = (Get-FileHash -LiteralPath $installer -Algorithm SHA256).Hash
     [IO.File]::WriteAllText((Join-Path $release 'SHA256SUMS.txt'),($hash + '  ' + [IO.Path]::GetFileName($installer) + [Environment]::NewLine),[Text.UTF8Encoding]::new($false))

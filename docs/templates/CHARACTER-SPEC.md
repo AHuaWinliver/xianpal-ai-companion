@@ -1,97 +1,94 @@
-# 人物定制规格单（复制后填写）
+# Companion specification
 
-适用基线：仙伴 0.6.7。填写前先阅读 [人物定制与动画规范](../CHARACTER-CUSTOMIZATION.md)。本模板是评审记录，不是可直接导入程序的配置文件。
+[简体中文](CHARACTER-SPEC.zh-CN.md)
 
-## 基本信息与范围
+Copy and complete this review record. It is not an importable manifest. Read the [customization rules](../CHARACTER-CUSTOMIZATION.md) and [pack contract](../CHARACTER-PACKS.md).
 
-- 展示名 / 稳定 ID：
-- 作者 / 版本 / 日期：
-- 改动类型：动作修复 / 替换既有外观 / 新增角色 / 新增演出。
-- 交付路径：外置成品资源包（无需接收方重装） / 内置渲染器扩展；外置包按 [热更新教程](../CHARACTER-PACKS.md) 导出配置、动作帧及校验清单。
-- 体型：双足人体 / 四足灵宠 / 其他（其他需说明新增求解与测试）。
-- 不得改变的造型特征（头身比、五官、轮廓、衣物、纹样、配色）：
-- 人设、称呼、台词风格及边界：
-- 备份位置 / 基线提交：
+## Identity and scope
 
-## 权利与来源
+- Display name / stable ID:
+- Author / resource version / date:
+- Scope: motion fix / appearance replacement / external pack / built-in renderer / performance.
+- Body type: biped / quadruped / other (describe the solver and tests).
+- Features that must remain fixed: head/body ratio, facial anchors, silhouette, clothing, patterns, colors.
+- Personality, voice and role boundaries:
+- Backup location / baseline commit:
 
-- 设计稿 / 原始分层文件路径：
-- 参考素材来源、作者、允许的用途与授权凭据：
-- AI 辅助工具、日期、实际提示词、参考图与人工修订：
-- 拟采用素材许可与可授权范围：
-- PROVENANCE 更新位置 / 待人工核实的问题：
+## Provenance and rights
 
-不要把“原创”“AI 生成”当作来源证明，也不要仅凭改名换色使用现有人物。
+- Approved designs and layered source paths:
+- References, authors, permission evidence and allowed uses:
+- AI tool/date, actual prompts, image references and human revisions:
+- Artwork license and rights you can grant:
+- Provenance entry and unresolved review questions:
 
-## 造型与分层确认
+Original or AI-generated is not proof of rights. Do not merely rename or recolor an existing character.
 
-- 正常视角确认图 / 侧向确认图：
-- 正常视角与行走的固有朝向分别为：
-- 原图尺寸与 alpha 检查（浅/深/棋盘背景）：
-- `rigs`、`side-rigs` 的 9 部件裁区：记录在对应 regions.json。
-- 人体 `side-torsos` 独立躯干裁区 / 非人体处理方式：
-- 已审查无相邻耳朵、头、袖子、道具混入：
+## Art and attachment review
 
-### 锚点表
+- Approved normal / side view:
+- Native facing direction of each view:
+- Source size and alpha review on light/dark/checkerboard backgrounds:
+- Actual `rigs`, `side-rigs` and optional `side-torsos` crops:
+- Confirmation that no adjacent ears, sleeves or props enter a crop:
 
-不要混用坐标。将真实数值与单位填在下表，左右/近远关系需明确；不适用项注明原因。
-
-| 项目 | 正常视角 | 侧向视角 | 单位/坐标系 |
+| Anchor | Normal view | Side view | Units / coordinate system |
 | --- | --- | --- | --- |
-| 颈根与躯干领口 | 待填 | 待填 | 渲染像素或部件 UV，分别注明 |
-| 头部边界与原比例 | 待填 | 待填 | 384×416 渲染坐标 |
-| 旧衣领局部排除区域 | 待填 | 待填 | 渲染像素 |
-| 近/远肩口 | 待填 | 待填 | 渲染像素 |
-| 袖子真实肩口与掌心 | 待填 | 待填 | 各部件 UV |
-| 髋点/壳体四肢插口 | 待填 | 待填 | 身体父级坐标 |
-| 靴筒/爪根、脚底与鞋尖 | 待填 | 待填 | 注明源图与目标坐标 |
-| 眼与原嘴、张嘴目标 | 待填 | 待填 | 分别注明 UV/渲染像素 |
-| 飞行/道具附着点 | 待填 | 待填 | 角色局部坐标 |
+| Skin neck root and collar | | | |
+| Head bounds and aspect ratio | | | |
+| Old collar exclusion | | | |
+| Near/far shoulder | | | |
+| Opaque sleeve shoulder and palm | | | |
+| Hip / shell sockets | | | |
+| Boot opening, sole and toe | | | |
+| Eye, original mouth and gesture mouth | | | |
+| Vessel/prop pivot | | | |
 
-## 动作设计与步态
+Do not mix source pixels, 384×416 render coordinates and local UVs. Label anatomical limbs separately from near/far and screen-left/right.
 
-- 左右/近远肢体对应图（镜像后仍用同一解剖学标记）：
-- 周期与生产帧数（行走至少 24 个不同相位）：
-- 支撑/摆动比例、脚底基准、抬脚高度与步幅：
-- 手臂交叉相位、轻微延迟、摆幅与肘部弯折范围：
-- 速度与步频/步幅关系、停止站立与转向策略：
-- 身体微动与颈部惯性（不可明显弹跳）：
-- 四足对角关系（仅灵宠）：
-- 前肢最外层实现：
+## Motion design
 
-| 状态 | 动作意图与姿态范围 | 与站姿衔接 | 验收结果 |
+- At least 24 unique walking phases, cycle timing and frame count:
+- Stance/swing ratio, ground line, lift and stride:
+- Opposite arm/leg relationship, slight phase lag, arm amplitude and elbow range:
+- Velocity/cadence response, stopping, turns and loop seam:
+- Subtle body and neck inertia:
+- Diagonal quadruped support, if applicable:
+- Outermost arms/front limbs:
+
+| States | Pose range and intent | Entry/exit to stance | Review result |
 | --- | --- | --- | --- |
-| idle / waiting / failed | 待填 | 待填 | 待填 |
-| running / running-left / running-right | 待填 | 待填 | 待填 |
-| waving / review | 待填 | 待填 | 待填 |
-| jumping / punching（兼容名） | 待填 | 待填 | 待填 |
-| eating / wiping-mouth | 待填 | 待填 | 待填 |
+| idle / waiting / failed | | | |
+| running / running-left / running-right | | | |
+| waving / review | | | |
+| jumping / punching (compatibility name) | | | |
+| eating / wiping-mouth | | | |
 
-## 表情与文件交互
+## Expressions and file interaction
 
-- 独立眨眼 / 嘴部节奏、正常与侧向贴片对齐：
-- 张嘴分档、范围与头型保持方式：
-- 准备吃→吞入→咀嚼→抬手擦嘴→放下的时间点与嘴边目标：
-- 原文件不删除，需求/路径确认流程保持不变的验证：
+- Independent blink/mouth timing and normal/side patch alignment:
+- Mouth bounds without skull or identity changes:
+- Prepare → swallow → chew → raise hand → wipe → lower timing and targets:
+- Confirmation that the animation does not delete originals or bypass file request confirmation:
 
-## 全屏演绎分镜
+## Fullscreen storyboard
 
-- 主题 / ReminderStyle / 与人物性格的关系：
-- 前奏→主动作→回落→事项卡片的时间点：
-- 角色姿态、道具、场景、颜色、尾迹与透明度：
-- 角色/道具共用支点及镜像/旋转方式：
-- 单显示器、小屏与缩放边界：
-- 减少动态 / 仅提示框 / 倒计时 / Esc / 稍后 / 降级行为：
-- 位图缓存、原生资源清理与长时间运行检查：
+- Theme / supported style / personality:
+- Prelude, main action, return and card timing:
+- Character poses, props, scenery, colors, trails and opacity:
+- Shared character/prop pivot, rotation and facing:
+- One-monitor, small-display and scaling bounds:
+- Reduced motion / popup / countdown / Escape / snooze / fallback:
+- Cache bounds and native resource cleanup:
 
-## 提交与确认
+## Delivery and approval
 
-- 修改文件及理由（含生成、运行时加载、预览、数量断言等新增角色适配）：
-- 构建命令、环境、结果：
-- 专项测试与结果 / 未验证项：
-- 正常、双向行走、逐帧、完整循环与演出预览路径：
-- 连接、图层、裁切、粉边、比例、表情、人设与多屏验收：
-- 美术/动作确认人及日期：
-- 安装包制作是否已获图像确认：
+- Changed files, source inputs, crops, calibration and rationale:
+- Build commands, environment and results:
+- Focused tests, evidence and unverified cases:
+- Standing, both walking directions, frame-by-frame loop and performance previews:
+- Attachment/layer/alpha/clipping/proportion/expression/multi-monitor review:
+- Visual reviewer and date:
+- Approval to package the reviewed images:
 
-提交时保留可重建输入，不仅提交 build 输出；不要上传用户配置、聊天、密钥或未经授权素材。
+Include rebuildable inputs. Exclude private settings, chat, secrets and unlicensed material.

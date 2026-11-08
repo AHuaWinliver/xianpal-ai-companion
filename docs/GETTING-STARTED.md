@@ -1,48 +1,46 @@
-# 开始使用仙伴
+# Getting started
 
-## 1. 安装桌面程序
+[简体中文](GETTING-STARTED.zh-CN.md)
 
-从 [Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases) 下载 `XianPal-0.6.11-Setup.exe`。若尚未发布安装包，可按仓库 README 从源码构建。
+## Install XianPal
 
-自行构建时建议将源码放在类似 `C:\src\xianpal` 的短目录，避免 .NET Framework 的传统路径长度限制。安装/快捷方式专项测试默认使用独立的临时短目录，不会修改真实开始菜单。
+Download the Windows installer from [Releases](https://github.com/AHuaWinliver/xianpal-ai-companion/releases). Use the package's SHA256 checksum to verify your download. The current installer is unsigned. For a source build, use a short path such as `C:\src\xianpal` to avoid legacy .NET Framework path limits.
 
-安装器面向当前 Windows 用户运行，创建开始菜单快捷方式并注册联动 Hooks。它会修改当前用户的 Claude 设置并先创建备份，保留其他 Hook 处理器。程序未签名，运行前请核实下载来源与 SHA256。
+The installer runs for the current user, offers an installation folder and language choice, and previews the original companions. It registers its own Claude hooks, backs up the existing settings and preserves other handlers. Silent installation also registers hooks. Preview builds on a development branch may contain features absent from the latest published installer; check its release notes.
 
-## 2. 接上本机 Claude Code
+## Connect Claude Code
 
-先在普通终端验证你自己的 Claude Code 能正常启动、访问期望的模型服务并完成授权。仙伴不替你安装 CLI，不捆绑账号、密钥或模型，也不绕过目录信任与权限提示。
+First verify that your own Claude Code CLI can start in an ordinary terminal, reach your configured model service and complete authentication. XianPal does not bundle a model, credentials or a CLI installation.
 
-右键宠物进入功能菜单，设置默认工作目录，然后打开对话或本机 CLI。AI 请求按 CLI 的配置发出，可能访问云端或你配置的内网服务。
+Right-click the companion and open **Default settings**. Set a working directory, then configure a global executable and optional JSON settings file. Each companion can override either field independently; an empty field inherits its global default. See [companion profiles](COMPANION-PROFILES.md).
 
-## 3. 选择日常相处方式
+Folder trust and tool permissions remain under Claude's control. Review prompts in the CLI. AI features use your configured service and may consume paid usage or contact a cloud or intranet endpoint.
 
-- 右键选择青衡、绯笺、苍芷或小墨，调整大小、漫游、尾迹及主动 AI 行为。
-- 双击回复气泡展开动态，查看和选择文本，也可以继续回复。
-- 拖动角色可重新摆放，靠近边缘可吸附；隐藏后从托盘菜单恢复。
-- 主动发言、AI 路线、趣味介绍和休息提醒均可按需启用；会调用 AI 的选项可能消耗额度。
+## Everyday interactions
 
-## 4. 拖入文件，先确认再执行
+- Right-click to change companions or open chat, tasks, reminders and settings.
+- Double-click a reply bubble to open the conversation; text becomes selectable there.
+- Drag the companion to reposition it. Drag to an edge to dock it; restore a hidden companion from the tray.
+- Double-click the companion for a character-aware AI interaction. Optional AI routes, proactive messages and break reminders make model requests.
+- Drop files or folders onto the companion, review the paths and working directory, then provide a request before sending. The eating animation does not delete the originals.
 
-将文件或文件夹拖给宠物，确认工作目录与处理需求后再发送。动画不删除原文件，但发送后的文件读写由 CLI 权限和你的请求决定。先用测试目录验证，勿自动授权来源不明的文件和提示词。
+## Tasks and reminders
 
-## 5. 定时任务与提醒不是同一件事
-
-| 功能 | 用途 | 执行方式 |
+| Feature | Purpose | Behavior |
 | --- | --- | --- |
-| 每日提醒 / 倒计时 | 提醒你去做某件事 | 角色演出或提示框，不自动代替你完成事项 |
-| Claude Code 定时任务 | 在指定目录让 CLI 执行任务 | 每日、每周或间隔；可阻塞或并行，并保留运行历史 |
+| Daily reminders and countdowns | Remind you to do something | A character performance or notification; no automatic file processing |
+| Claude scheduled tasks | Run a request in a specified directory | Daily, weekly or interval schedules, blocking or parallel overlap, and independent history |
 
-创建定时任务后检查目录、运行模式、周期和权限。原生 Background 等选项需要你的 CLI 支持对应能力。电脑休眠时程序不会唤醒电脑，恢复后按现有调度逻辑检查到期任务；不应把它当作无人值守的系统级任务保证。
+Choose an execution companion, directory, mode and recurrence before saving a task. The task window aggregates all companions and shows each owner. Task output stays in its run history rather than ordinary chat. Native Background requires a compatible CLI.
 
-## 6. 安装和更新自己的角色
+The app does not wake a sleeping or powered-off computer. It checks overdue items when running again; this is a desktop scheduler, not a system service with guaranteed unattended execution.
 
-右键宠物 → **切换形象 → 打开角色资源目录**，将完整人物包复制进去。程序会自动发现新角色，并热更新当前角色的有效资源；无需重新安装。未出现时点“刷新外置角色 / 查看校验结果”。角色包需要配置、动作PNG和校验清单，不能只放一张原画，详见 [资源包热更新教程](CHARACTER-PACKS.md)。
+## Add a companion
 
-## 常见边界
+Open the character resource directory from the character menu and copy in a complete, validated pack. New characters appear after scanning; valid updates to the selected character apply without reinstalling. A single image is insufficient. See [character packs](CHARACTER-PACKS.md).
 
-- 没有配置 CLI：仍可查看角色、动作和本地提醒，但不能凭空获得模型回复。
-- 看到权限或信任确认：在 CLI 内自行审阅并处理，不建议为便利全局关闭安全机制。
-- 中文 / emoji 或虚拟桌面异常：提供脱敏后的 Windows 版本、缩放、字体和 CLI 版本，见 [问题反馈](https://github.com/AHuaWinliver/xianpal-ai-companion/issues)。
-- 卸载不会递归删除用户可写的安装目录，程序文件及可能存在的用户文件需自行审阅后清理。
+## Platform notes
 
-[返回首页](../README.md) · [隐私与配置](PRIVACY.md) · [安全报告](../SECURITY.md)
+Windows chat uses native RichEdit with Chinese input protection and emoji fallback. Color emoji and virtual desktop behavior depend on the Windows environment. The [Linux port](LINUX.en.md) has separate validation and release requirements.
+
+Report issues with a sanitized OS, display scaling and CLI version. Keep credentials, private endpoints, prompts and transcripts out of public reports. See [privacy](PRIVACY.md) and [security reporting](../SECURITY.md).

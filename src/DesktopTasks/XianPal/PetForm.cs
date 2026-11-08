@@ -103,9 +103,6 @@ namespace XianPal
         private int layeredRenderError;
         private int layeredRenderCount;
         private ToolStripMenuItem pauseItem;
-        private ToolStripMenuItem startupItem;
-        private ToolStripMenuItem topmostItem;
-        private ToolStripMenuItem reduceMotionItem;
         private const int HotkeyId = 0x4B41;
         private const int WmHotkey = 0x0312;
         private const int WmPowerBroadcast = 0x0218;
@@ -311,6 +308,7 @@ namespace XianPal
             fileWipeTimer.Interval = 1650;
             fileWipeTimer.Tick += delegate { fileWipeTimer.Stop(); OpenDroppedFilesPromptAfterWipe(); };
             reminderService.Start();
+            claudeTaskService.AssignLegacyTasks(currentCharacterId);
             claudeTaskService.Start();
             InitializeWorkshop();
             SystemEvents.SessionSwitch += SystemSessionSwitch;
@@ -665,7 +663,8 @@ namespace XianPal
         private void LoadAnimations()
         {
             string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
-            if (!ValidateAssets(AppDomain.CurrentDomain.BaseDirectory))
+            if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1") root = Environment.GetEnvironmentVariable("XIANPAL_TEST_ASSETS") ?? root;
+            if (!ValidateAssets(Path.GetDirectoryName(root)))
                 throw new InvalidOperationException("宠物动画资源不完整，请重新安装。\n" + root);
             LoadCharacterAnimations(currentCharacterId);
         }
@@ -690,6 +689,7 @@ namespace XianPal
                 else
                 {
                     string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
+                    if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1") root = Environment.GetEnvironmentVariable("XIANPAL_TEST_ASSETS") ?? root;
                     if (character.Id != "orbit") root = Path.Combine(root, "characters", character.Id);
                     foreach (string name in CharacterPackCatalog.States)
                     {
@@ -868,72 +868,11 @@ namespace XianPal
             };
             menu.Items.Add(pauseItem);
 
-            var defaults = new ToolStripMenuItem("默认设置");
-            ToolStripItemCollection settings = defaults.DropDownItems;
-            startupItem = new ToolStripMenuItem("开机自动启动");
-            startupItem.Checked = IsStartupEnabled();
-            startupItem.Click += delegate { SetStartup(!startupItem.Checked); startupItem.Checked = IsStartupEnabled(); };
-            settings.Add(startupItem);
-
-            topmostItem = new ToolStripMenuItem("保持置顶");
-            topmostItem.Checked = TopMost;
-            topmostItem.Click += delegate { TopMost = !TopMost; topmostItem.Checked = TopMost; SavePreferences(); };
-            settings.Add(topmostItem);
-            AddDesktopVisibilityMenu(settings);
-
-            ToolStripMenuItem sizeMenu = new ToolStripMenuItem("宠物大小");
-            foreach (int percent in new[] { 50, 75, 100, 125 })
-            {
-                int selectedPercent = percent;
-                ToolStripMenuItem sizeItem = new ToolStripMenuItem(percent.ToString() + "%");
-                sizeItem.Click += delegate { SetPetScale(selectedPercent / 100.0f, true); };
-                sizeMenu.DropDownItems.Add(sizeItem);
-            }
-            ToolStripMenuItem resetSize = new ToolStripMenuItem("重置大小和位置");
-            resetSize.Click += delegate { SetPetScale(0.5f, false); ResetPosition(); SavePreferences(); };
-            sizeMenu.DropDownItems.Add(new ToolStripSeparator());
-            sizeMenu.DropDownItems.Add(resetSize);
-            settings.Add(sizeMenu);
-
-            settings.Add(BuildDockOpacityMenu());
-            settings.Add(BuildTrailOpacityMenu());
-            settings.Add(BuildPathModeMenu());
-            settings.Add(BuildAiCareMenu());
-
-            reduceMotionItem = new ToolStripMenuItem("减少动画");
-            reduceMotionItem.Checked = reduceMotion;
-            reduceMotionItem.Click += delegate
-            {
-                reduceMotion = !reduceMotion;
-                reduceMotionItem.Checked = reduceMotion;
-                if (reduceMotion) CancelWander();
-                frameIndex = 0;
-                SavePreferences();
-            };
-            settings.Add(reduceMotionItem);
-            settings.Add(new ToolStripSeparator());
-
+            var defaults = new ToolStripMenuItem(UiLanguage.Text("Default settings"));
+            defaults.Click += delegate { ShowDefaultSettings(); };
             ToolStripMenuItem openClaude = new ToolStripMenuItem("在 PowerShell 打开 Claude Code CLI");
             openClaude.Click += delegate { OpenClaudeCli(promptForm.WorkingDirectory); };
             menu.Items.Add(openClaude);
-            ToolStripMenuItem defaultDirectory = new ToolStripMenuItem("设置 Claude CLI 默认目录…");
-            defaultDirectory.Click += delegate { ChooseDefaultClaudeDirectory(); };
-            settings.Add(defaultDirectory);
-            settings.Add(BuildClaudeSettingsMenu());
-            ToolStripMenuItem externalSessions = new ToolStripMenuItem("收集其他 Claude 会话（默认关闭）");
-            externalSessions.Checked = integrationPreferences.MonitorExternalSessions;
-            externalSessions.Click += delegate
-            {
-                bool previous = integrationPreferences.MonitorExternalSessions;
-                integrationPreferences.MonitorExternalSessions = !previous;
-                try { integrationPreferences.Save(); externalSessions.Checked = !previous; }
-                catch (Exception ex)
-                {
-                    integrationPreferences.MonitorExternalSessions = previous;
-                    MessageBox.Show(ex.Message, "保存会话监控设置失败", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                }
-            };
-            settings.Add(externalSessions);
             menu.Items.Add(defaults);
             menu.Items.Add(new ToolStripSeparator());
 
@@ -958,6 +897,7 @@ namespace XianPal
 
             tray.Text = Program.ProductName;
             tray.ContextMenuStrip = menu;
+            menu.Opening += delegate { UiLanguageBindings.ApplyItems(menu.Items); };
             ContextMenuStrip = menu;
             menu.Opening += delegate { replyBubble.Dismiss(); quoteBubble.Hide(); UpdateVisibilityMenu(); };
             tray.Visible = true;
@@ -1396,7 +1336,7 @@ namespace XianPal
             screenSessionActive = active;
             if (!active) return;
             screenSessionStartedAt = DateTime.UtcNow;
-            nextBreakReminderAt = screenSessionStartedAt.AddMinutes(Math.Max(30, breakReminderMinutes));
+            nextBreakReminderAt = screenSessionStartedAt.AddMinutes(Math.Max(5, breakReminderMinutes));
             nextAiChatterAt = screenSessionStartedAt.AddMinutes(random.Next(12, 29));
             nextAiCareCheckAt = DateTime.MinValue;
         }
@@ -1608,9 +1548,11 @@ namespace XianPal
                 : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
             string literalDirectory = directory.Replace("'", "''");
             string settingsPath = ClaudeSettingsFile.CurrentPath(characterId);
+            string command = ClaudeCliRunner.FindClaudeCommand(characterId) ?? "claude";
+            string invoke = "& '" + command.Replace("'", "''") + "'";
             string script = "$env:FUFU_PET_MANAGED_SESSION='1'; $utf8=New-Object Text.UTF8Encoding($false); $OutputEncoding=$utf8; [Console]::InputEncoding=$utf8; [Console]::OutputEncoding=$utf8; Set-Location -LiteralPath '" + literalDirectory + "'; " +
-                ClaudeSettingsFile.PowerShellSetup(settingsPath, "claude") +
-                (settingsPath.Length == 0 ? "claude" : "try { claude --settings $xianpalSettings } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }");
+                ClaudeSettingsFile.PowerShellSetup(settingsPath, command) +
+                (settingsPath.Length == 0 ? invoke : "try { " + invoke + " --settings $xianpalSettings } finally { Remove-Item Env:FUFU_PET_SETTINGS_FILE -ErrorAction SilentlyContinue }");
             return new ProcessStartInfo("powershell.exe", "-NoLogo -NoExit -EncodedCommand " + Convert.ToBase64String(Encoding.Unicode.GetBytes(script)))
             {
                 WorkingDirectory = directory,
@@ -1876,97 +1818,10 @@ namespace XianPal
         }
 
         internal static List<Point> GeneratePlayfulPath(Rectangle area, Size petSize, Point origin, int seed)
-        {
-            List<Point> result = new List<Point>();
-            Random generator = new Random(seed);
-            int margin = 14;
-            int left = area.Left + margin, top = area.Top + margin;
-            int right = Math.Max(left, area.Right - petSize.Width - margin);
-            int bottom = Math.Max(top, area.Bottom - petSize.Height - margin);
-            int width = Math.Max(1, right - left), height = Math.Max(1, bottom - top);
-            int cx = left + width / 2, cy = top + height / 2;
-            int pattern = Math.Abs(seed % 4);
-            if (pattern == 0)
-            {
-                for (int i = 0; i < 24; i++)
-                {
-                    double angle = (Math.PI * 2.0 * i) / 23.0;
-                    result.Add(new Point(cx + (int)(Math.Sin(angle) * width * 0.43), cy + (int)(Math.Sin(angle * 2.0) * height * 0.38)));
-                }
-            }
-            else if (pattern == 1)
-            {
-                for (int i = 0; i < 26; i++)
-                {
-                    double ratio = i / 25.0, angle = ratio * Math.PI * 4.5;
-                    result.Add(new Point(cx + (int)(Math.Cos(angle) * width * 0.44 * ratio), cy + (int)(Math.Sin(angle) * height * 0.42 * ratio)));
-                }
-            }
-            else if (pattern == 2)
-            {
-                for (int i = 0; i < 14; i++)
-                {
-                    int x = (i % 2 == 0) ? left + generator.Next(0, Math.Max(1, width / 5)) : right - generator.Next(0, Math.Max(1, width / 5));
-                    int y = top + (int)Math.Round(height * (i / 13.0));
-                    result.Add(new Point(x, y));
-                }
-            }
-            else
-            {
-                const int starPoints = 20;
-                for (int i = 0; i < starPoints; i++)
-                {
-                    double angle = (-Math.PI / 2.0) + (i * Math.PI * 4.0 / starPoints);
-                    double radius = i % 2 == 0 ? 0.46 : 0.20;
-                    result.Add(new Point(cx + (int)(Math.Cos(angle) * width * radius), cy + (int)(Math.Sin(angle) * height * radius)));
-                }
-            }
-            Point safeOrigin = new Point(Math.Max(left, Math.Min(origin.X, right)), Math.Max(top, Math.Min(origin.Y, bottom)));
-            result.Add(safeOrigin);
-            return result;
-        }
+        { return CompanionRoutes.GeneratePlayfulPath(area, petSize, origin, seed); }
 
         internal static List<Point> GenerateAiPath(Rectangle area, Size petSize, Point origin, string curve, PointF[] normalizedControls)
-        {
-            List<Point> result = new List<Point>();
-            if (normalizedControls == null || normalizedControls.Length < 4) return result;
-            int margin = 14;
-            int left = area.Left + margin, top = area.Top + margin;
-            int right = Math.Max(left, area.Right - petSize.Width - margin);
-            int bottom = Math.Max(top, area.Bottom - petSize.Height - margin);
-            int width = Math.Max(1, right - left), height = Math.Max(1, bottom - top);
-            List<PointF> controls = new List<PointF>();
-            foreach (PointF normalized in normalizedControls)
-            {
-                float nx = Math.Max(0.04f, Math.Min(0.96f, normalized.X));
-                float ny = Math.Max(0.04f, Math.Min(0.96f, normalized.Y));
-                controls.Add(new PointF(left + (nx * width), top + (ny * height)));
-            }
-            if (String.Equals(curve, "orbit", StringComparison.OrdinalIgnoreCase)) controls.Add(controls[0]);
-
-            for (int segment = 0; segment < controls.Count - 1; segment++)
-            {
-                PointF p0 = controls[Math.Max(0, segment - 1)];
-                PointF p1 = controls[segment];
-                PointF p2 = controls[segment + 1];
-                PointF p3 = controls[Math.Min(controls.Count - 1, segment + 2)];
-                for (int sample = 0; sample < 10; sample++)
-                {
-                    float t = sample / 10f;
-                    float t2 = t * t, t3 = t2 * t;
-                    float x = 0.5f * ((2f * p1.X) + ((-p0.X + p2.X) * t) + ((2f * p0.X - 5f * p1.X + 4f * p2.X - p3.X) * t2) + ((-p0.X + 3f * p1.X - 3f * p2.X + p3.X) * t3));
-                    float y = 0.5f * ((2f * p1.Y) + ((-p0.Y + p2.Y) * t) + ((2f * p0.Y - 5f * p1.Y + 4f * p2.Y - p3.Y) * t2) + ((-p0.Y + 3f * p1.Y - 3f * p2.Y + p3.Y) * t3));
-                    result.Add(new Point(Math.Max(left, Math.Min((int)Math.Round(x), right)), Math.Max(top, Math.Min((int)Math.Round(y), bottom))));
-                }
-            }
-            result.Add(new Point((int)Math.Round(controls[controls.Count - 1].X), (int)Math.Round(controls[controls.Count - 1].Y)));
-
-            int minX = Int32.MaxValue, maxX = Int32.MinValue, minY = Int32.MaxValue, maxY = Int32.MinValue;
-            foreach (Point point in result) { minX = Math.Min(minX, point.X); maxX = Math.Max(maxX, point.X); minY = Math.Min(minY, point.Y); maxY = Math.Max(maxY, point.Y); }
-            if (maxX - minX < width * 0.55 || maxY - minY < height * 0.40) { result.Clear(); return result; }
-            result.Add(new Point(Math.Max(left, Math.Min(origin.X, right)), Math.Max(top, Math.Min(origin.Y, bottom))));
-            return result;
-        }
+        { return CompanionRoutes.GenerateAiPath(area, petSize, origin, curve, normalizedControls); }
 
         private void AddTrailPoint()
         {
@@ -2287,6 +2142,7 @@ namespace XianPal
             replyBubble.Hide();
             activityTray.HideUnlessPinned();
             reminderForm.Hide();
+            claudeTaskForm.SelectDefaultOwner(currentCharacterId);
             claudeTaskForm.ShowNear(Bounds, promptForm.WorkingDirectory);
         }
 
@@ -2434,7 +2290,7 @@ namespace XianPal
             };
             try
             {
-                runner.Start(BuildScheduledTaskPrompt(task), task.WorkingDirectory, null, task.Id, currentCharacterId);
+                runner.Start(BuildScheduledTaskPrompt(task), task.WorkingDirectory, null, task.Id, task.CharacterId);
             }
             catch (Exception ex)
             {
@@ -2469,7 +2325,7 @@ namespace XianPal
             try
             {
                 Directory.CreateDirectory(logDirectory);
-                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, "claude", currentCharacterId);
+                ProcessStartInfo info = BuildVisibleTaskStartInfo(task, logPath, ClaudeCliRunner.RequireClaudeCommand(task.CharacterId), task.CharacterId);
                 monitor = new VisibleTaskMonitor(logPath, delegate(string output)
                 {
                     claudeTaskService.UpdateRunProgress(task, run.Id, output);
@@ -2874,7 +2730,7 @@ namespace XianPal
                         if (breakMinutesValue != null)
                         {
                             int savedBreakMinutes = Convert.ToInt32(breakMinutesValue);
-                            if (savedBreakMinutes == 30 || savedBreakMinutes == 45 || savedBreakMinutes == 60 || savedBreakMinutes == 90) breakReminderMinutes = savedBreakMinutes;
+                            if (savedBreakMinutes >= 5 && savedBreakMinutes <= 240) breakReminderMinutes = savedBreakMinutes;
                         }
                         object characterValue = key.GetValue("Character");
                         if (characterValue != null) SetCharacter(Convert.ToString(characterValue), false);

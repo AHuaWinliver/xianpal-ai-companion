@@ -39,6 +39,9 @@ internal static class BuildReadmeMedia
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             string assets = args[0], output = args[1], previews = args[2];
+            Environment.SetEnvironmentVariable("XIANPAL_TEST_ASSETS", Path.GetFullPath(assets));
+            UiLanguage.Set("en");
+            UiLanguageBindings.Initialize();
             Directory.CreateDirectory(output);
             Image[] portraits = new Image[4];
             try
@@ -46,10 +49,13 @@ internal static class BuildReadmeMedia
                 for (int i = 0; i < 4; i++) portraits[i] = Image.FromFile(Path.Combine(CharacterRoot(assets, i), "idle", "00.png"));
                 Hero(output, portraits);
                 Workbench(output);
+                Settings(output);
+                Hall(output);
+                History(output);
                 Walking(assets, output);
                 Sword(assets, output, 640, 360);
                 if (new FileInfo(Path.Combine(output, "sword-flight.gif")).Length > 5 * 1024 * 1024) Sword(assets, output, 560, 315);
-                File.Copy(Path.Combine(previews, "characters.png"), Path.Combine(output, "characters.png"), true);
+                CharacterGallery(output, portraits);
                 foreach (string file in Directory.GetFiles(output))
                     if (new FileInfo(file).Length > 5 * 1024 * 1024) throw new InvalidDataException("README media exceeds repository budget: " + Path.GetFileName(file));
                 Console.WriteLine("PASS README media: cover, social preview, real-control demo, 24-frame gait and sword-flight loop; no CLI/model calls.");
@@ -114,13 +120,12 @@ internal static class BuildReadmeMedia
                 g.DrawArc(ring, 900, 175, 530, 530, 12, 255);
             }
             Panel(g, new RectangleF(68, 58, 251, 40), Color.FromArgb(224, 234, 220), 18);
-            Text(g, "AI COMPANION · " + Assembly.GetExecutingAssembly().GetName().Version.ToString(3), 18, Ink, 88, 66, true);
-            Text(g, "仙伴", 94, Ink, 62, 142, true);
-            Text(g, "XianPal", 62, Ink, 270, 171, true);
-            Text(g, "让 AI，陪在你的桌面上。", 39, Ink, 68, 278, true);
-            Text(g, "有性格的伙伴，也有能落地的工作流。", 26, Muted, 71, 349, false);
-            string[] chips = { "四位国风伙伴", "连接 Claude Code", "对话 · 文件 · 定时任务" };
-            int[] widths = { 166, 227, 259 }; int cursor = 74;
+            Text(g, "AI DESKTOP COMPANION", 17, Ink, 88, 66, true);
+            Text(g, "XianPal", 94, Ink, 62, 142, true);
+            Text(g, "AI at your side.", 39, Ink, 68, 278, true);
+            Text(g, "Companions for real work.", 26, Muted, 71, 349, false);
+            string[] chips = { "4 companions", "Claude Code", "Chat · files · tasks" };
+            int[] widths = { 170, 190, 260 }; int cursor = 74;
             for (int i = 0; i < chips.Length; i++)
             {
                 Panel(g, new RectangleF(cursor, 420, widths[i], 46), i == 1 ? Ink : Color.FromArgb(238, 229, 199), 16);
@@ -128,20 +133,20 @@ internal static class BuildReadmeMedia
                 cursor += widths[i] + 10;
             }
             Panel(g, new RectangleF(74, 535, 650, 201), Color.FromArgb(253, 252, 245), 24);
-            Text(g, "本机 Claude Code  ×  你的桌面伙伴", 23, Ink, 99, 560, true);
-            Text(g, "“帮我整理这份文件，明天下午提醒我跟进。”", 23, Muted, 99, 606, false);
+            Text(g, "Your Claude Code. Your desktop.", 23, Ink, 99, 560, true);
+            Text(g, "“Summarize these notes, then plan a follow-up.”", 18, Muted, 99, 606, false);
             Panel(g, new RectangleF(99, 659, 578, 43), Color.FromArgb(231, 240, 230), 13);
-            Text(g, "文件处理有上下文，定时任务有记录，陪伴有回应。", 20, Ink, 112, 668, false);
+            Text(g, "Chat in context. Schedule work. Keep the record.", 17, Ink, 112, 668, false);
             // Actual, unchanged runtime artwork; no external character images.
             Portrait(g, portraits[0], new Rectangle(820, 100, 300, 300));
             Portrait(g, portraits[1], new Rectangle(1150, 110, 300, 300));
             Portrait(g, portraits[2], new Rectangle(820, 455, 300, 285));
             Portrait(g, portraits[3], new Rectangle(1150, 550, 300, 210));
-            Text(g, "青衡", 23, Ink, 929, 415, true);
-            Text(g, "绯笺", 23, Ink, 1252, 428, true);
-            Text(g, "苍芷", 23, Ink, 925, 758, true);
-            Text(g, "小墨", 23, Ink, 1273, 785, true);
-            Text(g, "Windows 10 / 11   ·   C# / WinForms   ·   Apache-2.0", 18, Muted, 75, 782, false);
+            Text(g, "Qingheng", 23, Ink, 909, 415, true);
+            Text(g, "Feijian", 23, Ink, 1252, 428, true);
+            Text(g, "Cangzhi", 23, Ink, 905, 758, true);
+            Text(g, "Xiaomo", 23, Ink, 1253, 785, true);
+            Text(g, "Windows · Original companions · Apache-2.0 code", 18, Muted, 75, 782, false);
             image.Save(Path.Combine(output, "hero.png"), ImageFormat.Png);
             using (Bitmap social = new Bitmap(1280, 640, PixelFormat.Format24bppRgb))
             using (Graphics s = Graphics.FromImage(social))
@@ -149,6 +154,23 @@ internal static class BuildReadmeMedia
                 Quality(s); s.Clear(Paper); s.DrawImage(image, new Rectangle(30, 0, 1219, 640));
                 social.Save(Path.Combine(output, "social-preview.png"), ImageFormat.Png);
             }
+        }
+    }
+
+    private static void CharacterGallery(string output, Image[] portraits)
+    {
+        string[] roles = { "Wandering cultivator", "Talisman artisan", "Herbalist", "Cloud-shell turtle" };
+        using (var image = new Bitmap(1360, 500, PixelFormat.Format24bppRgb))
+        using (var graphics = Graphics.FromImage(image))
+        {
+            Quality(graphics); graphics.Clear(Paper);
+            for (int i = 0; i < portraits.Length; i++)
+            {
+                Portrait(graphics, portraits[i], new Rectangle(i * 340 + 30, 25, 280, 310));
+                Text(graphics, UiLanguage.Text(PetCharacter.All[i].Name), 25, Ink, i * 340 + 100, 365, true);
+                Text(graphics, roles[i], 19, Muted, i * 340 + 65, 414, false);
+            }
+            image.Save(Path.Combine(output, "characters.png"), ImageFormat.Png);
         }
     }
 
@@ -161,8 +183,11 @@ internal static class BuildReadmeMedia
     {
         form.StartPosition = FormStartPosition.Manual;
         form.Location = new Point(SystemInformation.VirtualScreen.Right + 80, 0);
+        form.Show();
+        Application.DoEvents();
         form.CreateControl();
         CreateHandles(form);
+        UiLanguageBindings.Apply(form);
         form.PerformLayout();
         Bitmap capture = new Bitmap(form.Width, form.Height, PixelFormat.Format32bppArgb);
         form.DrawToBitmap(capture, new Rectangle(Point.Empty, capture.Size));
@@ -178,7 +203,9 @@ internal static class BuildReadmeMedia
             // local flag is needed to omit inactive interval/date widgets.
             MethodInfo state = typeof(Control).GetMethod("GetState", BindingFlags.Instance | BindingFlags.NonPublic);
             if (state != null && !(bool)state.Invoke(child, new object[] { 2 })) continue;
-            Point origin = new Point(offset.X + child.Left, offset.Y + child.Top);
+            Form window = parent.FindForm();
+            Point screen = child.PointToScreen(Point.Empty);
+            Point origin = new Point(screen.X - window.Left, screen.Y - window.Top);
             ComboBox combo = child as ComboBox;
             RichTextBox rich = child as RichTextBox;
             // DrawToBitmap omits native RichEdit content and hidden ComboBox
@@ -225,42 +252,106 @@ internal static class BuildReadmeMedia
         {
             // Populate only in-memory mock records; no scheduler is started.
             var tasks = (List<ScheduledClaudeTask>)Field(service, "tasks"); tasks.Clear();
-            tasks.Add(new ScheduledClaudeTask { Prompt = "整理 Markdown 笔记，生成本周待办摘要。", WorkingDirectory = @"C:\Projects\notes", Recurrence = "weekly", Weekday = 5,
+            tasks.Add(new ScheduledClaudeTask { CharacterId = "orbit", Prompt = "Summarize Markdown notes and next steps.", WorkingDirectory = @"C:\Projects\notes", Recurrence = "weekly", Weekday = 5,
                 MinutesAfterMidnight = 18 * 60, RunMode = "interactive-powershell", OverlapMode = "block", DesktopNumber = 2 });
-            tasks.Add(new ScheduledClaudeTask { Prompt = "检查本周计划，列出仍需确认的事项。", WorkingDirectory = @"C:\Projects\weekly-review", Recurrence = "daily",
+            tasks.Add(new ScheduledClaudeTask { CharacterId = "spark", Prompt = "Review the plan and list open questions.", WorkingDirectory = @"C:\Projects\weekly-review", Recurrence = "daily",
                 MinutesAfterMidnight = 9 * 60, RunMode = "background", OverlapMode = "block" });
             using (ClaudeTaskForm scheduled = new ClaudeTaskForm(service))
             {
-                ((TextBox)Field(scheduled, "prompt")).Text = "整理当前目录的 Markdown 笔记，生成本周待办摘要。";
+                ((TextBox)Field(scheduled, "prompt")).Text = "Summarize the Markdown notes in this folder and suggest next steps.";
                 scheduled.GetType().GetField("workingDirectory", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(scheduled, @"C:\Projects\notes");
                 scheduled.GetType().GetMethod("UpdateDirectoryText", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(scheduled, null);
                 ((ComboBox)Field(scheduled, "recurrence")).SelectedIndex = 1;
                 ((ComboBox)Field(scheduled, "weekday")).SelectedIndex = 5;
                 ((DateTimePicker)Field(scheduled, "time")).Value = new DateTime(2026, 10, 23, 18, 0, 0);
-                var records = new List<ActivityRecord> { new ActivityRecord { Title = "本周笔记整理", SessionId = "documentation-demo", CharacterId = "orbit", State = "已完成", Updated = new DateTime(2026, 10, 21, 14, 30, 0),
-                    WorkingDirectory = @"C:\Projects\notes", Output = "你：帮我整理这周的笔记，给出下一步建议。\r\n\r\n青衡：道友，已按三个方向理清：\r\n\r\n1. 本周完成：整理资料与待办。\r\n2. 还需确认：两项计划的截止时间。\r\n3. 下一步：先处理最小的一件事。\r\n\r\n以上为预设演示内容，未调用真实模型。" } };
+                var records = new List<ActivityRecord> { new ActivityRecord { Title = "Weekly notes", SessionId = "documentation-demo", CharacterId = "orbit", State = "Completed", Updated = new DateTime(2026, 10, 21, 14, 30, 0),
+                    WorkingDirectory = @"C:\Projects\notes", Output = "You: Summarize this week's notes and suggest next steps.\r\n\r\nQingheng: Here is a short review:\r\n\r\n1. Completed: organize reference material and tasks.\r\n2. Open questions: confirm two deadlines.\r\n3. Next step: start with the smallest item.\r\n\r\nIllustrative data. No live model was called." } };
+                records[0].Output = "";
+                records[0].StartConversation("Summarize this week's notes and suggest next steps.");
+                records[0].AppendOutput("Here is a short review:\n\n1. Completed: organize notes and references.\n2. Open questions: confirm two deadlines.\n3. Next step: start with the smallest item.");
+                records[0].AppendUserPrompt("Which item should I start with?");
+                records[0].AppendOutput("Confirm the first deadline, then draft a short checklist.");
                 activity.SetActivities(records);
                 ((ListBox)Field(activity, "list")).SelectedIndex = 0;
-                ((ChineseInputTextBox)Field(activity, "reply")).Text = "先帮我列出明天最重要的三件事。";
+                ((ChineseInputTextBox)Field(activity, "reply")).Text = "What are the three priorities for tomorrow?";
                 using (Bitmap left = Capture(activity))
                 using (Bitmap right = Capture(scheduled))
                 using (Bitmap image = new Bitmap(1600, 1030, PixelFormat.Format24bppRgb))
                 using (Graphics g = Graphics.FromImage(image))
                 {
                     Quality(g); g.Clear(Paper);
-                    Text(g, "聊得来，也做得到。", 44, Ink, 60, 40, true);
-                    Text(g, "会话动态可继续回复；定时任务有目录、有周期、有运行记录。", 24, Muted, 63, 104, false);
-                    Text(g, "01  跟进一段对话", 25, Ink, 68, 180, true);
-                    Text(g, "02  把重复工作交给 CLI", 25, Ink, 828, 180, true);
+                    Text(g, "A companion for conversations and work.", 44, Ink, 60, 40, true);
+                    Text(g, "Continue a conversation. Schedule a task. Review what happened.", 24, Muted, 63, 104, false);
+                    Text(g, "01  Keep the conversation going", 25, Ink, 68, 180, true);
+                    Text(g, "02  Schedule work with Claude Code", 25, Ink, 828, 180, true);
                     Panel(g, new RectangleF(58, 230, 706, 610), Color.FromArgb(226, 234, 224), 20);
                     g.DrawImage(left, new Rectangle(68, 240, 685, 578));
                     Panel(g, new RectangleF(818, 230, 714, 751), Color.FromArgb(226, 234, 224), 20);
                     g.DrawImage(right, new Rectangle(828, 240, 694, 721));
-                    Text(g, "双击气泡展开动态，查看历史与继续回复。", 21, Muted, 69, 871, false);
-                    Text(g, "真实控件 / 预设演示数据 / 无真实 CLI 或模型调用", 19, Muted, 67, 977, false);
+                    Text(g, "Double-click a bubble to open the conversation.", 21, Muted, 69, 871, false);
+                    Text(g, "Actual UI controls · Illustrative data · No live CLI or model calls", 19, Muted, 67, 977, false);
                     image.Save(Path.Combine(output, "workbench.png"), ImageFormat.Png);
                 }
             }
+        }
+    }
+
+    private static void Settings(string output)
+    {
+        using (var pet = new PetForm())
+        {
+            typeof(PetForm).GetMethod("ShowDefaultSettings", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(pet, null);
+            using (var window = (Form)Field(pet, "defaultSettingsWindow"))
+            {
+                ((ComboBox)window.Controls.Find("CompanionScope", true)[0]).SelectedIndex = 1;
+                ((TextBox)window.Controls.Find("ClaudeExecutable", true)[0]).Text = @"C:\Applications\Claude\claude.exe";
+                ((TextBox)window.Controls.Find("ClaudeSettings", true)[0]).Text = @"C:\Projects\profiles\qingheng.json";
+                foreach (Control control in window.Controls) if (control is TabControl) ((TabControl)control).SelectedIndex = 1;
+                using (var capture = Capture(window)) capture.Save(Path.Combine(output, "claude-settings.png"), ImageFormat.Png);
+            }
+        }
+    }
+
+    private static void Hall(string output)
+    {
+        var sect = CompanionRolePresets.Create("Cloudline Workshop", Program.StateDirectory, false);
+        var run = new SectRun { Sect = sect.Name, Status = "running" };
+        string[] statuses = { "success", "running", "pending", "pending" };
+        for (int i = 0; i < sect.Members.Count; i++)
+        {
+            sect.Members[i].Name = UiLanguage.Text(PetCharacter.All[i].Name);
+            run.Steps.Add(new SectStepRun { Id = "demo-" + i, Member = sect.Members[i].Name, CharacterId = sect.Members[i].CharacterId, Status = statuses[i] });
+        }
+        run.Transfers.Add(new SectTransfer { From = "demo-0", To = "demo-1", Text = "Agreed scope, file ownership and acceptance criteria." });
+        using (var hall = new SectHallControl(delegate { return sect; }, delegate { return run; }, delegate { }))
+        using (var image = new Bitmap(1280, 820))
+        {
+            hall.Font = UiText.Font(10.5f);
+            hall.Size = image.Size;
+            hall.DrawToBitmap(image, new Rectangle(Point.Empty, image.Size));
+            image.Save(Path.Combine(output, "sect-hall.png"), ImageFormat.Png);
+        }
+    }
+
+    private static void History(string output)
+    {
+        var task = new ScheduledClaudeTask { CharacterId = "orbit", Prompt = "Summarize this week's notes and suggest next steps.", WorkingDirectory = @"C:\Projects\notes" };
+        var record = new ClaudeTaskRunRecord { CharacterId = "orbit", StartedAt = "2026-10-23T18:00:00", CompletedAt = "2026-10-23T18:00:12", Status = "success", Transcript = "The notes are organized into three themes.\n\nCompleted: organize reference material.\nOpen: confirm two deadlines.\nNext step: draft a short checklist.", Summary = "Notes reviewed; three next steps identified." };
+        task.History.Add(record);
+        using (var history = new ClaudeTaskHistoryForm(task))
+        using (var transcript = new ClaudeTaskRunTranscriptForm(task, record))
+        using (var left = Capture(history))
+        using (var right = Capture(transcript))
+        using (var image = new Bitmap(1600, 710, PixelFormat.Format24bppRgb))
+        using (var graphics = Graphics.FromImage(image))
+        {
+            Quality(graphics); graphics.Clear(Paper);
+            Text(graphics, "A record for every run.", 40, Ink, 45, 24, true);
+            Text(graphics, "Review status and open the saved output. Task records stay separate from ordinary chat.", 21, Muted, 48, 83, false);
+            graphics.DrawImage(left, new Rectangle(35, 140, 710, 510));
+            graphics.DrawImage(right, new Rectangle(775, 140, 790, 540));
+            Text(graphics, "Actual UI controls · Illustrative data · No live model calls", 17, Muted, 48, 674, false);
+            image.Save(Path.Combine(output, "scheduled-task-history.png"), ImageFormat.Png);
         }
     }
 
@@ -298,11 +389,11 @@ internal static class BuildReadmeMedia
                 using (Graphics g = Graphics.FromImage(image))
                 {
                     Quality(g); g.Clear(Color.White);
-                    Text(g, "XianPal  ·  24 相位原画动画", 16, Ink, 16, 10, true);
+                    Text(g, "XianPal · 24-phase original animation", 16, Ink, 16, 10, true);
                     for (int i = 0; i < 4; i++)
                     {
                         g.DrawImage(frames[i][frame], new Rectangle(i * 180 + 2, 34, 176, 191));
-                        Text(g, PetCharacter.All[i].Name, 17, Ink, i * 180 + 69, 240, true);
+                        Text(g, UiLanguage.Text(PetCharacter.All[i].Name), 17, Ink, i * 180 + 55, 240, true);
                     }
                     GifFrame(gif, image);
                 }
@@ -329,7 +420,7 @@ internal static class BuildReadmeMedia
                     // Rotate the cyclic demo so GitHub's still thumbnail starts
                     // with a visible sword / wake, not the pre-summoning pose.
                     ReminderPerformance.Render(g, new Size(960, 540), "command", frames, 1.20 + ((frame + 55) % 118) * .04, false, Rectangle.Empty);
-                    Text(g, "青衡 · 御剑飞仙", 22, Ink, 22, 20, true);
+                    Text(g, "Qingheng · Sword flight", 22, Ink, 22, 20, true);
                     GifFrame(gif, image);
                 }
                 gif.Write((byte)0x3b);

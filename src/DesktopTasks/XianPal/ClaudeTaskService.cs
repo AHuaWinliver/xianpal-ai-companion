@@ -2,8 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+using Timer = XianPal.Linux.UiTimer;
+#else
 using System.Web.Script.Serialization;
 using System.Windows.Forms;
+#endif
 
 namespace XianPal
 {
@@ -11,6 +16,7 @@ namespace XianPal
     {
         public string Id = Guid.NewGuid().ToString("N");
         public string Prompt = "";
+        public string CharacterId = "";
         public string WorkingDirectory = "";
         public string Recurrence = "daily";
         public int MinutesAfterMidnight = 9 * 60;
@@ -60,7 +66,10 @@ namespace XianPal
         public int ExitCode;
         public string Summary = "";
         public string Transcript = "";
+        public string CharacterId = "";
         public string RunMode = "background";
+        public string WorkingDirectory = "";
+        public string Prompt = "";
         public int DesktopNumber;
         public string BackgroundJobName = "";
         public string BackgroundJobId = "";
@@ -139,12 +148,18 @@ namespace XianPal
 
         internal ScheduledClaudeTask Add(string prompt, string directory, string recurrence, TimeSpan time, DayOfWeek weekday, int intervalMinutes, DateTime now, string runMode, string overlapMode)
         {
+            return Add(prompt, directory, recurrence, time, weekday, intervalMinutes, now, runMode, overlapMode, null);
+        }
+
+        internal ScheduledClaudeTask Add(string prompt, string directory, string recurrence, TimeSpan time, DayOfWeek weekday, int intervalMinutes, DateTime now, string runMode, string overlapMode, string characterId)
+        {
             string cleanPrompt = (prompt ?? "").Trim();
             if (cleanPrompt.Length == 0) throw new ArgumentException("请输入要交给 Claude Code 执行的任务。", "prompt");
             if (String.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) throw new DirectoryNotFoundException("任务工作目录不存在。");
             ScheduledClaudeTask task = new ScheduledClaudeTask
             {
                 Prompt = cleanPrompt.Length > 4000 ? cleanPrompt.Substring(0, 4000) : cleanPrompt,
+                CharacterId = NormalizeCharacterId(characterId),
                 WorkingDirectory = Path.GetFullPath(directory),
                 Recurrence = NormalizeRecurrence(recurrence),
                 MinutesAfterMidnight = Math.Max(0, Math.Min(1439, (int)time.TotalMinutes)),
@@ -174,11 +189,17 @@ namespace XianPal
 
         internal void Update(ScheduledClaudeTask task, string prompt, string directory, string recurrence, TimeSpan time, DayOfWeek weekday, int intervalMinutes, DateTime now, string runMode, string overlapMode)
         {
+            Update(task, prompt, directory, recurrence, time, weekday, intervalMinutes, now, runMode, overlapMode, null);
+        }
+
+        internal void Update(ScheduledClaudeTask task, string prompt, string directory, string recurrence, TimeSpan time, DayOfWeek weekday, int intervalMinutes, DateTime now, string runMode, string overlapMode, string characterId)
+        {
             if (task == null || !tasks.Contains(task)) return;
             string cleanPrompt = (prompt ?? "").Trim();
             if (cleanPrompt.Length == 0) throw new ArgumentException("请输入要交给 Claude Code 执行的任务。", "prompt");
             if (String.IsNullOrWhiteSpace(directory) || !Directory.Exists(directory)) throw new DirectoryNotFoundException("任务工作目录不存在。");
             task.Prompt = cleanPrompt.Length > 4000 ? cleanPrompt.Substring(0, 4000) : cleanPrompt;
+            if (characterId != null) task.CharacterId = NormalizeCharacterId(characterId);
             task.WorkingDirectory = Path.GetFullPath(directory);
             task.Recurrence = NormalizeRecurrence(recurrence);
             task.MinutesAfterMidnight = Math.Max(0, Math.Min(1439, (int)time.TotalMinutes));
@@ -198,7 +219,10 @@ namespace XianPal
             ClaudeTaskRunRecord record = new ClaudeTaskRunRecord
             {
                 StartedAt = now.ToString("o", CultureInfo.InvariantCulture),
+                CharacterId = NormalizeCharacterId(task.CharacterId),
                 Status = "running",
+                WorkingDirectory = task.WorkingDirectory,
+                Prompt = task.Prompt,
                 RunMode = NormalizeRunMode(task.RunMode),
                 DesktopNumber = NormalizeDesktopNumber(task.DesktopNumber)
             };
@@ -248,6 +272,9 @@ namespace XianPal
             if (task.History == null) task.History = new List<ClaudeTaskRunRecord>();
             ClaudeTaskRunRecord record = new ClaudeTaskRunRecord
             {
+                CharacterId = NormalizeCharacterId(task.CharacterId),
+                WorkingDirectory = task.WorkingDirectory,
+                Prompt = task.Prompt,
                 StartedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 CompletedAt = now.ToString("o", CultureInfo.InvariantCulture),
                 Status = "skipped",
@@ -343,6 +370,32 @@ namespace XianPal
             return String.Equals(value, "powershell", StringComparison.OrdinalIgnoreCase) ? "powershell" : "background";
         }
 
+        internal static string NormalizeCharacterId(string value)
+        {
+            string clean = (value ?? "").Trim().ToLowerInvariant();
+            return clean.Length == 0 ? "orbit" : clean;
+        }
+
+        internal static string RunDirectory(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
+        { return record != null && !String.IsNullOrEmpty(record.WorkingDirectory) ? record.WorkingDirectory : task == null ? "" : task.WorkingDirectory; }
+
+        internal static string RunPrompt(ScheduledClaudeTask task, ClaudeTaskRunRecord record)
+        { return record != null && !String.IsNullOrEmpty(record.Prompt) ? record.Prompt : task == null ? "" : task.Prompt; }
+
+        internal void AssignLegacyTasks(string characterId)
+        {
+            bool changed = false;
+            foreach (ScheduledClaudeTask task in tasks)
+            {
+                if (String.IsNullOrWhiteSpace(task.CharacterId))
+                { task.CharacterId = NormalizeCharacterId(characterId); changed = true; }
+                foreach (ClaudeTaskRunRecord record in task.History)
+                    if (String.IsNullOrWhiteSpace(record.CharacterId))
+                    { record.CharacterId = task.CharacterId; changed = true; }
+            }
+            if (changed) SaveAndNotify();
+        }
+
         internal static string RunModeLabel(string value)
         {
             string mode = NormalizeRunMode(value);
@@ -384,6 +437,9 @@ namespace XianPal
                         if (String.IsNullOrWhiteSpace(record.Id)) record.Id = Guid.NewGuid().ToString("N");
                         record.RunMode = NormalizeRunMode(record.RunMode);
                         if (record.RunMode == "claude-background" && record.Status == "running" && !String.IsNullOrEmpty(record.BackgroundJobName)) continue;
+#if XIANPAL_LINUX
+                        if (record.Status == "running" && record.RunMode != "background" && XianPal.Linux.LinuxTerminalJob.CanRecover(record)) continue;
+#endif
                         if (record.Status != "success" && record.Status != "failed" && record.Status != "skipped")
                         {
                             record.Status = "failed";

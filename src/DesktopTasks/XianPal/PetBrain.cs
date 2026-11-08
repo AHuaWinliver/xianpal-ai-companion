@@ -105,6 +105,7 @@ namespace XianPal
                     if (coordinates.Length != 2 ||
                         !Single.TryParse(coordinates[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out x) ||
                         !Single.TryParse(coordinates[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out y)) continue;
+                    if (Single.IsNaN(x) || Single.IsInfinity(x) || Single.IsNaN(y) || Single.IsInfinity(y)) continue;
                     x = Math.Max(0.04f, Math.Min(0.96f, x));
                     y = Math.Max(0.04f, Math.Min(0.96f, y));
                     PointF point = new PointF(x, y);

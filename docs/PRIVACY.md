@@ -1,15 +1,16 @@
-# 隐私与配置
+# Privacy and local configuration
 
-- 公开版本使用独立的 %LOCALAPPDATA%/OrbitPet 状态目录和对应注册表设置，不覆盖旧版目录。
-- 本地保存角色、位置、定时任务的目录/提示词及历史内容；这些均可能敏感。
-- 外置人物放在 %LOCALAPPDATA%/XianPal/Characters，不放入安装目录；热更新只读取本地角色配置与PNG，不自动联网下载或执行插件。人物人设会用于AI提示词，请只导入信任的来源。
-- Claude CLI 的凭据、模型、服务地址、权限由用户现有配置管理，本项目不捆绑 API 密钥。
-- 首次安装会为联动追加自己的 Hooks，保留其他 Hooks 并创建设置备份。
-  静默安装也会修改当前用户 Claude 设置；只在你希望启用联动的机器上安装。
-- 其他本机 Claude 会话的采集默认关闭，需用户主动开启。自己的任务会标记归属避免重复记录。
-- 主动 AI 发言、AI 路线、历史上的今天会调用 CLI，可能联网并消耗额度。
-- 拖入文件只准备路径和需求；发送后 CLI 会按照你的权限读取/处理相关文件。
-- 本项目没有另设分析遥测服务器，但 CLI、MCP 或用户配置的服务可有独立网络行为。
-- 卸载只移除本安装的联动、启动项和快捷方式，不递归删除安装目录；程序文件及可能存在的用户文件保留，关闭卸载窗口后可自行检查清理。不会回收其他 Claude 任务。
+[简体中文](PRIVACY.zh-CN.md)
 
-公开截图、日志前务必遮盖用户名、内网地址、文件路径、提示词和模型输出。
+XianPal stores companion selection, position, scheduled-task prompts and directories, and run history locally. These records can contain private information. Historical Windows installations may retain compatibility state names; do not upload the state directory with source code. Linux uses the user's XDG directories.
+
+- External character packs contain local metadata and PNGs. Loading a pack does not download updates or execute plugins. Its personality text is used in AI prompts; import packs from sources you trust.
+- Claude credentials, models, service endpoints and permissions remain in your existing CLI configuration. XianPal does not bundle API keys.
+- The Windows installer adds owned hooks, preserves other handlers and creates a backup. Silent installation does this too. Install only on accounts where you intend to enable the integration.
+- Monitoring unrelated local Claude sessions is off by default and requires explicit opt-in. Owned scheduled runs are identified so their output is not duplicated into ordinary chat.
+- Proactive messages, AI routes and history introductions call the configured CLI. They may contact a network service and consume usage.
+- Dropping a file stages paths and a request. Sending allows the CLI to process those paths according to its existing permissions; the animation itself deletes nothing.
+- XianPal has no separate analytics server. Your CLI, MCP tools and configured services can have their own network and retention behavior.
+- Windows uninstall removes owned hooks, startup entries and shortcuts. It does not recursively delete the installation directory or stop unrelated Claude jobs. Review retained files before cleaning them up.
+
+Redact usernames, intranet endpoints, paths, prompts and model output before publishing screenshots or logs. Report sensitive vulnerabilities through the [security policy](../SECURITY.md).

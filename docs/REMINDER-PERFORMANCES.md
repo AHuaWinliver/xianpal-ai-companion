@@ -1,39 +1,37 @@
-# 角色专属全屏演绎
+# Companion-specific fullscreen reminders
 
-定制其他角色前，请先阅读 [人物定制与动画规范](CHARACTER-CUSTOMIZATION.md) 的全屏演绎章节，
-并在 [规格单](templates/CHARACTER-SPEC.md) 中记录分镜、时间线、道具支点、透明度与降级验收。
+[简体中文](REMINDER-PERFORMANCES.zh-CN.md)
 
-四套演出使用现有获确认的原创人物素材，不另改角色造型；所有景物在角色图层之后绘制，保持双手/前肢最外层的素材规则。
+![Qingheng's sword flight](images/sword-flight.gif)
 
-| 角色 | 演出 | 角色动作与场景 |
+The four performances use the approved original characters. Effects are drawn behind the complete character, preserving the outermost arms/forelimbs. Read the [customization guide](CHARACTER-CUSTOMIZATION.md) before changing a timeline or attachment.
+
+| Companion | Theme | Motion and scenery |
 | --- | --- | --- |
-| 青衡 | 御剑飞仙 | 挥袖召出实体飞剑，踏剑腾空、沿弧线巡游，再回中落剑；脚底与剑身共用支点，伴随渐细的半透明青金色剑光尾迹。 |
-| 绯笺 | 灵符报时 | 挥袖、轻跃、收势；八张灵符环绕、逐笔显纹，伴随绯色光带。 |
-| 苍芷 | 草木知时 | 轻抬手催生藤蔓，再低头照看；两侧枝叶渐次舒展，落叶和萤光缓缓散去。 |
-| 小墨 | 墨涟唤醒 | 小幅跃起、落地、抬爪招呼；金边墨涟向外扩散，云纹浮起。 |
+| Qingheng | Sword flight | Summon a sword, stand aboard, follow an arc and land; cyan/gold light tapers behind the blade |
+| Feijian | Talisman message | Wave, light hop and settle while eight talismans orbit and reveal their marks |
+| Cangzhi | Growing garden | Raise a hand, tend growing vines, then let leaves and glow fade |
+| Xiaomo | Ink ripples | Small shell hop, landing ripples, claw greeting and cloud wisps |
 
-## 使用与兼容
+## Behavior
 
-- 在“提醒与倒计时”中选择“角色全屏演出”，到时按当前角色展示；“立即测试效果”使用同一流程。
-- 只在宠物所属显示器上显示，不使用跨屏虚拟桌面中心。
-- 入场约 1.12 秒，约 5.60 秒展示事项卡片，6.24 秒收完特效；卡片保留到用户确认。
-- 青衡约 1.82–5.18 秒御剑飞行；飞行阶段保持站稳的脚步，转向时人物与剑同向翻转，按屏幕尺寸限制飞行弧线，落地后再显示事项。
-- Esc 跳过/关闭；“稍后 5 分钟”沿用现有提醒服务。
-- “仅提示框”与倒计时仍使用原流程，不加入本次大型演出。
-- 开启“减少动态”时直接展示静止角色和提醒卡片，无粒子或跳跃。
-- 没有碎屏、巨大拳头或强闪光。原先的旧样式兼容代码保留，不作为新角色演出使用。
+Select a character performance in reminders or use the preview button. It uses the currently selected companion and its monitor, not the center of the combined desktop. Entrance ends near 1.12 s, the reminder card appears near 5.60 s and effects finish near 6.24 s. The card remains until dismissed.
 
-## 渲染和验证
+Sword flight is active roughly 1.82–5.18 s. The rider stands steadily with the feet attached to the blade; direction and rotation are shared. Popup-only reminders and countdowns keep their lightweight behavior. Reduced motion skips the animated performance. Escape closes/skips and snooze uses the existing reminder service.
 
-`ReminderPerformance.cs` 是程序与离线预览共用的唯一时间线/绘制实现。24 相位素材按时间取样；入场步频随实际位移变化。16 ms 计时器只请求重绘，不以计时器计数累计演出进度，也不承诺系统必然达到 60 fps。
+These performances do not use screen shatter, giant fists or strong flashes. Legacy state/resource names remain only for compatibility.
 
-`ReminderPerformanceSurface.cs` 使用每像素透明度和可复用的预乘透明 DIB，不把半透明颜色混到洋红底色上。画布点击穿透且不抢焦点，为提醒卡片留出透明区域；关闭时释放原生图形资源。若透明画布不可用，降级为普通事项提示，不丢失提醒。
+## Rendering and previews
 
-构建程序后，可在项目根目录执行：
+`ReminderPerformanceTimeline.cs` defines poses and timing. Windows scenery is in `ReminderPerformance.cs`, shared by live effects and offline previews. The native layered surface uses premultiplied alpha and reusable graphics resources. Failure falls back to an ordinary reminder rather than dropping the notification.
+
+The Linux candidate uses packaged previews for built-ins and a native renderer with the same pose timeline for external packs. External pack frames remain their own; a built-in actor is not substituted. Native effect appearance and target desktop acceptance are checked separately.
 
 ```powershell
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tools\BuildReminderPreviews.ps1
-powershell -NoProfile -ExecutionPolicy Bypass -File .\tests\reminder-performance-test.ps1
+.\tools\BuildReminderPreviews.ps1
+.\tests\reminder-performance-test.ps1
 ```
 
-打开 `build/previews/performances.html` 可切换角色、暂停、逐时拖动、重播和查看减少动态效果。预览使用原生渲染导出的图像，不是另一套近似网页效果。此命令不创建真实提醒、不调用 Claude、不安装或发布程序。
+Open `build/previews/performances.html` to pause, scrub, replay and inspect reduced motion. The Windows preview uses native-rendered output, not an approximate browser animation. These commands do not create real reminders, call a model, install or publish.
+
+Tests cover poses, timeline boundaries, multiple viewports, alpha, card avoidance, style routing, Escape/dismissal and native surface cleanup. A 16 ms redraw request is not a guaranteed 60 fps on every machine.

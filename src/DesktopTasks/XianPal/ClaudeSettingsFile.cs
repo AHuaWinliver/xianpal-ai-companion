@@ -3,7 +3,11 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
+#if XIANPAL_LINUX
+using JavaScriptSerializer = XianPal.Linux.CompatibleJson;
+#else
 using System.Web.Script.Serialization;
+#endif
 
 namespace XianPal
 {
@@ -14,8 +18,7 @@ namespace XianPal
         internal static string CurrentPath(string characterId = null)
         {
             IntegrationPreferences preferences = IntegrationPreferences.Load();
-            string path = preferences.SettingsPathFor(characterId);
-            return Validate(path.Length > 0 ? path : preferences.ClaudeSettingsPath);
+            return Validate(preferences.EffectiveSettingsPathFor(characterId));
         }
 
         internal static string Validate(string path)
