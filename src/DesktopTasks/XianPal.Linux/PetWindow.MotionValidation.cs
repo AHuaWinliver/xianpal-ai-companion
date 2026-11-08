@@ -143,7 +143,7 @@ print(json.dumps({'type':'result','result':text,'is_error':False}), flush=True)
             json.Deserialize<IntegrationPreferences>(savedIntegration).Save();
             preferences.PathMode = "builtin"; aiRoutes.Clear();
         }
-        string packRoot = Path.Combine(Program.StateDirectory, "pack-fixture", "test-familiar");
+        string packRoot = Path.Combine(catalog.Root, "test-familiar");
         var manifest = new CharacterPackManifest
         {
             schemaVersion = 1, id = "test-familiar", version = "0.1.0", name = "Test familiar", persona = "An isolated original-art validation fixture.",
@@ -171,6 +171,63 @@ print(json.dumps({'type':'result','result':text,'is_error':False}), flush=True)
             try { preview.Show(this); await Task.Delay(40); DesktopValidation.Capture(preview, "external-performance-" + style + ".png"); }
             finally { preview.Close(); }
         }
+        await ValidateCatalogUpdates(packRoot, manifest, evidence);
         File.WriteAllText(Path.Combine(evidence, "brain-pack-results.txt"), "PASS fake CLI: a single request supplies 24 route plans, speech and RGB colors; duplicate in-flight requests suppressed; twelve routes reused without further CLI calls. External data-only pack validated and rendered with its own frames in all four performance timelines.\n");
+    }
+
+    private async Task ValidateCatalogUpdates(string packRoot, CharacterPackManifest manifest, string evidence)
+    {
+        async Task CompleteScan()
+        {
+            DateTime until = DateTime.UtcNow.AddSeconds(25);
+            while (characterScan != null || pendingCharacterScan != null)
+            {
+                ConsumeCharacterScan();
+                if (DateTime.UtcNow > until) throw new TimeoutException("Character catalog did not finish its background update.");
+                await Task.Delay(10);
+            }
+        }
+        var json = new CompatibleJson();
+        string metadata = Path.Combine(packRoot, "character.json");
+        var original = Character;
+        gestureEnd = 0; dragging = false;
+        var started = System.Diagnostics.Stopwatch.StartNew();
+        Rescan(); var first = characterScan; Rescan();
+        if (started.ElapsedMilliseconds > 250 || first == null || !ReferenceEquals(first, characterScan))
+            throw new Exception("Catalog validation blocked the UI or started duplicate workers.");
+        await CompleteScan();
+        if (!PetCharacter.Available.Any(item => item.Id == manifest.id)) throw new Exception("A new external pack was not discovered.");
+        SelectCharacter(PetCharacter.Find(manifest.id));
+        string revision = Character.ResourceRevision;
+        manifest.version = "0.1.1";
+        File.WriteAllText(metadata, json.Serialize(manifest));
+        dragging = true; Rescan();
+        DateTime deadline = DateTime.UtcNow.AddSeconds(25);
+        while (characterScan?.IsCompleted != true && DateTime.UtcNow < deadline) await Task.Delay(10);
+        ConsumeCharacterScan();
+        if (Character.ResourceRevision != revision || pendingCharacterScan?.PreparedAssets == null)
+            throw new Exception("A pack update was applied during drag or was not prepared in the worker.");
+        dragging = false; gestureEnd = 0; await CompleteScan();
+        if (Character.ResourceRevision == revision) throw new Exception("A validated pack update was not applied after interaction finished.");
+        revision = Character.ResourceRevision; object current = sprite.Source;
+        File.WriteAllText(metadata, "{broken metadata"); Rescan(); await CompleteScan();
+        if (Character.ResourceRevision != revision || !ReferenceEquals(sprite.Source, current) || characterScanErrors.Length == 0)
+            throw new Exception("A broken update replaced the active character or discarded its validation error.");
+        manifest.version = "0.1.2"; File.WriteAllText(metadata, json.Serialize(manifest));
+        Rescan();
+        deadline = DateTime.UtcNow.AddSeconds(25);
+        while (characterScan?.IsCompleted != true && DateTime.UtcNow < deadline) await Task.Delay(10);
+        SelectCharacter(original); gestureEnd = 0; await CompleteScan();
+        if (Character.Id != original.Id) throw new Exception("A stale worker changed the newly selected companion.");
+        SelectCharacter(PetCharacter.Find(manifest.id));
+        string source = Path.GetFullPath(packRoot), target = Path.Combine(catalog.Root, ".removed-test-familiar");
+        string privateRoot = Path.GetFullPath(Program.StateDirectory) + Path.DirectorySeparatorChar;
+        if (!source.StartsWith(privateRoot, StringComparison.Ordinal) || !Path.GetFullPath(target).StartsWith(privateRoot, StringComparison.Ordinal) || Path.GetFileName(source) != "test-familiar")
+            throw new IOException("Pack removal fixture is outside its isolated state directory.");
+        Directory.Move(source, target); Rescan(); gestureEnd = 0; await CompleteScan();
+        if (Character.IsExternal || PetCharacter.Available.Any(item => item.Id == manifest.id))
+            throw new Exception("Removing the selected pack did not restore a built-in companion.");
+        SelectCharacter(original);
+        File.WriteAllText(Path.Combine(evidence, "catalog-results.txt"), "PASS asynchronous pack discovery; single worker; drag deferral; live valid replacement; invalid update retains decoded frames and diagnostics; role-switch race; removed-pack fallback. All XDG paths isolated.\n");
     }
 }

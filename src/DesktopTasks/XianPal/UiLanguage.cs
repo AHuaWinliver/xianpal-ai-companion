@@ -198,7 +198,10 @@ namespace XianPal
             { "事件", "Event" }, { "本地时间，如2026-11-05 09:00", "Local time, e.g. 2026-11-05 09:00" },
             { "重复：once/daily/weekly", "Repeat: once/daily/weekly" }, { "关联门派名称（可空）", "Linked team (optional)" },
             { "启动仙伴", "Launch XianPal" }, { "安装完成。", "Installation complete." }, { "原安装已备份到：", "Previous installation saved at:" }
-            ,{ "全屏漫游", "Full-screen roaming" }, { "AI 路线和主动发言会使用你配置的 Claude 服务，并可能产生用量。", "AI routes and proactive messages use your configured Claude service and may incur usage." }
+            ,{ "全屏漫游", "Full-screen roaming" }, { "AI 路线和主动发言会使用你配置的 Claude 服务，并可能产生用量。", "AI routes and proactive messages use your configured Claude service and may incur usage." },
+            { "查看校验结果", "View validation results" }, { "角色资源校验", "Character pack validation" },
+            { "资源校验正在后台运行，请稍候。", "Character packs are being checked in the background." },
+            { "未发现资源校验错误。", "No character pack validation errors." }
         };
         private static readonly Dictionary<string, string> Reverse = BuildReverse();
     }

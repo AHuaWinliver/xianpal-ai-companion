@@ -13,18 +13,18 @@ RUN set -eu; \
         fi; \
         apt-get update; \
         apt-get install -y --no-install-recommends libicu-dev libssl-dev ca-certificates \
-          libfontconfig1 libx11-6 libxext6 libxrender1 libice6 libsm6 libgl1 libegl1 \
+          libfontconfig1 libx11-6 libxext6 libxrender1 libice6 libsm6 libxtst6 libgl1 libegl1 \
           xvfb xterm openbox dbus-x11 fonts-dejavu-core python3; \
         apt-get clean ;; \
       rhel) \
         dnf install -y epel-release; \
         dnf install -y libicu openssl-libs ca-certificates fontconfig libX11 libXext \
-          libXrender libICE libSM mesa-libGL mesa-libEGL xorg-x11-server-Xvfb xterm \
+          libXrender libICE libSM libXtst mesa-libGL mesa-libEGL xorg-x11-server-Xvfb xterm \
           openbox dbus-x11 dejavu-sans-fonts python3; \
         dnf clean all ;; \
       suse) \
         zypper --non-interactive install --no-recommends libicu libopenssl3 \
-          ca-certificates fontconfig libX11-6 libXext6 libXrender1 libICE6 libSM6 \
+          ca-certificates fontconfig libX11-6 libXext6 libXrender1 libICE6 libSM6 libXtst6 \
           Mesa-libGL1 Mesa-libEGL1 xorg-x11-server-Xvfb xterm openbox dbus-1-daemon dbus-1-x11 \
           dejavu-fonts python3; \
         zypper clean --all ;; \

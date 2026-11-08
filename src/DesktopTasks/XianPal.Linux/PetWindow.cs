@@ -69,9 +69,7 @@ internal sealed partial class PetWindow : Window
         preferences.TrailOpacity = Math.Clamp(preferences.TrailOpacity, 0, 1);
         if (!Directory.Exists(preferences.Directory)) preferences.Directory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
         catalog = new CharacterPackCatalog(Path.Combine(NativePaths.UserDirectory("XDG_DATA_HOME", ".local", "share"), "Characters"));
-        Rescan();
-        Character = PetCharacter.Find(preferences.Character);
-        LoadCharacter(Character);
+        InitializeCharacterCatalog();
         Title = "仙伴 · XianPal";
         Width = Math.Clamp(preferences.Size, 80, 260); Height = Width * 416 / 384;
         CanResize = false;
@@ -124,6 +122,7 @@ internal sealed partial class PetWindow : Window
             ClaudeCliRunner request = brain; brain = null; request?.Stop(); request?.Dispose();
             trail?.Close();
             expressions.Dispose();
+            DisposeCharacterScans();
             externalFrames?.Dispose();
             DisposeFrames();
         };
@@ -170,21 +169,6 @@ internal sealed partial class PetWindow : Window
         sprite.Source = frame;
     }
 
-    private void Rescan()
-    {
-        using CharacterPackScan scan = catalog.Scan(Character?.Id ?? preferences.Character, Character?.ResourceRevision);
-        PetCharacter.SetExternalProfiles(scan.Characters);
-        if (Character != null && scan.PreparedId == Character.Id && scan.PreparedAssets != null)
-        {
-            sprite.Source = null;
-            externalFrames?.Dispose();
-            externalFrames = scan.PreparedAssets;
-            scan.PreparedAssets = null;
-            Character = PetCharacter.Find(scan.PreparedId);
-            RenderFrame("idle", 0);
-        }
-    }
-
     private void Gesture(string name, int milliseconds)
     {
         if (preferences.ReduceMotion) return;
@@ -199,12 +183,16 @@ internal sealed partial class PetWindow : Window
         if (!IsVisible) { lastTick = now; return; }
         double elapsed = Math.Min(50, now - lastTick);
         lastTick = now;
+        ConsumeCharacterScan();
         if (now / 8000 != (now - (long)elapsed) / 8000) Rescan();
         TickCare(now);
         if (preferences.ReduceMotion) { CancelMotion(); RenderFrame(ChatWorking ? "waiting" : "idle", 0); return; }
-        if (dragging && now - lastMotion < DragGaitClock.StopAfterMs)
+        if (dragging)
         {
-            RenderFrame(left ? "running-left" : "running-right", gait.Advance(elapsed, now - lastMotion, 24));
+            double age = now - lastMotion;
+            int frame = gait.Advance(elapsed, age, 24);
+            if (age < DragGaitClock.StopAfterMs) RenderFrame(left ? "running-left" : "running-right", frame);
+            else RenderFrame("idle", 0);
             return;
         }
         if (!dragging && ((string.IsNullOrEmpty(preferences.DockedEdge) && (!hovering || now < allowHoverUntil) && !ChatWorking && conversation?.IsVisible != true) || urgentRoute) && Opacity == 1)
@@ -367,9 +355,10 @@ internal sealed partial class PetWindow : Window
             DesktopUi.RemoveDecorations(reply);
             reply.Topmost = true;
             reply.ShowInTaskbar = false;
+            reply.WindowStartupLocation = WindowStartupLocation.Manual;
             reply.PointerPressed += (_, e) => { if (e.ClickCount == 2) OpenConversation(); };
         }
-        replyLabel.Text = currentReply.Length <= 130 ? currentReply : "…" + currentReply[^130..];
+        replyLabel.Text = currentReply.Length <= 130 ? currentReply : "…" + UiText.TailCodeUnits(currentReply, 130);
         AnchorReply();
         if (!reply.IsVisible) reply.Show(this);
         AnchorReply();
@@ -422,6 +411,9 @@ internal sealed partial class PetWindow : Window
             characters.Items.Add(Item(profile.Name, () => { LoadCharacter(profile); Save(); }));
         characters.Items.Add(Item("打开角色资源目录", () => DesktopUi.OpenFolder(catalog.Root)));
         characters.Items.Add(Item("刷新外置角色", () => Rescan()));
+        characters.Items.Add(Item("查看校验结果", () => DesktopUi.Notice(this, "角色资源校验", characterScan != null || pendingCharacterScan != null
+            ? UiLanguage.Text("资源校验正在后台运行，请稍候。") : characterScanErrors.Length == 0
+            ? UiLanguage.Text("未发现资源校验错误。") : string.Join("\n", characterScanErrors))));
         var menu = new ContextMenu();
         menu.Items.Add(Item("对话", OpenConversation));
         menu.Items.Add(Item("打开 Claude Code CLI", () => LinuxTerminal.OpenClaude(DirectoryPath, Character.Id)));

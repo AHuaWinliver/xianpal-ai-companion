@@ -66,10 +66,10 @@ jobs:
       - name: Validate native windows with an isolated CLI fixture
         run: |
           sudo apt-get update
-          sudo apt-get install -y xvfb openbox xterm libice6 libsm6 libfontconfig1 libx11-6 libxext6 libxrender1 libgl1 libegl1 fonts-noto-cjk fonts-noto-color-emoji
+          sudo apt-get install -y xvfb openbox xterm libice6 libsm6 libfontconfig1 libx11-6 libxext6 libxrender1 libxtst6 libgl1 libegl1 fonts-noto-cjk fonts-noto-color-emoji
           cp -r build/linux-resources/* build/linux-app/
           chmod +x build/linux-app/launch.sh build/linux-app/diagnose-linux.sh
-          xvfb-run -a sh -c 'openbox >/tmp/xianpal-window-manager.log 2>&1 & exec build/linux-app/xianpal --desktop-test build/linux-evidence'
+          XIANPAL_CI_INPUT=1 xvfb-run -a sh -c 'openbox >/tmp/xianpal-window-manager.log 2>&1 & exec build/linux-app/xianpal --desktop-test build/linux-evidence'
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
@@ -111,7 +111,7 @@ jobs:
             getconf GNU_LIBC_VERSION
             /app/launch.sh --self-test
             Xvfb :99 -screen 0 1440x900x24 >/evidence/xvfb.log 2>&1 &
-            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XIANPAL_RENDERER=software
+            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XIANPAL_RENDERER=software XIANPAL_CI_INPUT=1
             sleep 1
             dbus-run-session -- sh -ec "metacity --replace >/evidence/wm.log 2>&1 & exec /app/launch.sh --desktop-test /evidence"
           ' || status=$?
@@ -200,7 +200,7 @@ jobs:
             if [ -x /app/launch.sh ]; then launcher=/app/launch.sh; fi
             "$launcher" --self-test
             Xvfb :99 -screen 0 1440x900x24 >/evidence/xvfb.log 2>&1 &
-            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XIANPAL_RENDERER=software
+            export DISPLAY=:99 LIBGL_ALWAYS_SOFTWARE=1 XIANPAL_RENDERER=software XIANPAL_CI_INPUT=1
             sleep 1
             dbus-run-session -- sh -ec "openbox >/evidence/wm.log 2>&1 & exec $launcher --desktop-test /evidence"
           ' || status=$?

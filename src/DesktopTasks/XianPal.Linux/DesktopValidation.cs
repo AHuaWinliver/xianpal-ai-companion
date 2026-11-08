@@ -22,6 +22,9 @@ internal sealed class DesktopValidation : Application
         Directory.CreateDirectory(state);
         Environment.SetEnvironmentVariable("FUFU_TEST_MODE", "1");
         Environment.SetEnvironmentVariable("FUFU_STATE_DIR", state);
+        Environment.SetEnvironmentVariable("XDG_DATA_HOME", Path.Combine(state, "xdg-data"));
+        Environment.SetEnvironmentVariable("XDG_CONFIG_HOME", Path.Combine(state, "xdg-config"));
+        Environment.SetEnvironmentVariable("XDG_STATE_HOME", Path.Combine(state, "xdg-state"));
         UiLanguage.Set("zh-CN");
         Environment.SetEnvironmentVariable("PYTHONIOENCODING", "utf-8");
         string fixture = Path.Combine(evidence, "claude-fixture.py");
@@ -83,6 +86,7 @@ print(json.dumps({"type":"result","result":"道友，中文🌱回复已完成�
                 await LinuxNativeValidation.Run(pet, evidence);
                 await LinuxUiValidation.Run(pet, desktop, evidence);
                 await pet.ValidateMotion(evidence);
+                await pet.ValidateNativeInput(evidence);
                 await LinuxInstallerValidation.Run(pet, evidence);
                 TaskWindow.Show(pet, tasks);
                 ReminderWindows.ShowSettings(pet, pet.Services.Reminders);
