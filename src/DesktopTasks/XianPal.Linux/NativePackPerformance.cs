@@ -11,6 +11,7 @@ internal sealed class NativePackPerformance : Control, IDisposable
 {
     private readonly CharacterAnimationSet frames;
     private readonly string style;
+    private readonly Dictionary<Avalonia.Media.Imaging.Bitmap, int> soles = new();
     private bool disposed;
     internal double Seconds { get; set; }
 
@@ -27,14 +28,20 @@ internal sealed class NativePackPerformance : Control, IDisposable
         if (disposed || Bounds.Width <= 0 || Bounds.Height <= 0) return;
         var pose = ReminderPerformance.Sample(new System.Drawing.Size((int)Bounds.Width, (int)Bounds.Height), style, Seconds, false);
         var box = new Rect(pose.Bounds.X, pose.Bounds.Y, pose.Bounds.Width, pose.Bounds.Height);
+        var animation = frames.Frames[pose.Animation];
+        var image = animation[ReminderPerformance.FrameIndex(pose.Cycle, animation.Count)];
+        if (!soles.TryGetValue(image, out int sole)) soles[image] = sole = NativeArtifactView.FootRow(image);
+        var pivot = new Point(box.Center.X, box.Bottom);
+        var actorTransform = Matrix.CreateTranslation(-pivot.X, -pivot.Y) * Matrix.CreateScale(pose.FlipX ? -1 : 1, 1) * Matrix.CreateRotation(pose.Rotation * Math.PI / 180) * Matrix.CreateTranslation(pivot.X, pivot.Y);
         if (Seconds > ReminderPerformance.EntranceEnd && Seconds < ReminderPerformance.CardAt)
         {
             double alpha = ReminderPerformance.Smooth((Seconds - ReminderPerformance.EntranceEnd) / .5) * (1 - ReminderPerformance.Smooth((Seconds - 5.1) / .5));
             Color accent = Color.Parse(style == "beam" ? "#E37985" : style == "warning" ? "#73B58B" : style == "stone" ? "#CFAD66" : "#50BED3");
-            Point center = new(box.Center.X, box.Bottom - box.Height * .04);
+            Point center = new(box.Center.X, box.Y + box.Height * sole / image.PixelSize.Height);
             if (style == "command")
             {
                 double scale = box.Width / 384;
+                using var actor = context.PushTransform(actorTransform);
                 using var transform = context.PushTransform(Matrix.CreateScale(scale, scale) * Matrix.CreateTranslation(box.X, center.Y));
                 NativeArtifactView.DrawVessel(context, style, alpha, Seconds);
             }
@@ -62,12 +69,9 @@ internal sealed class NativePackPerformance : Control, IDisposable
                 }
             }
         }
-        var animation = frames.Frames[pose.Animation];
-        var image = animation[ReminderPerformance.FrameIndex(pose.Cycle, animation.Count)];
-        using var rotation = context.PushTransform(Matrix.CreateTranslation(-box.Center.X, -box.Center.Y) * Matrix.CreateRotation(pose.Rotation * Math.PI / 180) * Matrix.CreateTranslation(box.Center.X, box.Center.Y));
-        using var facing = context.PushTransform(pose.FlipX ? Matrix.CreateTranslation(-box.Center.X, 0) * Matrix.CreateScale(-1, 1) * Matrix.CreateTranslation(box.Center.X, 0) : Matrix.Identity);
+        using var attached = context.PushTransform(actorTransform);
         context.DrawImage(image, box);
     }
 
-    public void Dispose() { disposed = true; frames.Dispose(); InvalidateVisual(); }
+    public void Dispose() { disposed = true; soles.Clear(); frames.Dispose(); InvalidateVisual(); }
 }
