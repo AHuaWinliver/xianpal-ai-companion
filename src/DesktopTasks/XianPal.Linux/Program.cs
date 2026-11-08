@@ -42,8 +42,8 @@ internal static class Program
         try { lease.Lock(0, 1); }
         catch (IOException)
         {
-            Console.Error.WriteLine("仙伴已在当前用户的桌面运行。");
-            return 1;
+            File.WriteAllText(LinuxDesktopShell.RestoreRequest, "show");
+            return 0;
         }
         return AppBuilder.Configure<DesktopApp>().UsePlatformDetect().WithDesktopFonts().WithLinuxRendering().StartWithClassicDesktopLifetime(args);
     }

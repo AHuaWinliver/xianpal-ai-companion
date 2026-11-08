@@ -19,6 +19,8 @@ namespace XianPal
             var window = new Form { Name = "DefaultSettingsWindow", Text = UiLanguage.Text("Default settings"), ClientSize = new Size(720, 540),
                 MinimumSize = new Size(650, 510), StartPosition = FormStartPosition.CenterScreen,
                 Icon = AppIcon.WindowIcon, Font = UiText.Font(9.5f), BackColor = Color.FromArgb(250, 250, 248) };
+            if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1")
+            { window.StartPosition = FormStartPosition.Manual; window.Location = new Point(SystemInformation.VirtualScreen.Right + 80, 0); }
             defaultSettingsWindow = window;
             var tabs = new TabControl { Dock = DockStyle.Fill, Padding = new Point(12, 8) };
             var general = SettingsPage(tabs, "General");

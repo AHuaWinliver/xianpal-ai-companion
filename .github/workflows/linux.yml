@@ -21,6 +21,7 @@ jobs:
           ./build.ps1 -SkipInstaller
           New-Item -ItemType Directory -Path build/linux-resources | Out-Null
           Copy-Item build/payload/assets,build/payload/scenes,build/previews/performances -Destination build/linux-resources -Recurse
+          Copy-Item build/icon-preview/icon-256.png build/linux-resources/xianpal.png
           python src/DesktopTasks/XianPal.Linux/fetch-fonts.py build/linux-resources/fonts
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         with:

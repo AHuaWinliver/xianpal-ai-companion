@@ -161,6 +161,31 @@ namespace XianPal
             { "平滑的步伐、转向及专属角色动作。", "Smooth steps, turns, and character-specific motion." },
             { "拖入文件后，在对话中确认处理需求。", "Drop files, then confirm your request in chat." },
             { "提醒和互动采用角色特色动画。", "Distinct animations for reminders and interactions." }
+            ,{ "动态", "Activity" }, { "提醒", "Reminders" }, { "●  本机 CLI", "●  Local CLI" },
+            { "询问 Claude Code", "Ask Claude Code" }, { "询问 Claude Code…", "Ask Claude Code…" },
+            { "Enter 发送 · Shift+Enter 换行", "Enter to send · Shift+Enter for a new line" },
+            { "选择一条动态查看 Claude 回复", "Select a conversation to view Claude's reply" },
+            { "Claude Code 定时任务运行详情", "Claude Code task transcript" },
+            { "当前没有倒计时", "No active countdown" }, { "到点后，当前仙伴会来到屏幕中间", "Your companion moves to the center of this screen when the timer ends." },
+            { "倒计时状态异常", "Countdown unavailable" }, { "开始", "Start" }, { "自定义", "Custom" }, { "提醒我做什么…", "What should I remind you to do?" },
+            { "我知道了", "Dismiss" }, { "等待 Claude 回复…", "Waiting for Claude…" },
+            { "仙伴 · 事件规划与门派协作", "XianPal · Events and team workshop" },
+            { "仙伴 · 事件规划与门派大堂", "XianPal · Events and team hall" },
+            { "确认并执行协作", "Confirm and run" }, { "停止本轮", "Stop run" }, { "人物形象", "Character" },
+            { "下表：任务与依赖", "Tasks and dependencies" },
+            { "点击大堂中的成员查看实时回复与交接摘要。执行记录会保存在本机。", "Select a companion in the hall to view live output and handoffs. Run history is stored locally." },
+            { "共同目标 / 授权范围 / 验收要求（每位道友都能收到，不共享完整聊天历史）", "Shared goal, scope and acceptance criteria (sent to each agent; full chats stay separate)" },
+            { "到点提醒，不自动执行。关联门派仅作为执行入口；补发过期提醒一次。", "Events remind you to act. Team runs require confirmation. Overdue reminders are delivered once." },
+            { "每位成员是独立 Claude CLI 会话。最多2个并发；目录相同或互相包含时串行。\n可点击工作目录单元格后使用下方按钮选目录；任务依赖填写编号，以逗号分隔。", "Each member uses a separate Claude CLI session. Up to two agents run at once; overlapping folders run sequentially.\nSelect a working-directory cell, then choose a folder below. Separate dependency IDs with commas." },
+            { "创建四道友门派", "Create four-agent team" }, { "执行门派任务", "Run team" }, { "保存门派配置", "Save team configuration" },
+            { "取消运行", "Cancel run" }, { "配置门派名称、共同目标、成员职责、目录和任务依赖。", "Configure the team name, shared goal, member roles, folders and task dependencies." },
+            { "创建一个门派并填写共同目标。", "Create a team and set a shared goal." },
+            { "事件名称", "Event title" }, { "添加事件", "Add event" }, { "删除事件", "Delete event" }, { "保存事件", "Save events" },
+            { "一次", "Once" }, { "每日", "Daily" }, { "已处理", "Handled" }, { "待提醒", "Upcoming" },
+            { "删除定时任务", "Delete scheduled task" }, { "删除选中的任务和运行记录？", "Delete the selected task and its run history?" },
+            { "定时任务未保存", "Task was not saved" }, { "任务工作目录", "Task working directory" },
+            { "Claude 默认目录", "Default Claude folder" }, { "继承全局 / CLI 自身配置", "Inherit global settings or Claude's defaults" },
+            { "并行", "Parallel" }, { "跳过重叠运行", "Skip overlap" }, { "受阻", "Blocked" }
         };
         private static readonly Dictionary<string, string> Reverse = BuildReverse();
     }

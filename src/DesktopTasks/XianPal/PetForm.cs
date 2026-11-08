@@ -663,7 +663,8 @@ namespace XianPal
         private void LoadAnimations()
         {
             string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
-            if (!ValidateAssets(AppDomain.CurrentDomain.BaseDirectory))
+            if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1") root = Environment.GetEnvironmentVariable("XIANPAL_TEST_ASSETS") ?? root;
+            if (!ValidateAssets(Path.GetDirectoryName(root)))
                 throw new InvalidOperationException("宠物动画资源不完整，请重新安装。\n" + root);
             LoadCharacterAnimations(currentCharacterId);
         }
@@ -688,6 +689,7 @@ namespace XianPal
                 else
                 {
                     string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "assets");
+                    if (Environment.GetEnvironmentVariable("FUFU_TEST_MODE") == "1") root = Environment.GetEnvironmentVariable("XIANPAL_TEST_ASSETS") ?? root;
                     if (character.Id != "orbit") root = Path.Combine(root, "characters", character.Id);
                     foreach (string name in CharacterPackCatalog.States)
                     {

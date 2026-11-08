@@ -75,6 +75,8 @@ namespace XianPal
             if (strip != null) ApplyItems(strip.Items);
             ListView list = control as ListView;
             if (list != null) foreach (ColumnHeader column in list.Columns) column.Text = Translate(column, column.Text);
+            DataGridView grid = control as DataGridView;
+            if (grid != null) foreach (DataGridViewColumn column in grid.Columns) column.HeaderText = Translate(column, column.HeaderText);
             if (control.ContextMenuStrip != null) ApplyItems(control.ContextMenuStrip.Items);
             foreach (Control child in control.Controls) Apply(child);
         }

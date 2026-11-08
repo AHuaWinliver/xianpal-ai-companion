@@ -52,7 +52,23 @@ internal static class LinuxUiValidation
         }
         DesktopValidation.Capture(tasks, "tasks-en.png");
         tasks.Close();
+        int taskCount = pet.Services.Tasks.Tasks.Count;
+        pet.HideCompanion();
+        if (pet.IsVisible) throw new Exception("Hide companion left the window visible.");
+        File.WriteAllText(LinuxDesktopShell.RestoreRequest, "show");
+        await Task.Delay(650);
+        if (!pet.IsVisible || File.Exists(LinuxDesktopShell.RestoreRequest) || pet.Services.Tasks.Tasks.Count != taskCount)
+            throw new Exception("Relaunch restoration failed or restarted services.");
+        LinuxStartup.SetEnabled(true);
+        if (!LinuxStartup.Enabled || !File.ReadAllText(LinuxStartup.EntryPath).Contains("Terminal=false")) throw new Exception("User autostart entry was not written.");
+        LinuxStartup.SetEnabled(false);
+        if (LinuxStartup.Enabled || File.Exists(LinuxStartup.EntryPath)) throw new Exception("User autostart entry was not removed.");
+        File.WriteAllText(LinuxStartup.EntryPath, "[Desktop Entry]\nName=User-owned entry\n");
+        bool protectedEntry = false;
+        try { LinuxStartup.SetEnabled(true); } catch (IOException) { protectedEntry = true; }
+        if (!protectedEntry || !File.ReadAllText(LinuxStartup.EntryPath).Contains("User-owned entry")) throw new Exception("An unrelated startup entry was overwritten.");
+        File.Delete(LinuxStartup.EntryPath);
         UiLanguage.Set("zh-CN");
-        File.WriteAllText(Path.Combine(evidence, "ui-results.txt"), "PASS live English/Chinese captions; preserved input and selection; separate settings window; profile draft retention and cancellation; all-companion task avatars.\n");
+        File.WriteAllText(Path.Combine(evidence, "ui-results.txt"), "PASS live English/Chinese captions; preserved input and selection; separate settings window; profile draft retention and cancellation; all-companion task avatars; hidden-window restoration; owned user autostart entries.\n");
     }
 }

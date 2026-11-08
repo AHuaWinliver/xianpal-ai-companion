@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.VisualTree;
+using Avalonia.LogicalTree;
 using System.Runtime.CompilerServices;
 
 namespace XianPal.Linux;
@@ -28,14 +29,17 @@ internal static class LinuxLanguageBindings
         element.PropertyChanged += (_, e) =>
         {
             if (applying) return;
-            if (e.Property == TextBlock.TextProperty || e.Property == ContentControl.ContentProperty || e.Property == HeaderedSelectingItemsControl.HeaderProperty)
+            if (e.Property == TextBlock.TextProperty || e.Property == ContentControl.ContentProperty || e.Property == HeaderedSelectingItemsControl.HeaderProperty || e.Property == HeaderedContentControl.HeaderProperty)
             {
                 string current = Read(element);
                 if (current != rendered) { source = current; Apply(); }
             }
         };
-        element.AttachedToVisualTree += (_, _) => { UiLanguage.Changed += Apply; Apply(); };
-        element.DetachedFromVisualTree += (_, _) => UiLanguage.Changed -= Apply;
+        bool subscribed = false;
+        void Attach() { if (!subscribed) { UiLanguage.Changed += Apply; subscribed = true; } Apply(); }
+        element.AttachedToVisualTree += (_, _) => Attach();
+        element.DetachedFromVisualTree += (_, _) => { if (subscribed) UiLanguage.Changed -= Apply; subscribed = false; };
+        if (TopLevel.GetTopLevel(element) != null) Attach();
         Apply();
     }
 
@@ -63,8 +67,11 @@ internal static class LinuxLanguageBindings
             if (!applying && e.Property == ItemsControl.ItemsSourceProperty)
             { source = combo.ItemsSource?.Cast<object>().OfType<string>().ToArray() ?? Array.Empty<string>(); Apply(); }
         };
-        combo.AttachedToVisualTree += (_, _) => { UiLanguage.Changed += Apply; Apply(); };
-        combo.DetachedFromVisualTree += (_, _) => UiLanguage.Changed -= Apply;
+        bool subscribed = false;
+        void Attach() { if (!subscribed) { UiLanguage.Changed += Apply; subscribed = true; } Apply(); }
+        combo.AttachedToVisualTree += (_, _) => Attach();
+        combo.DetachedFromVisualTree += (_, _) => { if (subscribed) UiLanguage.Changed -= Apply; subscribed = false; };
+        if (TopLevel.GetTopLevel(combo) != null) Attach();
     }
 
     internal static void Window(Window window)
@@ -74,10 +81,11 @@ internal static class LinuxLanguageBindings
         window.Opened += (_, _) =>
         {
             ApplyTitle();
-            foreach (Control element in window.GetVisualDescendants().OfType<Control>().ToArray())
+            foreach (Control element in window.GetVisualDescendants().OfType<Control>().Concat(window.GetLogicalDescendants().OfType<Control>()).Distinct().ToArray())
             {
                 if (element is ComboBox choices) Choices(choices);
-                else if (element is TextBlock or Button or CheckBox) Caption(element);
+                else if (element is TextBlock or Button or CheckBox or TabItem) Caption(element);
+                else if (element is TextBox input && input.Watermark != null) Watermark(input);
             }
             UiLanguage.Changed += ApplyTitle;
         };
@@ -88,6 +96,7 @@ internal static class LinuxLanguageBindings
     {
         if (element is TextBlock text) return text.Text;
         if (element is MenuItem menu) return menu.Header as string;
+        if (element is TabItem tab) return tab.Header as string;
         return (element as ContentControl)?.Content as string;
     }
 
@@ -95,6 +104,21 @@ internal static class LinuxLanguageBindings
     {
         if (element is TextBlock text) text.Text = value;
         else if (element is MenuItem menu) menu.Header = value;
+        else if (element is TabItem tab) tab.Header = value;
         else if (element is ContentControl content) content.Content = value;
+    }
+
+    private static void Watermark(TextBox input)
+    {
+        if (bound.TryGetValue(input, out _)) return;
+        bound.Add(input, new object());
+        string source = input.Watermark;
+        void Apply() => input.Watermark = UiLanguage.Text(source);
+        bool subscribed = false;
+        void Attach() { if (!subscribed) { UiLanguage.Changed += Apply; subscribed = true; } Apply(); }
+        input.AttachedToVisualTree += (_, _) => Attach();
+        input.DetachedFromVisualTree += (_, _) => { if (subscribed) UiLanguage.Changed -= Apply; subscribed = false; };
+        if (TopLevel.GetTopLevel(input) != null) Attach();
+        Apply();
     }
 }

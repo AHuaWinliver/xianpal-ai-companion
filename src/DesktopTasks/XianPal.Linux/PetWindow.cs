@@ -29,6 +29,8 @@ internal sealed class PetWindow : Window
     private readonly DesktopPreferences preferences;
     private readonly CharacterPackCatalog catalog;
     private readonly DesktopServices services;
+    private LinuxDesktopShell shell;
+    private bool started;
     private readonly Image sprite = new() { Stretch = Stretch.Uniform };
     private readonly DragGaitClock gait = new();
     private readonly Stopwatch clock = Stopwatch.StartNew();
@@ -94,16 +96,20 @@ internal sealed class PetWindow : Window
         timer = new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Background, (_, _) => Animate());
         Opened += (_, _) =>
         {
+            if (started) return;
+            started = true;
             PixelRect area = Screens.Primary?.WorkingArea ?? new PixelRect(0, 0, 1024, 768);
             Position = Fit(new PixelPoint(preferences.X ?? area.Right - (int)Width - 30, preferences.Y ?? area.Bottom - (int)Height - 45));
             nextRoam = clock.ElapsedMilliseconds + Random.Shared.Next(12000, 22000);
             timer.Start();
             services.Start();
+            shell = new LinuxDesktopShell(this);
         };
         Closing += (_, _) => IsClosing = true;
         Closed += (_, _) =>
         {
             timer.Stop();
+            shell?.Dispose();
             services.Dispose();
             externalFrames?.Dispose();
             DisposeFrames();
@@ -173,6 +179,7 @@ internal sealed class PetWindow : Window
     private void Animate()
     {
         long now = clock.ElapsedMilliseconds;
+        if (!IsVisible) { lastTick = now; return; }
         double elapsed = Math.Min(50, now - lastTick);
         lastTick = now;
         if (now / 8000 != (now - (long)elapsed) / 8000) Rescan();
@@ -302,6 +309,20 @@ internal sealed class PetWindow : Window
         conversation.Activate();
     }
 
+    internal void HideCompanion()
+    {
+        reply?.Hide(); conversation?.Hide(); roamTarget = null;
+        ContextMenu?.Close(); Hide();
+    }
+
+    internal void ShowCompanion()
+    {
+        if (IsClosing) return;
+        Position = Fit(Position);
+        if (!IsVisible) Show();
+        Activate();
+    }
+
     private void AnchorConversation()
     {
         if (conversation == null || positioning) return;
@@ -406,6 +427,7 @@ internal sealed class PetWindow : Window
         menu.Items.Add(Item("事件规划 / 门派协作", () => WorkshopWindow.Show(this, services)));
         menu.Items.Add(Item("默认设置", ShowSettings));
         menu.Items.Add(Item("跑一会儿", StartRoam));
+        menu.Items.Add(Item("隐藏宠物", HideCompanion));
         menu.Items.Add(Item("退出仙伴", Close));
         return menu;
     }
@@ -415,6 +437,7 @@ internal sealed class PetWindow : Window
         var directory = new TextBox { Text = preferences.Directory, Watermark = "Claude 默认工作目录" };
         var top = new CheckBox { Content = "保持置顶", IsChecked = Topmost };
         var motion = new CheckBox { Content = "减少动画", IsChecked = preferences.ReduceMotion };
+        var startup = new CheckBox { Content = "开机自动启动", IsChecked = LinuxStartup.Enabled };
         var size = new Slider { Minimum = 80, Maximum = 260, Value = Width };
         var opacity = new Slider { Minimum = 20, Maximum = 100, Value = preferences.DockedOpacity * 100 };
         var integration = IntegrationPreferences.Load();
@@ -461,6 +484,7 @@ internal sealed class PetWindow : Window
                     integration.SetSettingsPath(id, ClaudeSettingsFile.Validate(integration.SettingsPathFor(id)));
                     integration.SetExecutablePath(id, integration.ExecutableOverrideFor(id));
                 }
+                if (startup.IsChecked == true != LinuxStartup.Enabled) LinuxStartup.SetEnabled(startup.IsChecked == true);
                 integration.Save();
                 preferences.Directory = Path.GetFullPath(directory.Text);
                 preferences.Topmost = Topmost = top.IsChecked == true;
@@ -476,7 +500,7 @@ internal sealed class PetWindow : Window
             catch (Exception error) { DesktopUi.Notice(dialog, "设置未保存", error.Message); }
         });
         dialog = DesktopUi.Dialog("默认设置", new ScrollViewer { Content = DesktopUi.Stack(DesktopUi.Label("Language"), language, DesktopUi.Label("Claude 默认工作目录"), directory, browse,
-            DesktopUi.Row(top, motion), DesktopUi.Label("角色大小"), size, DesktopUi.Label("贴边不透明度"), opacity,
+            DesktopUi.Row(top, motion, startup), DesktopUi.Label("角色大小"), size, DesktopUi.Label("贴边不透明度"), opacity,
             DesktopUi.Label("Companions"), scope, DesktopUi.Label("Claude executable"), executable, browseExecutable,
             DesktopUi.Label("Claude 配置文件"), configuration, DesktopUi.Row(browseJson, apply)) }, 590, 650);
         dialog.Name = "DefaultSettingsWindow";

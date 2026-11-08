@@ -100,7 +100,7 @@ namespace XianPal
             label.Text=(IsUser?UiLanguage.Text("你"):characterId.Length==0?"Claude Code":TaskPresentation.Owner(characterId))+"   "+message.At.ToString("HH:mm");
             avatar.SizeMode=PictureBoxSizeMode.Zoom;avatar.Size=new Size(36,36);avatar.BackColor=Color.Transparent;
             if(!IsUser&&characterId.Length>0)avatar.Image=LoadAvatar(characterId);
-            avatar.Paint+=delegate(object sender,PaintEventArgs e){if(IsUser||avatar.Image==null){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var brush=new SolidBrush(Color.FromArgb(57,88,74)))e.Graphics.FillEllipse(brush,0,0,34,34);TextRenderer.DrawText(e.Graphics,IsUser?"我":"AI",label.Font,new Rectangle(0,0,34,34),Color.White,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);}};
+            avatar.Paint+=delegate(object sender,PaintEventArgs e){if(IsUser||avatar.Image==null){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var brush=new SolidBrush(Color.FromArgb(57,88,74)))e.Graphics.FillEllipse(brush,0,0,34,34);TextRenderer.DrawText(e.Graphics,IsUser?(UiLanguage.IsEnglish?"U":"我"):"AI",label.Font,new Rectangle(0,0,34,34),Color.White,TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter);}};
             card.Controls.Add(body);Controls.Add(card);Controls.Add(label);Controls.Add(avatar);
             var menu=new ContextMenuStrip();menu.Items.Add("复制整条消息",null,delegate {try{Clipboard.SetText(body.Text);}catch(System.Runtime.InteropServices.ExternalException){}});body.ContextMenuStrip=menu;
             SetText(message.Text);
