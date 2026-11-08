@@ -127,6 +127,38 @@ fixture CLIs and real `xterm` windows; it does not submit model requests.
 
 ## Remaining acceptance
 
+Native X11 input tests cover all four companions: dragging from the expanded hit
+area in both directions, faster gait at faster pointer speeds, a held-drag pause
+returning to standing, release cleanup, first reply placement, emoji-safe truncation
+and right-click dismissal. Input injection requires both the private test mode and
+`XIANPAL_CI_INPUT=1`; it is disabled during ordinary desktop use. Character-pack
+validation runs off the render thread and defers replacement during interactions.
+Tests cover valid replacement, malformed-update retention, selection races and
+removed-pack fallback in isolated XDG directories.
+
+### Offline candidate archives
+
+After native checks pass, CI builds self-contained `.tar.gz` candidates with
+executable permissions, SHA256 manifests and English/Chinese first-run instructions.
+`VALIDATION.json` identifies the source and CI run and keeps actual target acceptance
+marked pending. Downloaded ZIP artifacts must be unpacked to retrieve the TAR;
+extract the TAR on Linux to preserve permissions.
+
+```sh
+python3 tests/linux-package-test.py
+python3 src/DesktopTasks/XianPal.Linux/package-linux.py build build/linux-compat-x64 \
+  --compat --output dist/XianPal-Linux-Compat-x64-Candidate.tar.gz \
+  --source-commit FULL_TESTED_COMMIT_SHA \
+  --validation-url https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/RUN_ID
+python3 src/DesktopTasks/XianPal.Linux/package-linux.py verify dist/XianPal-Linux-Compat-x64-Candidate.tar.gz
+```
+
+Use the published folder with all character resources, fonts, runtime libraries and
+licenses. Packaging is offline, rejects missing resources and personal state, and
+never overwrites an existing archive. Tests reject damaged payloads, unsafe archive
+paths, links, missing frames and mismatched runtime families. Python is a build-time
+tool; it is not required to run the delivered desktop application.
+
 The candidate includes shared 24-phase motion, spirit-artifact travel, batched AI
 routes, proactive care, optional light trails and external-character performances.
 Native tests cover directional gait progression, cancellation, opaque edge docking,

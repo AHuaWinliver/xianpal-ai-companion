@@ -86,6 +86,23 @@ build/linux-app/xianpal --self-test
 
 ## 发布验收
 
+原生 X11 输入测试已覆盖四位角色的扩大响应区域、双向拖动、拖动速度驱动步频、按住暂停后回站姿、松手清理、首次气泡定位、表情字符截断与右键关闭气泡。注入鼠标事件必须同时开启隔离测试模式与 `XIANPAL_CI_INPUT=1`，普通使用不会开启。角色资源校验已移到后台，并在交互结束后替换；隔离 XDG 测试覆盖有效更新、损坏更新保留旧素材、切换角色竞争与删除后的回退。
+
+### 离线候选包
+
+原生检查通过后，CI 自动生成 `.tar.gz` 候选包，保留可执行权限，内含逐文件 SHA256 清单、中英文试运行说明与 `VALIDATION.json`。元数据记录源码提交及 CI 地址，实际目标验收保持待完成。下载 Actions 的 ZIP 附件后，取出其中 TAR 包，在 Linux 上解压 TAR 保留权限。
+
+```sh
+python3 tests/linux-package-test.py
+python3 src/DesktopTasks/XianPal.Linux/package-linux.py build build/linux-compat-x64 \
+  --compat --output dist/XianPal-Linux-Compat-x64-Candidate.tar.gz \
+  --source-commit FULL_TESTED_COMMIT_SHA \
+  --validation-url https://github.com/AHuaWinliver/xianpal-ai-companion/actions/runs/RUN_ID
+python3 src/DesktopTasks/XianPal.Linux/package-linux.py verify dist/XianPal-Linux-Compat-x64-Candidate.tar.gz
+```
+
+输入须为包含角色、字体、运行库和许可的完整发布目录。打包全程离线，拒绝缺失资源或混入个人状态，拒绝覆盖已有包。自动测试检查损坏载荷、不安全路径、链接、缺帧与运行时不匹配。Python 仅用于制作，运行交付的桌面程序无需 Python。
+
 | 功能 | 发布前需要验证 |
 | --- | --- |
 | 人物与桌面互动 | 四位角色、透明边缘、双向步态、悬停、拖动、贴边、隐藏恢复、多显示器与缩放 |

@@ -18,6 +18,7 @@ jobs:
       - name: Generate the approved character artwork
         shell: pwsh
         run: |
+          python tests/linux-package-test.py
           ./build.ps1 -SkipInstaller
           New-Item -ItemType Directory -Path build/linux-resources | Out-Null
           Copy-Item build/payload/assets,build/payload/scenes,build/previews/performances -Destination build/linux-resources -Recurse
@@ -70,6 +71,14 @@ jobs:
           cp -r build/linux-resources/* build/linux-app/
           chmod +x build/linux-app/launch.sh build/linux-app/diagnose-linux.sh
           XIANPAL_CI_INPUT=1 xvfb-run -a sh -c 'openbox >/tmp/xianpal-window-manager.log 2>&1 & exec build/linux-app/xianpal --desktop-test build/linux-evidence'
+      - name: Package and verify the offline candidate
+        run: |
+          python3 src/DesktopTasks/XianPal.Linux/package-linux.py build build/linux-app --output build/linux-package/XianPal-Linux-${{ matrix.arch }}-Candidate.tar.gz --source-commit '${{ github.sha }}' --validation-url '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: linux-${{ matrix.runner }}-offline-candidate
+          path: build/linux-package
+          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
@@ -117,6 +126,14 @@ jobs:
           ' || status=$?
           sudo chown -R "$(id -u):$(id -g)" "$PWD/build/centos7-evidence"
           exit "$status"
+      - name: Package and verify the offline compatibility candidate
+        run: |
+          python3 src/DesktopTasks/XianPal.Linux/package-linux.py build build/centos7-app --compat --output build/linux-package/XianPal-Linux-Compat-x64-Candidate.tar.gz --source-commit '${{ github.sha }}' --validation-url '${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}'
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
+        with:
+          name: linux-compat-x64-offline-candidate
+          path: build/linux-package
+          retention-days: 7
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9
         if: always()
         with:
