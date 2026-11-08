@@ -1336,7 +1336,7 @@ namespace XianPal
             screenSessionActive = active;
             if (!active) return;
             screenSessionStartedAt = DateTime.UtcNow;
-            nextBreakReminderAt = screenSessionStartedAt.AddMinutes(Math.Max(30, breakReminderMinutes));
+            nextBreakReminderAt = screenSessionStartedAt.AddMinutes(Math.Max(5, breakReminderMinutes));
             nextAiChatterAt = screenSessionStartedAt.AddMinutes(random.Next(12, 29));
             nextAiCareCheckAt = DateTime.MinValue;
         }
@@ -2817,7 +2817,7 @@ namespace XianPal
                         if (breakMinutesValue != null)
                         {
                             int savedBreakMinutes = Convert.ToInt32(breakMinutesValue);
-                            if (savedBreakMinutes == 30 || savedBreakMinutes == 45 || savedBreakMinutes == 60 || savedBreakMinutes == 90) breakReminderMinutes = savedBreakMinutes;
+                            if (savedBreakMinutes >= 5 && savedBreakMinutes <= 240) breakReminderMinutes = savedBreakMinutes;
                         }
                         object characterValue = key.GetValue("Character");
                         if (characterValue != null) SetCharacter(Convert.ToString(characterValue), false);
