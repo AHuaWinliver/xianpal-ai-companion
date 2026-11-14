@@ -11,7 +11,7 @@ try {
     New-Item -ItemType Directory -Path $env:FUFU_STATE_DIR -Force | Out-Null
     foreach($language in @('en','zh-CN')) {
         [IO.File]::WriteAllText((Join-Path $env:FUFU_STATE_DIR 'ui-language.txt'),$language,[Text.UTF8Encoding]::new($false))
-        foreach($mode in @('--self-test','--encoding-self-test','--claude-task-self-test')) {
+        foreach($mode in @('--self-test','--encoding-self-test','--claude-task-self-test','--reminder-self-test')) {
             $check=Start-Process -FilePath $app -ArgumentList $mode -WindowStyle Hidden -PassThru -Wait
             if($check.ExitCode -ne 0){throw ($language+' '+$mode+' failed: '+$check.ExitCode)}
             Write-Output ('PASS '+$language+' '+$mode)

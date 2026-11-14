@@ -16,6 +16,8 @@ namespace XianPal
     {
         public string Id = Guid.NewGuid().ToString("N");
         public int MinutesAfterMidnight;
+        // -1 preserves daily recurrence for reminders saved before weekday support.
+        public int Weekday = -1;
         public string Text = "";
         public bool Enabled = true;
         public string LastTriggeredDate = "";
@@ -81,11 +83,19 @@ namespace XianPal
 
         internal DailyReminder Add(TimeSpan time, string text, string effect)
         {
+            return Add(time, text, effect, null);
+        }
+
+        internal DailyReminder Add(TimeSpan time, string text, string effect, DayOfWeek? weekday)
+        {
             string clean = (text ?? "").Trim();
             if (clean.Length == 0) throw new ArgumentException("请输入提醒事项。", "text");
+            if (weekday.HasValue && !Enum.IsDefined(typeof(DayOfWeek), weekday.Value))
+                throw new ArgumentOutOfRangeException("weekday");
             DailyReminder reminder = new DailyReminder
             {
                 MinutesAfterMidnight = Math.Max(0, Math.Min(1439, ((int)time.TotalMinutes))),
+                Weekday = weekday.HasValue ? (int)weekday.Value : -1,
                 Text = clean.Length > 300 ? clean.Substring(0, 300) : clean,
                 Enabled = true,
                 Effect = NormalizeEffect(effect)
@@ -193,8 +203,9 @@ namespace XianPal
                     }
                     continue;
                 }
-                DateTime scheduled = now.Date.AddMinutes(reminder.MinutesAfterMidnight);
-                if (!String.Equals(reminder.LastTriggeredDate, today, StringComparison.Ordinal) && scheduled > previous && scheduled <= now)
+                if (reminder.Weekday >= 0 && reminder.Weekday != (int)now.DayOfWeek) continue;
+                if (!String.Equals(reminder.LastTriggeredDate, today, StringComparison.Ordinal) &&
+                    CrossesScheduledTime(reminder.MinutesAfterMidnight, previous, now))
                 {
                     reminder.LastTriggeredDate = today;
                     due.Add(reminder);
@@ -238,6 +249,7 @@ namespace XianPal
                         if (reminder.IsCountdown && String.IsNullOrWhiteSpace(reminder.DueAt)) continue;
                         reminder.Effect = reminder.IsCountdown ? "countdown" : NormalizeEffect(reminder.Effect);
                         reminder.MinutesAfterMidnight = Math.Max(0, Math.Min(1439, reminder.MinutesAfterMidnight));
+                        if (reminder.Weekday < 0 || reminder.Weekday > 6) reminder.Weekday = -1;
                         reminders.Add(reminder);
                     }
                 }

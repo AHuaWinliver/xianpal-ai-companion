@@ -9,6 +9,8 @@ namespace XianPal
     internal sealed class ReminderForm : Form
     {
         private readonly ReminderService service;
+        private readonly ComboBox recurrence = new ComboBox();
+        private readonly ComboBox weekday = new ComboBox();
         private readonly DateTimePicker time = new DateTimePicker();
         private readonly TextBox task = new TextBox();
         private readonly ComboBox effectMode = new ComboBox();
@@ -27,7 +29,7 @@ namespace XianPal
             service = reminderService;
             Text = "提醒与倒计时";
             Icon = AppIcon.WindowIcon;
-            ClientSize = new Size(520, 552);
+            ClientSize = new Size(520, 588);
             FormBorderStyle = FormBorderStyle.None;
             AutoScaleMode = AutoScaleMode.None;
             ShowInTaskbar = false;
@@ -37,7 +39,7 @@ namespace XianPal
             Font = new Font("Microsoft YaHei UI", 9f);
 
             Label title = new Label { Text = "提醒与倒计时", Font = new Font("Microsoft YaHei UI", 10.5f, FontStyle.Bold), ForeColor = Color.FromArgb(34, 34, 32), AutoSize = true, Location = new Point(18, 16) };
-            Label subtitle = new Label { Text = "到点后，当前仙伴会来到屏幕中间", Font = new Font("Microsoft YaHei UI", 8f), ForeColor = Color.FromArgb(112, 112, 106), AutoSize = true, Location = new Point(126, 18) };
+            Label subtitle = new Label { Text = "到点后，当前仙伴会来到屏幕中间", Font = new Font("Microsoft YaHei UI", 8f), ForeColor = Color.FromArgb(112, 112, 106), AutoSize = true, Location = new Point(18, 34) };
             Button close = TextButton("×", new Point(476, 8), new Size(30, 30));
             close.Font = new Font("Segoe UI", 13f);
             close.Click += delegate { Hide(); };
@@ -85,8 +87,21 @@ namespace XianPal
             countdownCard.Controls.Add(cancelCountdown);
             countdownCard.Controls.Add(countdownStatus);
 
-            Label dailyTitle = new Label { Text = "每日提醒", Font = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Bold), ForeColor = Color.FromArgb(52, 52, 49), AutoSize = true, Location = new Point(18, 184) };
-            RoundedPanel editor = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 210), Size = new Size(492, 76) };
+            Label reminderTitle = new Label { Text = "定时提醒", Font = new Font("Microsoft YaHei UI", 9.5f, FontStyle.Bold), ForeColor = Color.FromArgb(52, 52, 49), AutoSize = true, Location = new Point(18, 184) };
+            RoundedPanel editor = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 210), Size = new Size(492, 112) };
+            Label repeat = new Label { Text = "重复", AutoSize = true, Location = new Point(14, 77), ForeColor = Color.FromArgb(80, 80, 76), BackColor = editor.BackColor };
+            recurrence.DropDownStyle = ComboBoxStyle.DropDownList;
+            recurrence.Location = new Point(76, 72);
+            recurrence.Size = new Size(104, 28);
+            recurrence.Items.AddRange(new object[] { "每天", "每周" });
+            recurrence.SelectedIndex = 0;
+            weekday.DropDownStyle = ComboBoxStyle.DropDownList;
+            weekday.Location = new Point(188, 72);
+            weekday.Size = new Size(118, 28);
+            for (int day = 0; day < 7; day++) weekday.Items.Add(ScheduledClaudeTask.WeekdayText(day));
+            weekday.SelectedIndex = (int)DateTime.Now.DayOfWeek;
+            weekday.Visible = false;
+            recurrence.SelectedIndexChanged += delegate { weekday.Visible = recurrence.SelectedIndex == 1; };
             time.Format = DateTimePickerFormat.Custom;
             time.CustomFormat = "HH:mm";
             time.ShowUpDown = true;
@@ -128,9 +143,12 @@ namespace XianPal
             editor.Controls.Add(task);
             editor.Controls.Add(placeholder);
             editor.Controls.Add(effectMode);
+            editor.Controls.Add(repeat);
+            editor.Controls.Add(recurrence);
+            editor.Controls.Add(weekday);
             editor.Controls.Add(add);
 
-            RoundedPanel listCard = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 298), Size = new Size(492, 205) };
+            RoundedPanel listCard = new RoundedPanel { Radius = 16, BorderColor = Color.FromArgb(226, 226, 223), BackColor = Color.FromArgb(247, 247, 246), Location = new Point(14, 334), Size = new Size(492, 205) };
             list.BorderStyle = BorderStyle.None;
             list.BackColor = listCard.BackColor;
             list.DrawMode = DrawMode.OwnerDrawFixed;
@@ -143,13 +161,13 @@ namespace XianPal
             listCard.Controls.Add(list);
 
             toggle.Text = "停用";
-            toggle.Location = new Point(14, 512);
+            toggle.Location = new Point(14, 548);
             toggle.Size = new Size(74, 31);
             StyleButton(toggle, false);
             toggle.Click += delegate { DailyReminder item = list.SelectedItem as DailyReminder; service.Toggle(item); RefreshList(item); };
 
             delete.Text = "删除";
-            delete.Location = new Point(94, 512);
+            delete.Location = new Point(94, 548);
             delete.Size = new Size(70, 31);
             StyleButton(delete, false);
             delete.ForeColor = Color.FromArgb(174, 65, 58);
@@ -158,7 +176,7 @@ namespace XianPal
             preview.Text = "立即测试效果";
             preview.Name = "reminderPreviewButton";
             preview.AccessibleName = "立即测试提醒效果";
-            preview.Location = new Point(370, 512);
+            preview.Location = new Point(370, 548);
             preview.Size = new Size(136, 31);
             preview.Click += delegate { PreviewCurrentReminder(); };
 
@@ -166,7 +184,7 @@ namespace XianPal
             Controls.Add(subtitle);
             Controls.Add(close);
             Controls.Add(countdownCard);
-            Controls.Add(dailyTitle);
+            Controls.Add(reminderTitle);
             Controls.Add(editor);
             Controls.Add(listCard);
             Controls.Add(toggle);
@@ -212,7 +230,8 @@ namespace XianPal
             string text = task.Text.Trim();
             if (text.Length == 0) { task.Focus(); return; }
             string effect = effectMode.SelectedIndex == 1 ? "popup" : "impact";
-            DailyReminder added = service.Add(time.Value.TimeOfDay, text, effect);
+            DayOfWeek? day = recurrence.SelectedIndex == 1 ? (DayOfWeek?)weekday.SelectedIndex : null;
+            DailyReminder added = service.Add(time.Value.TimeOfDay, text, effect, day);
             task.Clear();
             RefreshList(added);
             task.Focus();
@@ -313,12 +332,15 @@ namespace XianPal
             Color background = selected ? Color.FromArgb(231, 241, 234) : list.BackColor;
             using (SolidBrush brush = new SolidBrush(background)) e.Graphics.FillRectangle(brush, e.Bounds);
             using (SolidBrush dot = new SolidBrush(item.Enabled ? Color.FromArgb(40, 132, 84) : Color.FromArgb(170, 170, 165))) e.Graphics.FillEllipse(dot, e.Bounds.Left + 11, e.Bounds.Top + 20, 8, 8);
-            Rectangle timeBounds = new Rectangle(e.Bounds.Left + 30, e.Bounds.Top + 11, 58, 27);
-            Rectangle textBounds = new Rectangle(e.Bounds.Left + 92, e.Bounds.Top + 11, e.Bounds.Width - 188, 27);
-            Rectangle stateBounds = new Rectangle(e.Bounds.Right - 90, e.Bounds.Top + 11, 78, 27);
+            Rectangle timeBounds = new Rectangle(e.Bounds.Left + 30, e.Bounds.Top + 3, 58, 22);
+            Rectangle textBounds = new Rectangle(e.Bounds.Left + 92, e.Bounds.Top + 3, e.Bounds.Width - 104, 22);
+            Rectangle scheduleBounds = new Rectangle(e.Bounds.Left + 30, e.Bounds.Top + 24, e.Bounds.Width - 146, 21);
+            Rectangle stateBounds = new Rectangle(e.Bounds.Right - 114, e.Bounds.Top + 24, 102, 21);
             using (Font bold = new Font(list.Font, FontStyle.Bold)) TextRenderer.DrawText(e.Graphics, item.TimeText, bold, timeBounds, Color.FromArgb(38, 38, 36), TextFormatFlags.VerticalCenter);
             TextRenderer.DrawText(e.Graphics, item.Text, list.Font, textBounds, item.Enabled ? Color.FromArgb(38, 38, 36) : Color.FromArgb(135, 135, 130), TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis);
-            string stateText = item.Enabled ? (ReminderService.NormalizeEffect(item.Effect) == "popup" ? "提示 · 每天" : "演出 · 每天") : "已停用";
+            string schedule = item.Weekday < 0 ? UiLanguage.Text("每天") : UiLanguage.Format("每{0}", UiLanguage.Text(ScheduledClaudeTask.WeekdayText(item.Weekday)));
+            TextRenderer.DrawText(e.Graphics, schedule, list.Font, scheduleBounds, Color.FromArgb(105, 105, 100), TextFormatFlags.VerticalCenter);
+            string stateText = UiLanguage.Text(item.Enabled ? (ReminderService.NormalizeEffect(item.Effect) == "popup" ? "提示框" : "演出") : "已停用");
             TextRenderer.DrawText(e.Graphics, stateText, list.Font, stateBounds, item.Enabled ? Color.FromArgb(40, 132, 84) : Color.FromArgb(145, 145, 140), TextFormatFlags.Right | TextFormatFlags.VerticalCenter);
         }
 

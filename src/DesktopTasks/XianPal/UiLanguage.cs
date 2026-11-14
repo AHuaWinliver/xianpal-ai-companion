@@ -110,6 +110,8 @@ namespace XianPal
             { "上次未完成则跳过", "Skip while previous run is active" }, { "允许并行", "Allow parallel runs" },
             { "阻塞模式", "Skip overlapping runs" }, { "并行模式", "Allow parallel runs" },
             { "每天", "Daily" }, { "每周", "Weekly" }, { "固定间隔", "Interval" }, { "每隔一段时间", "Interval" },
+            { "重复", "Repeat" }, { "每{0}", "Every {0}" }, { "定时提醒", "Scheduled reminders" },
+            { "提示框", "Popup" }, { "演出", "Performance" }, { "已停用", "Disabled" },
             { "周日", "Sunday" }, { "周一", "Monday" }, { "周二", "Tuesday" }, { "周三", "Wednesday" },
             { "周四", "Thursday" }, { "周五", "Friday" }, { "周六", "Saturday" },
             { "分钟", "Minutes" }, { "小时", "Hours" }, { "天", "Days" },

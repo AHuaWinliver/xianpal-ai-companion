@@ -10,8 +10,8 @@ using System.Windows.Forms;
 
 [assembly: System.Reflection.AssemblyTitle(XianPal.StartupRegistration.DisplayName)]
 [assembly: System.Reflection.AssemblyProduct(XianPal.StartupRegistration.DisplayName)]
-[assembly: System.Reflection.AssemblyVersion("0.6.12.0")]
-[assembly: System.Reflection.AssemblyFileVersion("0.6.12.0")]
+[assembly: System.Reflection.AssemblyVersion("0.6.13.0")]
+[assembly: System.Reflection.AssemblyFileVersion("0.6.13.0")]
 
 namespace XianPal
 {

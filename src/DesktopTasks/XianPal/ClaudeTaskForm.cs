@@ -159,17 +159,17 @@ namespace XianPal
             recurrence.SelectedIndexChanged += delegate { UpdateScheduleControls(); };
 
             weekday.DropDownStyle = ComboBoxStyle.DropDownList;
-            weekday.Items.AddRange(new object[] { "周日", "周一", "周二", "周三", "周四", "周五", "周六" });
+            for (int day = 0; day < 7; day++) weekday.Items.Add(ScheduledClaudeTask.WeekdayText(day));
             weekday.SelectedIndex = (int)DateTime.Now.DayOfWeek;
             weekday.Location = new Point(222, 141);
-            weekday.Size = new Size(84, 28);
+            weekday.Size = new Size(100, 28);
 
             time.Format = DateTimePickerFormat.Custom;
             time.CustomFormat = "HH:mm";
             time.ShowUpDown = true;
             time.Value = DateTime.Today.AddHours(9);
-            time.Location = new Point(314, 141);
-            time.Size = new Size(82, 28);
+            time.Location = new Point(330, 141);
+            time.Size = new Size(66, 28);
 
             intervalValue.Minimum = 1;
             intervalValue.Maximum = 10080;
@@ -210,6 +210,7 @@ namespace XianPal
             editor.Controls.Add(directory);
             editor.Controls.Add(runMode);
             editor.Controls.Add(overlapMode);
+            editor.Controls.Add(NewLabel("重复", new Point(16, 145), editor.BackColor));
             editor.Controls.Add(recurrence);
             editor.Controls.Add(weekday);
             editor.Controls.Add(time);
@@ -398,6 +399,7 @@ namespace XianPal
             bool isWeekly = recurrence.SelectedIndex == 1;
             weekday.Visible = isWeekly;
             time.Visible = !isInterval;
+            time.Left = isWeekly ? 330 : 222;
             intervalValue.Visible = intervalUnit.Visible = isInterval;
         }
 
