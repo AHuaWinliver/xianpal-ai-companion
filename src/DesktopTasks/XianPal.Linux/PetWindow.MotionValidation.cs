@@ -191,10 +191,15 @@ print(json.dumps({'type':'result','result':text,'is_error':False}), flush=True)
         string metadata = Path.Combine(packRoot, "character.json");
         var original = Character;
         gestureEnd = 0; dragging = false;
-        var started = System.Diagnostics.Stopwatch.StartNew();
-        Rescan(); var first = characterScan; Rescan();
-        if (started.ElapsedMilliseconds > 250 || first == null || !ReferenceEquals(first, characterScan))
-            throw new Exception("Catalog validation blocked the UI or started duplicate workers.");
+        // The earlier docking probe calls Animate directly. It can cross the
+        // periodic scan boundary even while the animation timer is stopped.
+        await CompleteScan();
+        Rescan();
+        var first = characterScan;
+        if (first == null) throw new Exception("A fresh catalog scan was not queued.");
+        Rescan();
+        if (!ReferenceEquals(first, characterScan))
+            throw new Exception("Duplicate requests did not share the active catalog worker.");
         await CompleteScan();
         if (!PetCharacter.Available.Any(item => item.Id == manifest.id)) throw new Exception("A new external pack was not discovered.");
         SelectCharacter(PetCharacter.Find(manifest.id));
