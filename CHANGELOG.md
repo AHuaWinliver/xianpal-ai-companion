@@ -9,6 +9,11 @@
 - Shared route and travel timing, expressive motion, optional AI route batches, trails and external-character performances are under native validation.
 - Linux target-kernel, TurboVNC, display scaling and real-CLI acceptance remain required before release. See docs/LINUX.en.md for evidence and limitations.
 
+## 0.6.13 · Weekly schedules on Windows · 2026-11-14
+
+- Choose a weekday for a weekly reminder and see the repeat day in the reminder list. Existing daily reminders keep their schedule.
+- Make the repeat controls easier to find in Claude Code scheduled tasks. Weekly task rows show the weekday and time.
+
 ## 0.6.12 · Companion profiles and international setup · 2026-11-08
 
 - Add English/Simplified Chinese UI switching, preserving user text and selections.

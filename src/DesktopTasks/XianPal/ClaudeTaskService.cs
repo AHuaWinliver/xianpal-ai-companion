@@ -36,7 +36,7 @@ namespace XianPal
             get
             {
                 string time = (MinutesAfterMidnight / 60).ToString("00") + ":" + (MinutesAfterMidnight % 60).ToString("00");
-                if (Recurrence == "weekly") return WeekdayText(Weekday) + " " + time;
+                if (Recurrence == "weekly") return "每" + WeekdayText(Weekday) + " " + time;
                 if (Recurrence == "interval") return "每隔 " + FormatInterval(IntervalMinutes);
                 return "每天 " + time;
             }
